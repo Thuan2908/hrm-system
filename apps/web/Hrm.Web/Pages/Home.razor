@@ -1,0 +1,35 @@
+﻿@page "/"
+
+<PageTitle>Saigon Retail</PageTitle>
+
+<h1>Trung tâm điều hành</h1>
+
+<p class="lead">Nền tảng quản lý nhân sự, kho, mua hàng và bán hàng trên cùng một hệ thống.</p>
+
+<div class="row g-3 mt-2">
+    @foreach (var area in Areas)
+    {
+        <div class="col-12 col-md-6 col-xl-4">
+            <section class="card h-100 border-0 shadow-sm">
+                <div class="card-body">
+                    <h2 class="h5">@area.Name</h2>
+                    <p class="text-secondary mb-0">@area.Description</p>
+                </div>
+            </section>
+        </div>
+    }
+</div>
+
+@code {
+    private static readonly AreaSummary[] Areas =
+    [
+        new("Nhân sự", "Hồ sơ, chấm công, nghỉ phép và bảng lương."),
+        new("Kho vận", "Sản phẩm, tồn kho, điều chuyển và kiểm kê."),
+        new("Mua hàng", "Nhà cung cấp, đơn mua và nhận hàng."),
+        new("Bán hàng", "Đơn bán, thanh toán, trả hàng và báo cáo."),
+        new("Quản trị", "Người dùng, vai trò, quyền và nhật ký kiểm toán."),
+        new("Báo cáo", "Chỉ số vận hành xuyên suốt các phân hệ.")
+    ];
+
+    private sealed record AreaSummary(string Name, string Description);
+}

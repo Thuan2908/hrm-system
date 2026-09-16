@@ -1,31 +1,51 @@
 # Module Boundaries
 
-## auth
-Users, Roles, Permissions, token, password.
+## Auth / Users
+Users, Roles, Permissions, token, password, account lifecycle.
 
-## employees
+## Employees
 Employee profile, department, position, lifecycle.
 
-## attendance
+## Attendance
 Check-in/out, actual hours, OT, timesheet closing.
 
-## leave
+## Leave
 Leave request, approval workflow.
 
-## payroll
+## Payroll
 Salary calculation, deductions, payslip, finalize, bank export.
 
-## reports
-Read models và analytics.
+## Products
+Product master data, product search/filter/sort.
 
-## audit
+## Suppliers
+Supplier master data, supplier search/filter/sort.
+
+## Warehouses
+Warehouse master data.
+
+## Inventory
+Stock balance, stock movements, warehouse-product quantity.
+
+## Procurement
+Purchase order and goods receipt baseline.
+
+## Sales
+Sales order and sales reporting baseline.
+
+## Reports
+Read models and analytics by authorized domain.
+
+## Audit
 Audit trail cross-cutting.
 
-## files
-Attachment metadata và storage contract.
+## Files
+Attachment metadata and storage contract.
 
 ### Forbidden
-- payroll sửa employee trực tiếp;
-- reports sửa payroll;
-- leave truy cập raw users repository;
-- frontend quyết định authorization thay backend.
+- payroll sửa employee trực tiếp
+- reports sửa domain data
+- sales ghi thẳng inventory table
+- procurement ghi thẳng inventory table
+- warehouse/sales UI dùng admin layout
+- frontend quyết định authorization thay backend

@@ -24,7 +24,7 @@ Base: `/api/v1`
 ```
 
 ## Pagination
-`page`, `limit`, `sort`, filters theo query params.
+`page`, `pageSize`, `sort`, filters theo query params.
 
 ## HTTP
 - GET: read

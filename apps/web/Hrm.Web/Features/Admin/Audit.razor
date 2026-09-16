@@ -1,0 +1,61 @@
+@page "/admin/audit"
+@layout AdminLayout
+@attribute [Authorize(Roles = "ADMIN")]
+@inject AdminApiClient AdminApiClient
+
+<PageTitle>Nhật ký kiểm toán</PageTitle>
+
+<h1 class="h3">Nhật ký kiểm toán</h1>
+<p class="text-secondary">Theo dõi thay đổi tài khoản, trạng thái và phân quyền.</p>
+
+<section class="card border-0 shadow-sm">
+    <div class="card-body">
+        <div class="row g-2 mb-3">
+            <div class="col-md-6"><input class="form-control" placeholder="Lọc theo action" @bind="action" @bind:event="oninput" /></div>
+            <div class="col-md-2"><button class="btn btn-outline-primary w-100" @onclick="SearchAsync">Lọc</button></div>
+        </div>
+        @if (entries.Count == 0)
+        {
+            <p class="text-secondary mb-0">Không có dữ liệu audit.</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead><tr><th>Thời gian</th><th>Action</th><th>Đối tượng</th><th>Actor</th></tr></thead>
+                    <tbody>
+                    @foreach (var entry in entries)
+                    {
+                        <tr>
+                            <td>@entry.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss")</td>
+                            <td><code>@entry.Action</code></td>
+                            <td>@entry.EntityType · @entry.EntityId</td>
+                            <td>@(entry.ActorUserId?.ToString() ?? "system")</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+            <div class="d-flex justify-content-between"><span class="text-secondary">Tổng: @total</span><div><button class="btn btn-sm btn-outline-secondary me-2" disabled="@(page <= 1)" @onclick="PreviousPageAsync">Trước</button><button class="btn btn-sm btn-outline-secondary" disabled="@(page * 20 >= total)" @onclick="NextPageAsync">Sau</button></div></div>
+        }
+    </div>
+</section>
+
+@code {
+    private IReadOnlyCollection<AuditLogDto> entries = [];
+    private string? action;
+    private int page = 1;
+    private long total;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+    private async Task SearchAsync() { page = 1; await LoadAsync(); }
+    private async Task PreviousPageAsync() { page--; await LoadAsync(); }
+    private async Task NextPageAsync() { page++; await LoadAsync(); }
+
+    private async Task LoadAsync()
+    {
+        var response = await AdminApiClient.SearchAuditAsync(action, page);
+        entries = response?.Data?.Items ?? [];
+        total = response?.Data?.Total ?? 0;
+    }
+}

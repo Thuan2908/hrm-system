@@ -1,0 +1,101 @@
+@page "/admin/roles"
+@layout AdminLayout
+@attribute [Authorize(Roles = "ADMIN")]
+@inject AdminApiClient AdminApiClient
+
+<PageTitle>Vai trò và quyền</PageTitle>
+
+<h1 class="h3">Vai trò và quyền</h1>
+<p class="text-secondary">Backend luôn là authority cuối cùng. Mọi thay đổi permission đều được ghi audit.</p>
+
+@if (!string.IsNullOrWhiteSpace(message))
+{
+    <div class="alert @(hasError ? "alert-danger" : "alert-success")">@message</div>
+}
+
+@if (roles.Count == 0)
+{
+    <p class="text-secondary">Đang tải vai trò...</p>
+}
+else
+{
+    <div class="row g-3">
+        @foreach (var role in roles)
+        {
+            <div class="col-12">
+                <section class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div><h2 class="h5 mb-1">@role.Name</h2><p class="text-secondary">@role.Description</p></div>
+                            <button class="btn btn-sm btn-outline-primary" @onclick="() => BeginEdit(role)">Chỉnh quyền</button>
+                        </div>
+                        <div class="d-flex flex-wrap gap-1">
+                            @foreach (var permission in role.Permissions)
+                            {
+                                <span class="badge text-bg-light border">@permission</span>
+                            }
+                        </div>
+                        @if (editingRoleId == role.Id)
+                        {
+                            <hr />
+                            <div class="row g-2">
+                                @foreach (var permission in PermissionCodes.All)
+                                {
+                                    <div class="col-md-4 col-xl-3">
+                                        <label class="form-check">
+                                            <input class="form-check-input" type="checkbox" checked="@selectedPermissions.Contains(permission)" @onchange="args => TogglePermission(permission, args)" />
+                                            <span class="form-check-label small">@permission</span>
+                                        </label>
+                                    </div>
+                                }
+                            </div>
+                            <div class="mt-3"><button class="btn btn-primary me-2" @onclick="SaveAsync">Lưu quyền</button><button class="btn btn-outline-secondary" @onclick="CancelEdit">Hủy</button></div>
+                        }
+                    </div>
+                </section>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private IReadOnlyCollection<RoleDto> roles = [];
+    private readonly HashSet<string> selectedPermissions = new(StringComparer.Ordinal);
+    private long? editingRoleId;
+    private string? message;
+    private bool hasError;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        var response = await AdminApiClient.GetRolesAsync();
+        roles = response?.Data ?? [];
+        if (response?.Error is not null) { message = response.Error.Message; hasError = true; }
+    }
+
+    private void BeginEdit(RoleDto role)
+    {
+        editingRoleId = role.Id;
+        selectedPermissions.Clear();
+        selectedPermissions.UnionWith(role.Permissions);
+        message = null;
+    }
+
+    private void TogglePermission(string permission, ChangeEventArgs args)
+    {
+        if (args.Value is true) selectedPermissions.Add(permission);
+        else selectedPermissions.Remove(permission);
+    }
+
+    private void CancelEdit() { editingRoleId = null; selectedPermissions.Clear(); }
+
+    private async Task SaveAsync()
+    {
+        if (editingRoleId is null) return;
+        var response = await AdminApiClient.SetRolePermissionsAsync(editingRoleId.Value, selectedPermissions.ToArray());
+        hasError = response?.Success != true;
+        message = hasError ? response?.Error?.Message ?? "Không thể cập nhật quyền." : "Đã cập nhật quyền và ghi audit.";
+        if (!hasError) { CancelEdit(); await LoadAsync(); }
+    }
+}

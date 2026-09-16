@@ -1,8 +1,23 @@
 # Backend Rules
-- NestJS.
-- Controller chỉ xử lý HTTP concern.
-- Service/Application xử lý use case.
-- Repository xử lý persistence.
-- DTO phải validate input.
-- Mọi endpoint nhạy cảm phải có permission guard.
-- Không trả `passwordHash`, token secret hoặc dữ liệu nội bộ nhạy cảm.
+
+Framework: ASP.NET Core Web API
+Language: C#
+ORM: Entity Framework Core + Npgsql
+Database: PostgreSQL hosted on Supabase
+
+## Layers
+- Presentation
+- Application
+- Domain
+- Infrastructure
+
+## Rules
+- Controller không chứa business logic.
+- Dùng built-in Dependency Injection.
+- Dùng async/await cho I/O.
+- Dùng CancellationToken khi phù hợp.
+- Centralized exception handling.
+- Validate input.
+- Authorization bằng ASP.NET Core policies/handlers.
+- Không expose secret.
+- Không truy cập DbContext của module khác.

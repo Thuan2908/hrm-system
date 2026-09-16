@@ -1,0 +1,18 @@
+using Hrm.Contracts;
+
+namespace Hrm.UnitTests;
+
+public sealed class PagedResultTests
+{
+    [Theory]
+    [InlineData(0, 20, 0)]
+    [InlineData(1, 20, 1)]
+    [InlineData(20, 20, 1)]
+    [InlineData(21, 20, 2)]
+    public void TotalPagesRoundsUp(long total, int pageSize, int expected)
+    {
+        var result = new PagedResult<string>([], 1, pageSize, total);
+
+        Assert.Equal(expected, result.TotalPages);
+    }
+}

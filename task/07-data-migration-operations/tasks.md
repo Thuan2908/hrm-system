@@ -54,7 +54,8 @@
 **Mục tiêu:** Giảm mất dữ liệu giao dịch.
 
 **Acceptance Criteria:**
-- Thiết lập WAL/PITR tương đương PostgreSQL
+- Thiết lập PostgreSQL point-in-time recovery/restore phù hợp với Supabase plan
+- Xác định retention và giới hạn của Supabase backup/PITR
 - Test restore
 - RPO documented
 

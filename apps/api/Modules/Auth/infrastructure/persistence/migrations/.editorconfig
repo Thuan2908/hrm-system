@@ -1,0 +1,3 @@
+[*.cs]
+# EF Core owns the generated migration shape; array literals are emitted by design.
+dotnet_diagnostic.CA1861.severity = none

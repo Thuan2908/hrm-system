@@ -23,3 +23,15 @@ Excel migration, backup, restore, monitoring, disaster recovery.
 
 ## Phase 7 — Hardening & Product
 Security hardening, UAT, documentation, deployment, handover.
+
+## Phase 8 — Retail Expansion
+Products, Suppliers, Warehouse, Inventory, Procurement và Sales.
+
+## Phase 9 — Cross-domain Hardening
+Permission matrix mở rộng, transaction boundaries, reporting integration và UAT liên phân hệ.
+
+## Architecture Migration — Blazor + Supabase
+- Replace previous frontend stack with Blazor WebAssembly.
+- Replace SQL Server with PostgreSQL hosted on Supabase.
+- Use Npgsql for EF Core.
+- Add Supabase environment/secrets configuration.

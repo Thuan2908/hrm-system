@@ -1,0 +1,28 @@
+# Build output
+**/bin/
+**/obj/
+TestResults/
+artifacts/
+
+# IDE and local tooling
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+appsettings.Local.json
+appsettings.*.Local.json
+secrets.json
+
+# Generated browser test output
+playwright-report/
+test-results/
+
+# Operating system files
+.DS_Store
+Thumbs.db

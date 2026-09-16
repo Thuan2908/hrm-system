@@ -43,3 +43,44 @@
 - BR-BKP-002: Có differential/incremental phù hợp.
 - BR-BKP-003: Có transaction-log/point-in-time strategy tương đương cho dữ liệu quan trọng.
 - BR-BKP-004: Restore phải được thử nghiệm định kỳ.
+
+## Admin Account Management
+- BR-ADM-001: Admin UI phải tách biệt với HR, Warehouse, Sales và Employee UI.
+- BR-ADM-002: Admin được tìm kiếm account theo keyword: full name hoặc username.
+- BR-ADM-003: Admin được lọc theo Department, Role, Account Status.
+- BR-ADM-004: Admin được sort theo CreatedAt và LastLogin.
+- BR-ADM-005: Account không hard-delete; thao tác "xóa" nghiệp vụ chuyển thành Deactivate/Disable.
+- BR-ADM-006: Mọi thay đổi role/permission/account status phải có audit.
+
+## Product
+- BR-PRD-001: ProductCode là duy nhất.
+- BR-PRD-002: Product có trạng thái Active/Inactive.
+- BR-PRD-003: Product có thể được tìm kiếm theo code/name.
+- BR-PRD-004: Product hỗ trợ filter theo category/status/supplier baseline.
+- BR-PRD-005: Product hỗ trợ sort theo name/createdAt/updatedAt.
+
+## Supplier
+- BR-SUP-001: SupplierCode là duy nhất.
+- BR-SUP-002: Supplier có trạng thái Active/Inactive.
+- BR-SUP-003: Supplier hỗ trợ search theo code/name/contact.
+- BR-SUP-004: Supplier hỗ trợ filter theo status và sort theo name/createdAt.
+- BR-SUP-005: Supplier đang được tham chiếu bởi PO/history không được hard-delete.
+
+## Warehouse & Inventory
+- BR-WHS-001: WarehouseCode là duy nhất.
+- BR-WHS-002: Inventory được xác định tối thiểu bởi Warehouse + Product.
+- BR-WHS-003: Stock quantity không được âm nếu không có business exception được phê duyệt.
+- BR-WHS-004: Mọi nhập/xuất/chuyển kho phải tạo StockMovement.
+- BR-WHS-005: StockMovement đã posted không được sửa trực tiếp; phải reverse/adjust có audit.
+- BR-WHS-006: Inventory hỗ trợ search/filter/sort theo warehouse/product/category/quantity/status.
+
+## Procurement
+- BR-PUR-001: Purchase Order gắn với Supplier.
+- BR-PUR-002: Goods Receipt cập nhật tồn kho qua StockMovement.
+- BR-PUR-003: PO/Receipt sau khi finalized không hard-delete.
+
+## Sales
+- BR-SAL-001: Sales Order có ít nhất một item.
+- BR-SAL-002: Sales Order item tham chiếu Product hợp lệ.
+- BR-SAL-003: Khi đơn bán được xác nhận xuất kho, inventory giảm thông qua StockMovement.
+- BR-SAL-004: Sales screens phải tách khỏi Admin và HR screens.

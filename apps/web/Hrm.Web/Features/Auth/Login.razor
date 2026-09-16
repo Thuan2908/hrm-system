@@ -1,0 +1,80 @@
+@page "/login"
+@layout AuthLayout
+@using System.ComponentModel.DataAnnotations
+@inject IAuthApiClient AuthApiClient
+@inject NavigationManager Navigation
+
+<PageTitle>Đăng nhập</PageTitle>
+
+<section class="card border-0 shadow-sm">
+    <div class="card-body p-4 p-md-5">
+        <p class="text-uppercase text-primary fw-semibold small mb-2">Saigon Retail</p>
+        <h1 class="h3 mb-2">Đăng nhập hệ thống</h1>
+        <p class="text-secondary mb-4">Sử dụng tài khoản nội bộ được cấp bởi quản trị viên.</p>
+
+        @if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <div class="alert alert-danger" role="alert">@errorMessage</div>
+        }
+
+        <EditForm Model="model" OnValidSubmit="LoginAsync" FormName="login">
+            <DataAnnotationsValidator />
+            <div class="mb-3">
+                <label class="form-label" for="username">Tên đăng nhập</label>
+                <InputText id="username" class="form-control" @bind-Value="model.UserName" autocomplete="username" />
+                <ValidationMessage For="@(() => model.UserName)" />
+            </div>
+            <div class="mb-4">
+                <label class="form-label" for="password">Mật khẩu</label>
+                <InputText id="password" type="password" class="form-control" @bind-Value="model.Password" autocomplete="current-password" />
+                <ValidationMessage For="@(() => model.Password)" />
+            </div>
+            <button class="btn btn-primary w-100" type="submit" disabled="@isSubmitting">
+                @(isSubmitting ? "Đang xác thực..." : "Đăng nhập")
+            </button>
+        </EditForm>
+    </div>
+</section>
+
+@code {
+    private readonly LoginModel model = new();
+    private string? errorMessage;
+    private bool isSubmitting;
+
+    [SupplyParameterFromQuery]
+    public string? ReturnUrl { get; set; }
+
+    private async Task LoginAsync()
+    {
+        isSubmitting = true;
+        errorMessage = null;
+        try
+        {
+            var error = await AuthApiClient.LoginAsync(new LoginRequest(model.UserName, model.Password));
+            if (error is not null)
+            {
+                errorMessage = error.Message;
+                return;
+            }
+
+            Navigation.NavigateTo(string.IsNullOrWhiteSpace(ReturnUrl) ? "admin/dashboard" : ReturnUrl);
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Không thể kết nối API. Hãy kiểm tra backend đang chạy.";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private sealed class LoginModel
+    {
+        [Required(ErrorMessage = "Vui lòng nhập tên đăng nhập.")]
+        public string UserName { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Vui lòng nhập mật khẩu.")]
+        public string Password { get; set; } = string.Empty;
+    }
+}

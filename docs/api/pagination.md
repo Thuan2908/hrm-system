@@ -1,10 +1,10 @@
 # Pagination
 Default:
 - page = 1
-- limit = 20
-- max limit = 100
+- pageSize = 20
+- max pageSize = 100
 Response meta:
 - page
-- limit
+- pageSize
 - total
 - totalPages

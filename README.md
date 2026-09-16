@@ -1,30 +1,101 @@
-# HRM System — Saigon Retail JSC
+# Saigon Retail Management System
 
-Bộ tài liệu này là khung triển khai dự án HRM theo hướng **AI-agent friendly / vibe coding có kiểm soát**.
+## Architecture
+- Monorepo
+- Modular Monolith
 
-## Nguồn yêu cầu
-Bộ tài liệu được xây dựng dựa trên PRD/Báo cáo đặc tả của Saigon Retail JSC:
-- 12 chi nhánh tại TP.HCM
-- khoảng 250 nhân sự
-- 4 nhóm vấn đề chính: hồ sơ phân tán, chấm công/đơn từ thủ công, tính lương sai lệch/chậm, thiếu RBAC/backup/BI
-- 5 phân hệ chính: Admin, Hồ sơ nhân sự, Chấm công & Đơn từ, Tiền lương, Báo cáo BI
-- 4 tác nhân chính: Admin, Người quản lý, Nhân viên, Cổng ngân hàng
+## Stack
+- Frontend: Blazor WebAssembly + C#
+- Backend: ASP.NET Core Web API + C#
+- ORM: Entity Framework Core + Npgsql
+- Database: PostgreSQL hosted on Supabase
 
-## Cách dùng
-Agent phải đọc theo thứ tự:
-1. `AGENTS.md`
-2. `docs/product/vision.md`
-3. `docs/product/scope.md`
-4. `docs/product/business-rules.md`
-5. `ARCHITECTURE.md`
-6. `docs/architecture/module-boundaries.md`
-7. `docs/decisions/*`
-8. `.agent/rules/*`
-9. `task/README.md`
-10. task cụ thể đang được giao
+## Recommended flow
 
-## Nguyên tắc
-- Tài liệu product/business bám sát PRD.
-- Các quyết định kỹ thuật như Next.js, NestJS, PostgreSQL, Prisma, monorepo, modular monolith là lựa chọn kiến trúc bổ sung để triển khai.
-- Nếu requirement mới mâu thuẫn PRD, phải ghi rõ trong ADR hoặc Change Request trước khi code.
-# hrm-system
+```text
+Blazor WebAssembly
+        ↓
+ASP.NET Core Web API
+        ↓
+EF Core + Npgsql
+        ↓
+Supabase PostgreSQL
+```
+
+## Supabase public/client configuration
+
+```text
+SUPABASE_URL=https://xrieskmmmlgtonltuina.supabase.co
+SUPABASE_ANON_KEY=<provided anon key>
+```
+
+The anon key is not the database password.
+
+Backend uses a separate secret connection string.
+
+## Domains
+- Admin/RBAC
+- HRM
+- Products
+- Suppliers
+- Warehouse/Inventory
+- Procurement
+- Sales
+- Reports
+- Audit
+
+## Development references
+
+- Full implementation prompt: `docs/project-build-prompt.md`
+- .NET dependency requirements: `requirements.md`
+- Central NuGet versions: `Directory.Packages.props`
+
+## Run locally
+
+Prerequisites: .NET SDK version pinned by `global.json`; Docker is optional until PostgreSQL integration tests are enabled.
+
+```powershell
+dotnet tool restore
+dotnet restore Hrm.slnx
+dotnet build Hrm.slnx --no-restore
+```
+
+Store the Supabase PostgreSQL connection string in .NET user-secrets for the API project. Never use `SUPABASE_ANON_KEY` as the database password.
+
+For the local `.env` workflow, copy `.env.example` to `.env`, fill in local values, and dot-source the loader before running .NET commands:
+
+```powershell
+. .\scripts\load-env.ps1
+```
+
+The root `.env` is ignored by Git. `.NET` does not load `.env` automatically, so the loader must run in each new PowerShell terminal. User-secrets remain the recommended alternative for the backend database password.
+
+```powershell
+dotnet user-secrets init --project apps/api/Hrm.Api/Hrm.Api.csproj
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=<host>;Port=5432;Database=postgres;Username=<user>;Password=<password>;SSL Mode=Require;Trust Server Certificate=true" --project apps/api/Hrm.Api/Hrm.Api.csproj
+```
+
+Run API and frontend in two terminals:
+
+```powershell
+dotnet run --project apps/api/Hrm.Api/Hrm.Api.csproj --launch-profile https
+dotnet run --project apps/web/Hrm.Web/Hrm.Web.csproj --launch-profile https
+```
+
+- Frontend: `https://localhost:7100`
+- API: `https://localhost:7060`
+- Liveness: `https://localhost:7060/health/live`
+- Readiness (includes PostgreSQL): `https://localhost:7060/health/ready`
+- OpenAPI JSON (Development): `https://localhost:7060/openapi/v1.json`
+
+Apply the committed migration only after configuring the backend connection string:
+
+```powershell
+dotnet tool run dotnet-ef database update --project apps/api/Modules/Auth/Hrm.Modules.Auth.csproj --startup-project apps/api/Hrm.Api/Hrm.Api.csproj --context AuthDbContext
+```
+
+Run the automated checks using the .NET 10 Microsoft Testing Platform syntax:
+
+```powershell
+dotnet test --solution Hrm.slnx
+```

@@ -4,8 +4,8 @@
 **Mục tiêu:** Tạo workspace FE/BE/shared packages.
 
 **Acceptance Criteria:**
-- Có apps/web, apps/api, packages/*
-- Có lint/format/typecheck scripts
+- Có apps/web, apps/api, shared/* và tests/*
+- Có .NET solution, Central Package Management và shared build properties
 - README chạy local rõ ràng
 
 **Definition of Done:** theo `task/00-governance/definition-of-done.md`.
@@ -21,7 +21,7 @@
 **Definition of Done:** theo `task/00-governance/definition-of-done.md`.
 
 ## FND-003 — Database baseline
-**Mục tiêu:** Khởi tạo PostgreSQL + Prisma schema cơ sở.
+**Mục tiêu:** Khởi tạo PostgreSQL (Supabase) + Entity Framework Core (Npgsql) schema cơ sở.
 
 **Acceptance Criteria:**
 - Có migration đầu tiên
@@ -54,8 +54,27 @@
 **Mục tiêu:** Thiết lập pipeline quality gate.
 
 **Acceptance Criteria:**
-- Lint pass
-- Typecheck pass
-- Test pass trước merge
+- `dotnet format --verify-no-changes` pass
+- `dotnet build -c Release` pass
+- `dotnet test -c Release` pass trước merge
 
 **Definition of Done:** theo `task/00-governance/definition-of-done.md`.
+
+## FND-007 — Configure Supabase PostgreSQL
+**Mục tiêu:** Kết nối ASP.NET Core backend với PostgreSQL trên Supabase.
+
+**Acceptance Criteria:**
+- EF Core dùng Npgsql.
+- DB connection string lấy từ secret/env.
+- Anon key không được dùng làm DB credential.
+- EF Core migration chạy được.
+- Database health check hoạt động.
+
+## FND-008 — Blazor Frontend Baseline
+**Mục tiêu:** Khởi tạo Blazor WebAssembly frontend.
+
+**Acceptance Criteria:**
+- Có `App.razor` và routing.
+- Có layout riêng cho từng business area.
+- Có typed API client.
+- Có authorization state baseline.

@@ -1,0 +1,14 @@
+@page "/admin/dashboard"
+@layout AdminLayout
+@attribute [Authorize(Roles = "ADMIN")]
+
+<PageTitle>Quản trị</PageTitle>
+
+<h1 class="h3">Trung tâm quản trị</h1>
+<p class="text-secondary">Quản lý tài khoản, phân quyền và theo dõi các thao tác nhạy cảm.</p>
+
+<div class="row g-3 mt-2">
+    <div class="col-md-4"><a class="card card-body text-decoration-none shadow-sm" href="admin/users"><strong>Tài khoản</strong><span class="text-secondary">Tìm kiếm, khóa và phân quyền</span></a></div>
+    <div class="col-md-4"><a class="card card-body text-decoration-none shadow-sm" href="admin/roles"><strong>Vai trò</strong><span class="text-secondary">Quản lý permission theo role</span></a></div>
+    <div class="col-md-4"><a class="card card-body text-decoration-none shadow-sm" href="admin/audit"><strong>Audit</strong><span class="text-secondary">Theo dõi thay đổi bảo mật</span></a></div>
+</div>

@@ -1,7 +1,13 @@
 # Frontend Rules
-- Next.js + TypeScript.
-- Feature-based structure.
-- UI component không gọi API trực tiếp.
-- Page chỉ compose feature.
-- Permission trên FE chỉ phục vụ UX; backend mới là nguồn quyết định quyền.
-- Error từ API phải map thống nhất.
+
+Framework: Blazor WebAssembly
+Language: C#
+
+- Dùng Razor Components.
+- Không gọi PostgreSQL trực tiếp.
+- API calls qua typed HttpClient services.
+- Tách layout theo Admin/HR/Warehouse/Procurement/Sales/Employee.
+- Component không chứa business rule.
+- Backend là authority cho authorization.
+- Không hardcode secrets.
+- Không đưa Supabase service-role key vào frontend.

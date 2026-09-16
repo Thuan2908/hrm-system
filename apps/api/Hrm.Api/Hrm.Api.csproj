@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AspNetCore.HealthChecks.NpgSql" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="EFCore.NamingConventions" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../shared/Hrm.Contracts/Hrm.Contracts.csproj" />
+    <ProjectReference Include="../../../shared/Hrm.SharedKernel/Hrm.SharedKernel.csproj" />
+    <ProjectReference Include="../Modules/Attendance/Hrm.Modules.Attendance.csproj" />
+    <ProjectReference Include="../Modules/Audit/Hrm.Modules.Audit.csproj" />
+    <ProjectReference Include="../Modules/Auth/Hrm.Modules.Auth.csproj" />
+    <ProjectReference Include="../Modules/Employees/Hrm.Modules.Employees.csproj" />
+    <ProjectReference Include="../Modules/Files/Hrm.Modules.Files.csproj" />
+    <ProjectReference Include="../Modules/Inventory/Hrm.Modules.Inventory.csproj" />
+    <ProjectReference Include="../Modules/Leave/Hrm.Modules.Leave.csproj" />
+    <ProjectReference Include="../Modules/Payroll/Hrm.Modules.Payroll.csproj" />
+    <ProjectReference Include="../Modules/Procurement/Hrm.Modules.Procurement.csproj" />
+    <ProjectReference Include="../Modules/Products/Hrm.Modules.Products.csproj" />
+    <ProjectReference Include="../Modules/Reports/Hrm.Modules.Reports.csproj" />
+    <ProjectReference Include="../Modules/Sales/Hrm.Modules.Sales.csproj" />
+    <ProjectReference Include="../Modules/Suppliers/Hrm.Modules.Suppliers.csproj" />
+    <ProjectReference Include="../Modules/Warehouses/Hrm.Modules.Warehouses.csproj" />
+  </ItemGroup>
+
+</Project>
