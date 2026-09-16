@@ -65,11 +65,26 @@
 
             var session = await SessionStore.GetAsync();
             var isAdmin = session?.User.Roles.Any(r => r.Equals("ADMIN", StringComparison.OrdinalIgnoreCase)) == true;
-            var target = !string.IsNullOrWhiteSpace(ReturnUrl)
-                ? ReturnUrl
-                : (isAdmin ? "admin/dashboard" : "attendance");
+            string target;
+            if (isAdmin)
+            {
+                target = !string.IsNullOrWhiteSpace(ReturnUrl) && !ReturnUrl.Contains("login")
+                    ? ReturnUrl
+                    : "admin/dashboard";
+            }
+            else
+            {
+                if (!string.IsNullOrWhiteSpace(ReturnUrl) && !ReturnUrl.StartsWith("admin", StringComparison.OrdinalIgnoreCase) && !ReturnUrl.Contains("login"))
+                {
+                    target = ReturnUrl;
+                }
+                else
+                {
+                    target = "attendance";
+                }
+            }
 
-            Navigation.NavigateTo(target);
+            Navigation.NavigateTo(target, forceLoad: true);
         }
         catch (HttpRequestException)
         {
