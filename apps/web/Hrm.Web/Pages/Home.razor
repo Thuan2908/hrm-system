@@ -36,6 +36,24 @@
 </div>
 
 @code {
+    [Inject] private BrowserSessionStore SessionStore { get; set; } = default!;
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var session = await SessionStore.GetAsync();
+        if (session is not null)
+        {
+            var isOnlyEmployee = session.User.Roles.Contains("EMPLOYEE", StringComparer.OrdinalIgnoreCase) 
+                                 && !session.User.Roles.Contains("ADMIN", StringComparer.OrdinalIgnoreCase);
+            if (isOnlyEmployee)
+            {
+                Navigation.NavigateTo("attendance", replace: true);
+                return;
+            }
+        }
+    }
+
     private static readonly AreaSummary[] Areas =
     [
         new("Nhân sự", "Hồ sơ, chấm công, nghỉ phép và bảng lương."),
