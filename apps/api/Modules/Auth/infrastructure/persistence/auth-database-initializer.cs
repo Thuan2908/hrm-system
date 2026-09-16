@@ -66,7 +66,7 @@ public sealed class AuthDatabaseInitializer(AuthDbContext dbContext) : IAuthData
                 INSERT INTO permissions (perm_id, permission_code, description)
                 SELECT COALESCE(MAX(perm_id), 0) + 1, {code}, {"Quyền hệ thống Milestone 2"}
                 FROM permissions
-                WHERE NOT EXISTS (SELECT 1 FROM permissions WHERE permission_code = {code});
+                HAVING NOT EXISTS (SELECT 1 FROM permissions WHERE permission_code = {code});
                 """, cancellationToken);
         }
 

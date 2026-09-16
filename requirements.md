@@ -90,7 +90,7 @@ Không reference tất cả package vào mọi project. Mỗi layer/module chỉ
 | Package | Version | Mục đích | Project dự kiến |
 |---|---:|---|---|
 | `Microsoft.AspNetCore.Authentication.JwtBearer` | 10.0.12 | Xác thực JWT bearer cho API | `Hrm.Api` |
-| `Microsoft.AspNetCore.Identity.EntityFrameworkCore` | 10.0.12 | User, role, password hashing, lockout và Identity persistence | Auth Infrastructure |
+| `BCrypt.Net-Next` | 4.1.0 | Xác minh/tạo password hash tương thích dữ liệu Supabase hiện có | Auth Application |
 | `Microsoft.AspNetCore.OpenApi` | 10.0.12 | Sinh OpenAPI document | `Hrm.Api` |
 | `System.IdentityModel.Tokens.Jwt` | 8.22.0 | Phát hành và xử lý JWT | Auth Application/Infrastructure |
 | `FluentValidation` | 12.1.1 | Strongly typed request/use-case validation | Application modules |
@@ -304,6 +304,4 @@ dotnet user-secrets set "Jwt:SigningKey" "<local development secret>" --project 
 
 ## 14. Trạng thái hiện tại
 
-Repository hiện vẫn là documentation baseline và chưa có `.slnx`/`.csproj`, vì vậy `dotnet restore` chưa thể tải package ngay lúc tài liệu này được tạo.
-
-`Directory.Packages.props` đã là package/version catalog chính thức. Khi Foundation milestone scaffold project files và thêm versionless `PackageReference`, developer mới pull về chỉ cần cài .NET 10 SDK, Docker và chạy các lệnh restore ở mục 2.
+Repository đã có `Hrm.slnx`, 24 project .NET và Central Package Management. Developer mới chỉ cần cài .NET 10 SDK, chạy `dotnet tool restore`, `dotnet restore Hrm.slnx`, sau đó build. Docker chỉ bắt buộc khi bật Testcontainers; kết nối local hiện dùng PostgreSQL trên Supabase.

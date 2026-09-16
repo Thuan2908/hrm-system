@@ -2,26 +2,28 @@
 @inject IAuthApiClient AuthApiClient
 @inject NavigationManager Navigation
 
-<div class="d-flex min-vh-100 bg-light">
-    <aside class="bg-dark text-white p-3" style="width: 16rem">
-        <a class="d-block text-white text-decoration-none fs-5 fw-semibold mb-4" href="admin/dashboard">Saigon Retail Admin</a>
-        <nav class="nav nav-pills flex-column gap-1">
-            <NavLink class="nav-link text-white" href="admin/dashboard">Tổng quan</NavLink>
-            <NavLink class="nav-link text-white" href="admin/users">Tài khoản</NavLink>
-            <NavLink class="nav-link text-white" href="admin/roles">Vai trò &amp; quyền</NavLink>
-            <NavLink class="nav-link text-white" href="admin/audit">Nhật ký kiểm toán</NavLink>
+<div class="admin-shell">
+    <aside class="admin-sidebar">
+        <a class="admin-brand" href="admin/dashboard"><span class="admin-brand-mark">SR</span><span><strong>Saigon Retail</strong><small>ADMIN CONSOLE</small></span></a>
+        <p class="admin-nav-label">QUẢN TRỊ HỆ THỐNG</p>
+        <nav class="admin-nav">
+            <NavLink class="admin-nav-link" href="admin/dashboard"><span>⌂</span>Tổng quan</NavLink>
+            <NavLink class="admin-nav-link" href="admin/users"><span>◎</span>Tài khoản</NavLink>
+            <NavLink class="admin-nav-link" href="admin/roles"><span>◇</span>Vai trò &amp; quyền</NavLink>
+            <NavLink class="admin-nav-link" href="admin/audit"><span>≡</span>Nhật ký kiểm toán</NavLink>
         </nav>
-        <button class="btn btn-outline-light w-100 mt-4" @onclick="LogoutAsync">Đăng xuất</button>
+        <button class="admin-logout" @onclick="LogoutAsync"><span>↪</span>Đăng xuất</button>
     </aside>
-    <main class="flex-grow-1">
-        <header class="bg-white border-bottom px-4 py-3">
+    <main class="admin-main">
+        <header class="admin-topbar">
+            <div><span class="admin-topbar-kicker">SAIGON RETAIL</span><strong>Trung tâm quản trị</strong></div>
             <AuthorizeView>
                 <Authorized Context="authContext">
-                    <span class="text-secondary">@authContext.User.FindFirst("full_name")?.Value</span>
+                    <div class="admin-user"><span class="admin-avatar">@GetInitial(authContext.User.FindFirst("full_name")?.Value)</span><span><strong>@authContext.User.FindFirst("full_name")?.Value</strong><small>Administrator</small></span></div>
                 </Authorized>
             </AuthorizeView>
         </header>
-        <article class="p-4">@Body</article>
+        <article class="admin-content">@Body</article>
     </main>
 </div>
 
@@ -31,4 +33,7 @@
         await AuthApiClient.LogoutAsync();
         Navigation.NavigateTo("login", true);
     }
+
+    private static string GetInitial(string? fullName) =>
+        string.IsNullOrWhiteSpace(fullName) ? "A" : fullName.Trim()[0].ToString().ToUpperInvariant();
 }

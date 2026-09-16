@@ -2,7 +2,7 @@
 
 ## Trạng thái hiện tại
 
-**Milestone 1 — Foundation baseline đã hoàn thành ngày 2026-09-16.** Repository đã chuyển từ documentation-only sang .NET 10 monorepo có thể restore, build và test.
+**Milestone 2 — Security & Admin đã hoàn thành phần implementation ngày 2026-09-16.** Repository là .NET 10 monorepo kết nối PostgreSQL trên Supabase và có frontend Blazor cho các luồng quản trị.
 
 ## Đã hoàn thành
 
@@ -10,19 +10,21 @@
 - Central Package Management, shared build/analyzer rules, local `dotnet-ef` tool manifest và `.gitignore`.
 - API v1 baseline: response envelope, exception handler, OpenAPI, CORS, liveness/readiness health checks và OpenTelemetry.
 - PostgreSQL/Supabase persistence baseline bằng EF Core + Npgsql + snake_case.
-- Auth schema baseline: ASP.NET Core Identity, users, roles, permissions, role grants và refresh tokens.
-- Migration đầu tiên: `InitialAuth`, có seed 9 roles, permission catalog và quyền ADMIN.
-- Blazor shell: typed API client, dashboard, error boundary, anonymous authentication-state baseline và layout Admin/HR/Warehouse/Procurement/Sales/Employee.
+- Auth persistence tương thích schema Supabase hiện có (`bigint`, BCrypt, một role/user), JWT access token, refresh-token rotation, logout và session restoration.
+- Startup Development bổ sung idempotent các bảng hỗ trợ `refresh_tokens`, `user_security_states`, `user_account_metadata`, `audit_logs`; không chạy migration Identity lên schema legacy.
+- RBAC backend default-deny, permission guard, role-permission administration và ADMIN override có kiểm soát.
+- Blazor Admin: login/logout, dashboard, tìm kiếm, lọc department/role/status, sort createdAt/lastLogin/username, pagination, tạo/khóa/vô hiệu hóa/reset mật khẩu/đổi role, role permissions và audit log.
+- Offboarding chuyển employee sang `RESIGNED`, khóa/vô hiệu hóa account, thu hồi refresh token và ghi audit; chặn tự offboard.
 - Unit, architecture, API integration và Blazor component tests đã chạy thành công.
 - E2E project đã scaffold; smoke test được skip cho đến khi local stack và Playwright browser cùng chạy.
 - Tài liệu stack đã được đồng bộ sang PostgreSQL/Npgsql, pagination `page`/`pageSize`, và ADR-014 cho .NET monorepo tooling.
 
 ## Chưa triển khai
 
-- Auth use cases/endpoints: login, refresh, logout, forgot/reset password, session revocation và JWT issuance.
 - Các vertical slice nghiệp vụ trong Employees, Attendance, Leave, Payroll, Products, Suppliers, Warehouses, Inventory, Procurement, Sales, Reports, Audit và Files.
 - PostgreSQL Testcontainers integration tests thực tế và Playwright E2E thực tế.
 - CI/CD, deployment, backup/restore drill, monitoring production và product handover.
+- Flow quên mật khẩu không thuộc phạm vi theo quyết định sản phẩm; Admin vẫn có chức năng reset mật khẩu.
 
 ## Quality gate gần nhất
 
@@ -30,13 +32,13 @@
 - Blazor build: pass, 0 warnings, 0 errors.
 - Unit tests: 4 passed.
 - Architecture tests: 1 passed.
-- API integration tests: 2 passed.
+- API integration tests: 4 passed.
 - Component tests: 1 passed.
 - E2E: 1 skipped có chủ đích vì cần running stack/browser.
 
 ## Milestone tiếp theo
 
-Milestone 2 nên triển khai Security/Admin theo vertical slice: JWT access/refresh rotation, login/logout/refresh/password reset, RBAC authorization handler, admin user search và audit trail; sau đó mới mở rộng Core HR.
+Milestone 3 mở rộng Core HR. Trước khi production cần chạy UAT bằng tài khoản Admin thật và bật Playwright E2E với local API/frontend đang chạy.
 
 ## Stack đang áp dụng
 

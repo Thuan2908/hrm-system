@@ -1,5 +1,15 @@
 html, body {
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #f4f7fb;
+    color: #162033;
+}
+
+:root {
+    --sr-primary: #2457d6;
+    --sr-primary-dark: #173da2;
+    --sr-navy: #0d1730;
+    --sr-muted: #6b7588;
+    --sr-border: #e5eaf2;
 }
 
 h1:focus {
@@ -112,4 +122,180 @@ code {
 
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
+}
+
+.eyebrow {
+    display: block;
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: .14em;
+    margin-bottom: .8rem;
+}
+
+.auth-shell {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: minmax(22rem, 1.08fr) minmax(28rem, .92fr);
+    background: #fff;
+}
+
+.auth-brand-panel {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding: clamp(2rem, 5vw, 5.5rem);
+    color: #fff;
+    background:
+        radial-gradient(circle at 80% 15%, rgba(67, 125, 255, .42), transparent 32%),
+        radial-gradient(circle at 10% 85%, rgba(20, 187, 167, .2), transparent 34%),
+        linear-gradient(145deg, #101b3d 0%, #142966 56%, #1f4ab5 100%);
+}
+
+.auth-brand-panel::after {
+    content: "";
+    position: absolute;
+    width: 26rem;
+    height: 26rem;
+    right: -12rem;
+    bottom: -12rem;
+    border: 1px solid rgba(255,255,255,.18);
+    border-radius: 50%;
+    box-shadow: 0 0 0 4rem rgba(255,255,255,.035), 0 0 0 8rem rgba(255,255,255,.025);
+}
+
+.auth-brand {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: .8rem;
+    color: #fff;
+    text-decoration: none;
+    font-size: 1.15rem;
+    font-weight: 750;
+}
+
+.auth-brand-mark, .admin-brand-mark {
+    display: inline-grid;
+    place-items: center;
+    width: 2.55rem;
+    height: 2.55rem;
+    border-radius: .8rem;
+    background: linear-gradient(135deg, #4e7dff, #2bc7ba);
+    color: #fff;
+    font-size: .85rem;
+    font-weight: 900;
+    letter-spacing: .04em;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, .18);
+}
+
+.auth-brand-copy {
+    position: relative;
+    z-index: 1;
+    max-width: 38rem;
+    margin: auto 0;
+}
+
+.auth-brand-copy h1 {
+    max-width: 34rem;
+    font-size: clamp(2.35rem, 4vw, 4.5rem);
+    line-height: 1.05;
+    letter-spacing: -.045em;
+    margin-bottom: 1.6rem;
+}
+
+.auth-brand-copy p {
+    max-width: 32rem;
+    color: rgba(255,255,255,.72);
+    font-size: 1.06rem;
+    line-height: 1.8;
+}
+
+.auth-feature-list {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: .75rem 1.5rem;
+    color: rgba(255,255,255,.78);
+    font-size: .86rem;
+}
+
+.auth-form-panel {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: clamp(1.5rem, 6vw, 6rem);
+    background: linear-gradient(145deg, #fff 0%, #f7f9fd 100%);
+}
+
+.auth-form-wrap {
+    width: 100%;
+    max-width: 30rem;
+    margin: auto;
+}
+
+.auth-footer {
+    margin: 2rem auto 0;
+    color: #929bad;
+    font-size: .78rem;
+}
+
+.login-card {
+    border: 1px solid rgba(226, 232, 242, .85);
+    border-radius: 1.5rem;
+    background: rgba(255,255,255,.88);
+    box-shadow: 0 28px 70px rgba(21, 38, 80, .12);
+    backdrop-filter: blur(12px);
+}
+
+.login-card-body { padding: clamp(2rem, 4vw, 3.2rem); }
+.login-card h1 { font-size: 2.3rem; font-weight: 780; letter-spacing: -.035em; margin-bottom: .75rem; }
+.login-subtitle { color: var(--sr-muted); line-height: 1.65; margin-bottom: 2rem; }
+.login-mobile-brand { display: none; align-items: center; gap: .75rem; margin-bottom: 2rem; }
+.login-field .form-label { font-size: .84rem; font-weight: 700; color: #344055; }
+.login-field .form-control { border-color: #dce3ef; border-radius: .85rem; padding: .82rem 1rem; font-size: .95rem; }
+.login-field .form-control:focus { border-color: #7195f2; box-shadow: 0 0 0 .24rem rgba(36, 87, 214, .11); }
+.login-submit { border: 0; border-radius: .85rem; background: linear-gradient(135deg, var(--sr-primary), #3971ef); font-size: .95rem; font-weight: 750; padding: .9rem; box-shadow: 0 12px 26px rgba(36,87,214,.22); }
+.login-submit:hover { background: linear-gradient(135deg, var(--sr-primary-dark), var(--sr-primary)); transform: translateY(-1px); }
+.login-security-note { display: flex; align-items: center; justify-content: center; gap: .55rem; margin-top: 1.5rem; color: #7b8597; font-size: .76rem; }
+.security-dot { width: .48rem; height: .48rem; border-radius: 50%; background: #19ad82; box-shadow: 0 0 0 .25rem rgba(25,173,130,.11); }
+
+.admin-shell { min-height: 100vh; display: flex; background: #f4f7fb; }
+.admin-sidebar { position: sticky; top: 0; display: flex; flex-direction: column; width: 17.5rem; height: 100vh; padding: 1.5rem 1.15rem; color: #fff; background: linear-gradient(180deg, #111d3c 0%, #0b142b 100%); }
+.admin-brand { display: flex; align-items: center; gap: .8rem; padding: .25rem .5rem 1.8rem; color: #fff; text-decoration: none; }
+.admin-brand > span:last-child { display: flex; flex-direction: column; }
+.admin-brand small { color: #8190b2; font-size: .58rem; font-weight: 800; letter-spacing: .13em; margin-top: .15rem; }
+.admin-nav-label { color: #657495; font-size: .62rem; font-weight: 800; letter-spacing: .12em; padding: 0 .75rem; margin: .5rem 0 .7rem; }
+.admin-nav { display: flex; flex-direction: column; gap: .35rem; }
+.admin-nav-link { display: flex; align-items: center; gap: .8rem; padding: .78rem .85rem; border-radius: .75rem; color: #aebbd6; text-decoration: none; font-size: .88rem; font-weight: 650; transition: .18s ease; }
+.admin-nav-link > span { display: grid; place-items: center; width: 1.45rem; font-size: 1.05rem; }
+.admin-nav-link:hover { color: #fff; background: rgba(255,255,255,.06); }
+.admin-nav-link.active { color: #fff; background: linear-gradient(135deg, #2d5fd8, #356fe8); box-shadow: 0 10px 24px rgba(30,76,187,.28); }
+.admin-logout { display: flex; align-items: center; justify-content: center; gap: .65rem; margin-top: auto; padding: .78rem; border: 1px solid rgba(255,255,255,.12); border-radius: .75rem; color: #bac5dd; background: rgba(255,255,255,.035); }
+.admin-logout:hover { color: #fff; background: rgba(255,255,255,.08); }
+.admin-main { flex: 1; min-width: 0; }
+.admin-topbar { height: 5rem; display: flex; align-items: center; justify-content: space-between; padding: 0 clamp(1.25rem, 3vw, 2.5rem); border-bottom: 1px solid var(--sr-border); background: rgba(255,255,255,.92); backdrop-filter: blur(10px); }
+.admin-topbar > div:first-child { display: flex; flex-direction: column; }
+.admin-topbar-kicker { color: #929caf; font-size: .58rem; font-weight: 850; letter-spacing: .14em; }
+.admin-user { display: flex; align-items: center; gap: .7rem; }
+.admin-user > span:last-child { display: flex; flex-direction: column; font-size: .82rem; }
+.admin-user small { color: #8a94a7; font-size: .68rem; }
+.admin-avatar { display: grid; place-items: center; width: 2.35rem; height: 2.35rem; border-radius: .72rem; color: #fff; background: linear-gradient(135deg, #2457d6, #4783fa); font-weight: 800; }
+.admin-content { padding: clamp(1.25rem, 3vw, 2.5rem); }
+.admin-content .card { border: 1px solid #e8edf5 !important; border-radius: 1rem; box-shadow: 0 10px 30px rgba(25,42,80,.055) !important; }
+.admin-content .table > :not(caption) > * > * { padding: .9rem .75rem; border-bottom-color: #edf0f5; }
+
+@media (max-width: 900px) {
+    .auth-shell { display: block; background: linear-gradient(145deg, #f3f6fc, #fff); }
+    .auth-brand-panel { display: none; }
+    .auth-form-panel { min-height: 100vh; padding: 1.25rem; }
+    .login-mobile-brand { display: flex; }
+    .admin-sidebar { width: 5rem; padding-inline: .65rem; }
+    .admin-brand > span:last-child, .admin-nav-label, .admin-nav-link { font-size: 0; }
+    .admin-nav-link { justify-content: center; }
+    .admin-nav-link > span { font-size: 1.1rem; }
+    .admin-logout { font-size: 0; }
+    .admin-logout > span { font-size: 1.1rem; }
 }

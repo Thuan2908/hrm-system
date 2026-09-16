@@ -5,6 +5,7 @@ using Hrm.Contracts;
 using Hrm.Modules.Auth;
 using Hrm.Modules.Auth.Application;
 using Hrm.Modules.Auth.Infrastructure.Persistence;
+using Hrm.Modules.Employees;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
@@ -68,6 +69,7 @@ builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
 builder.Services.AddAuthModule(builder.Configuration);
+builder.Services.AddEmployeesModule(builder.Configuration);
 
 var healthChecks = builder.Services
     .AddHealthChecks()

@@ -71,4 +71,28 @@ public sealed class SystemEndpointsTests : IClassFixture<WebApplicationFactory<P
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
+
+    [Fact]
+    public async Task OffboardingEndpointRejectsAnonymousRequests()
+    {
+        await using var securedFactory = factory.WithWebHostBuilder(builder =>
+            builder.ConfigureAppConfiguration((_, configuration) =>
+                configuration.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["Jwt:Issuer"] = "SaigonRetail.Api",
+                    ["Jwt:Audience"] = "SaigonRetail.Web",
+                    ["Jwt:SigningKey"] = "integration-test-signing-key-with-at-least-32-characters"
+                })));
+        using var client = securedFactory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false
+        });
+
+        using var response = await client.PostAsync(
+            new Uri("/api/v1/employees/1/offboard", UriKind.Relative),
+            content: null,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
 }

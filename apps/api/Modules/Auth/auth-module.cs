@@ -1,4 +1,5 @@
 using Hrm.Modules.Auth.Application;
+using Hrm.Modules.Auth.Contracts;
 using Hrm.Modules.Auth.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -25,6 +26,7 @@ public static class AuthModule
                 .UseSnakeCaseNamingConvention());
 
         services.AddScoped<IAuthDatabaseInitializer, AuthDatabaseInitializer>();
+        services.AddScoped<IEmployeeAccessRevoker, EmployeeAccessRevoker>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IAdminService, AdminService>();
 

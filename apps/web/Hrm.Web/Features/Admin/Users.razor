@@ -74,6 +74,7 @@
                                 <button class="btn btn-sm btn-outline-secondary me-1" @onclick="() => ToggleLockAsync(user)">@(user.IsLocked ? "Mở khóa" : "Khóa")</button>
                                 <button class="btn btn-sm btn-outline-warning me-1" @onclick="() => ToggleStatusAsync(user)">@(user.IsActive ? "Vô hiệu hóa" : "Kích hoạt")</button>
                                 <button class="btn btn-sm btn-outline-primary" @onclick="() => ResetPasswordAsync(user)">Đặt lại MK</button>
+                                <button class="btn btn-sm btn-outline-danger ms-1" disabled="@(!user.IsActive)" @onclick="() => OffboardAsync(user)">Thôi việc</button>
                             </td>
                         </tr>
                     }
@@ -188,6 +189,16 @@
 
         var response = await AdminApiClient.SetRolesAsync(user.Id, [selectedRole]);
         SetMessage(response?.Success == true ? "Đã cập nhật vai trò." : response?.Error?.Message ?? "Không thể cập nhật vai trò.", response?.Success != true);
+        await LoadAsync();
+    }
+
+    private async Task OffboardAsync(AdminUserDto user)
+    {
+        if (!await ConfirmAsync($"Chuyển {user.FullName} sang RESIGNED, khóa tài khoản và thu hồi toàn bộ phiên đăng nhập?")) return;
+        var response = await AdminApiClient.OffboardEmployeeAsync(user.EmployeeId);
+        SetMessage(response?.Success == true
+            ? "Đã hoàn tất thôi việc và thu hồi quyền truy cập."
+            : response?.Error?.Message ?? "Không thể hoàn tất thôi việc.", response?.Success != true);
         await LoadAsync();
     }
 

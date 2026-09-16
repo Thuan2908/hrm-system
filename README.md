@@ -60,7 +60,7 @@ dotnet restore Hrm.slnx
 dotnet build Hrm.slnx --no-restore
 ```
 
-Store the Supabase PostgreSQL connection string in .NET user-secrets for the API project. Never use `SUPABASE_ANON_KEY` as the database password.
+For this local workspace, the Supabase PostgreSQL connection string and development JWT key are loaded from `apps/api/Hrm.Api/appsettings.Development.Local.json`. This file is ignored by Git. Never use `SUPABASE_ANON_KEY` as the database password.
 
 For the local `.env` workflow, copy `.env.example` to `.env`, fill in local values, and dot-source the loader before running .NET commands:
 
@@ -68,7 +68,7 @@ For the local `.env` workflow, copy `.env.example` to `.env`, fill in local valu
 . .\scripts\load-env.ps1
 ```
 
-The root `.env` is ignored by Git. `.NET` does not load `.env` automatically, so the loader must run in each new PowerShell terminal. User-secrets remain the recommended alternative for the backend database password.
+The root `.env` is ignored by Git. `.NET` does not load `.env` automatically, so the loader must run in each new PowerShell terminal. User-secrets remain an optional alternative for another developer or machine.
 
 ```powershell
 dotnet user-secrets init --project apps/api/Hrm.Api/Hrm.Api.csproj
@@ -88,14 +88,10 @@ dotnet run --project apps/web/Hrm.Web/Hrm.Web.csproj --launch-profile https
 - Readiness (includes PostgreSQL): `https://localhost:7060/health/ready`
 - OpenAPI JSON (Development): `https://localhost:7060/openapi/v1.json`
 
-Apply the committed migration only after configuring the backend connection string:
-
-```powershell
-dotnet tool run dotnet-ef database update --project apps/api/Modules/Auth/Hrm.Modules.Auth.csproj --startup-project apps/api/Hrm.Api/Hrm.Api.csproj --context AuthDbContext
-```
+In Development, API startup uses non-destructive `CREATE TABLE IF NOT EXISTS` initialization for the Milestone 2 support tables (`refresh_tokens`, `user_security_states`, `user_account_metadata`, `audit_logs`). Do not run the removed ASP.NET Identity migration against the existing Supabase legacy schema.
 
 Run the automated checks using the .NET 10 Microsoft Testing Platform syntax:
 
 ```powershell
-dotnet test --solution Hrm.slnx
+.\scripts\test-all.ps1
 ```

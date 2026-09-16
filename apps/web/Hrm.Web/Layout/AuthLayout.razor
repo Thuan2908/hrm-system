@@ -1,7 +1,24 @@
 @inherits LayoutComponentBase
 
-<main class="container py-5">
-    <div class="mx-auto" style="max-width: 30rem">
-        @Body
-    </div>
+<main class="auth-shell">
+    <section class="auth-brand-panel">
+        <a class="auth-brand" href="/">
+            <span class="auth-brand-mark">SR</span>
+            <span>Saigon Retail</span>
+        </a>
+        <div class="auth-brand-copy">
+            <span class="eyebrow">RETAIL OPERATIONS PLATFORM</span>
+            <h1>Điều hành doanh nghiệp trên một hệ thống duy nhất.</h1>
+            <p>Nhân sự, phân quyền, kho vận, mua hàng và bán hàng — an toàn, nhất quán và dễ kiểm soát.</p>
+        </div>
+        <div class="auth-feature-list">
+            <span>✓ Phân quyền theo vai trò</span>
+            <span>✓ Dữ liệu PostgreSQL trên Supabase</span>
+            <span>✓ Nhật ký thao tác minh bạch</span>
+        </div>
+    </section>
+    <section class="auth-form-panel">
+        <div class="auth-form-wrap">@Body</div>
+        <p class="auth-footer">© 2026 Saigon Retail Management System</p>
+    </section>
 </main>

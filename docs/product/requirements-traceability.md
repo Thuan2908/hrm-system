@@ -18,3 +18,9 @@
 | Warehouse & Inventory | warehouses/inventory | INV-001..INV-010 |
 | Procurement | procurement | PUR-001..PUR-006 |
 | Sales | sales | SAL-001..SAL-008 |
+
+## Milestone 2 implementation status
+
+- `SEC-001..SEC-008`: implementation complete; UAT checklist tại `docs/milestone-2-uat.md`.
+- `ADM-001..ADM-006`: implementation complete, gồm filter Department/Role/Status, sorting, lifecycle và RBAC UI.
+- Flow quên mật khẩu được loại khỏi phạm vi; Admin reset password vẫn được hỗ trợ.
