@@ -19,5 +19,6 @@ builder.Services.AddScoped<AuthenticationStateProvider>(provider =>
     provider.GetRequiredService<AppAuthenticationStateProvider>());
 builder.Services.AddScoped<IAuthApiClient, AuthApiClient>();
 builder.Services.AddScoped<AdminApiClient>();
+builder.Services.AddScoped<IAttendanceApiClient, AttendanceApiClient>();
 
 await builder.Build().RunAsync();

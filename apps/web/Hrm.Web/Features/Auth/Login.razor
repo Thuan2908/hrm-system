@@ -2,6 +2,7 @@
 @layout AuthLayout
 @using System.ComponentModel.DataAnnotations
 @inject IAuthApiClient AuthApiClient
+@inject BrowserSessionStore SessionStore
 @inject NavigationManager Navigation
 
 <PageTitle>Đăng nhập</PageTitle>
@@ -62,7 +63,13 @@
                 return;
             }
 
-            Navigation.NavigateTo(string.IsNullOrWhiteSpace(ReturnUrl) ? "admin/dashboard" : ReturnUrl);
+            var session = await SessionStore.GetAsync();
+            var isAdmin = session?.User.Roles.Any(r => r.Equals("ADMIN", StringComparison.OrdinalIgnoreCase)) == true;
+            var target = !string.IsNullOrWhiteSpace(ReturnUrl)
+                ? ReturnUrl
+                : (isAdmin ? "admin/dashboard" : "attendance");
+
+            Navigation.NavigateTo(target);
         }
         catch (HttpRequestException)
         {

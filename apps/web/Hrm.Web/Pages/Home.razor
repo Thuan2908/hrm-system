@@ -1,4 +1,4 @@
-﻿@page "/"
+@page "/"
 
 @attribute [Authorize]
 
@@ -7,6 +7,19 @@
 <h1>Trung tâm điều hành</h1>
 
 <p class="lead">Nền tảng quản lý nhân sự, kho, mua hàng và bán hàng trên cùng một hệ thống.</p>
+
+<div class="card border-0 shadow-sm p-4 rounded-4 mb-4" style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-left: 5px solid #10b981 !important;">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+        <div>
+            <span class="badge bg-success mb-2 px-3 py-1">NHÂN VIÊN</span>
+            <h3 class="h5 fw-bold text-dark mb-1">Chấm công hàng ngày (Check-in / Check-out)</h3>
+            <p class="text-secondary mb-0">Điểm danh vào ca và tan ca làm việc theo thời gian thực.</p>
+        </div>
+        <a href="attendance" class="btn btn-success px-4 py-2 fw-semibold rounded-pill shadow-sm text-white">
+            Vào màn hình Chấm công &rarr;
+        </a>
+    </div>
+</div>
 
 <div class="row g-3 mt-2">
     @foreach (var area in Areas)

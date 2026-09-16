@@ -1,0 +1,394 @@
+@page "/attendance"
+@page "/dashboard"
+@layout EmployeeLayout
+@attribute [Authorize]
+@inject IAttendanceApiClient AttendanceApiClient
+@implements IDisposable
+
+<PageTitle>Điểm danh &amp; Chấm công - Saigon Retail</PageTitle>
+
+<div class="container-fluid px-0">
+    <!-- Header Hero Banner -->
+    <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #0b1528 0%, #1e3a8a 100%); color: white; border-radius: 16px;">
+        <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <div>
+                <span class="badge bg-emerald-500 text-white mb-2 px-3 py-1" style="background-color: #059669; font-size: 0.85rem; border-radius: 20px;">
+                    ● HỆ THỐNG ĐIỂM DANH THỜI GIAN THỰC
+                </span>
+                <h1 class="h3 fw-bold mb-1 text-white">Chấm công hàng ngày</h1>
+                <p class="mb-0 text-white-50">Ghi nhận giờ vào và giờ ra ca làm việc chính xác và minh bạch.</p>
+            </div>
+            <div class="text-md-end bg-black bg-opacity-25 p-3 px-4 rounded-4 border border-white border-opacity-10">
+                <div class="text-uppercase small text-white-50" style="letter-spacing: 1px;">@currentDateStr</div>
+                <div class="display-6 fw-bold text-white font-monospace">@currentTimeStr</div>
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm d-flex align-items-center gap-2 mb-4" role="alert" style="border-radius: 12px; background-color: #ecfdf5; color: #065f46;">
+            <span style="font-size: 1.25rem;">✓</span>
+            <div>@successMessage</div>
+            <button type="button" class="btn-close ms-auto" @onclick="() => successMessage = null"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm d-flex align-items-center gap-2 mb-4" role="alert" style="border-radius: 12px;">
+            <span style="font-size: 1.25rem;">⚠</span>
+            <div>@errorMessage</div>
+            <button type="button" class="btn-close ms-auto" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    <!-- Main Attendance Action Card -->
+    <div class="row g-4 mb-4">
+        <div class="col-12 col-lg-7">
+            <div class="card border-0 shadow-sm h-100" style="border-radius: 16px;">
+                <div class="card-header bg-white border-bottom border-light py-3 px-4 d-flex justify-content-between align-items-center">
+                    <span class="fw-bold text-dark">TRẠNG THÁI HÔM NAY</span>
+                    @if (isLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm text-primary" role="status"></span>
+                    }
+                    else if (todayStatus is not null)
+                    {
+                        @if (!todayStatus.HasCheckedIn)
+                        {
+                            <span class="badge bg-secondary-subtle text-secondary px-3 py-2 rounded-pill fw-semibold">
+                                Chưa vào ca
+                            </span>
+                        }
+                        else if (todayStatus.HasCheckedIn && !todayStatus.HasCheckedOut)
+                        {
+                            <span class="badge bg-success-subtle text-success border border-success px-3 py-2 rounded-pill fw-semibold animate-pulse">
+                                ● Đang trong ca làm việc
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-primary-subtle text-primary border border-primary px-3 py-2 rounded-pill fw-semibold">
+                                ✓ Đã hoàn thành ca
+                            </span>
+                        }
+                    }
+                </div>
+                <div class="card-body p-4 text-center">
+                    @if (isLoading && todayStatus is null)
+                    {
+                        <div class="py-5 text-center text-muted">
+                            <div class="spinner-border text-primary mb-3" role="status"></div>
+                            <p>Đang tải trạng thái chấm công...</p>
+                        </div>
+                    }
+                    else if (todayStatus is not null)
+                    {
+                        <!-- Dynamic Button Action Area -->
+                        <div class="my-3">
+                            @if (!todayStatus.HasCheckedIn)
+                            {
+                                <!-- CHƯA CHECK-IN: HIỆN NÚT CHECK-IN (NÚT CHECK-OUT ẨN) -->
+                                <div class="mb-3">
+                                    <button class="btn btn-lg px-5 py-3 text-white fw-bold shadow"
+                                            style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 50px; font-size: 1.2rem; min-width: 280px; transition: transform 0.2s;"
+                                            disabled="@isSubmitting"
+                                            @onclick="DoCheckInAsync">
+                                        @if (isSubmitting)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-2"></span>
+                                            <span>Đang xử lý...</span>
+                                        }
+                                        else
+                                        {
+                                            <span>🟢 ĐIỂM DANH VÀO CA (CHECK-IN)</span>
+                                        }
+                                    </button>
+                                </div>
+                                <p class="text-muted small">Bấm nút trên để ghi nhận thời gian bắt đầu ca làm việc hôm nay.</p>
+                            }
+                            else if (todayStatus.HasCheckedIn && !todayStatus.HasCheckedOut)
+                            {
+                                <!-- ĐÃ CHECK-IN: ẨN NÚT CHECK-IN, HIỆN NÚT CHECK-OUT -->
+                                <div class="mb-3">
+                                    <button class="btn btn-lg px-5 py-3 text-white fw-bold shadow"
+                                            style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border-radius: 50px; font-size: 1.2rem; min-width: 280px; transition: transform 0.2s;"
+                                            disabled="@isSubmitting"
+                                            @onclick="DoCheckOutAsync">
+                                        @if (isSubmitting)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-2"></span>
+                                            <span>Đang xử lý...</span>
+                                        }
+                                        else
+                                        {
+                                            <span>🔴 ĐIỂM DANH TAN CA (CHECK-OUT)</span>
+                                        }
+                                    </button>
+                                </div>
+                                <p class="text-muted small">
+                                    Bạn đã vào ca lúc <strong class="text-success">@FormatTime(todayStatus.CheckInTime)</strong>. Bấm nút trên khi kết thúc ca làm việc.
+                                </p>
+                            }
+                            else
+                            {
+                                <!-- ĐÃ CHECK-OUT: ẨN CẢ 2 NÚT, HIỆN THÔNG BÁO HOÀN THÀNH -->
+                                <div class="p-4 rounded-4 bg-light border border-success border-opacity-25 d-inline-block text-center mb-2" style="min-width: 320px;">
+                                    <div class="text-success mb-2" style="font-size: 2.5rem;">🎉</div>
+                                    <h5 class="fw-bold text-dark mb-1">Ca làm việc hôm nay đã hoàn thành!</h5>
+                                    <p class="text-muted mb-0 small">Cảm ơn bạn đã nỗ lực làm việc. Hẹn gặp lại bạn vào ca tiếp theo!</p>
+                                </div>
+                            }
+                        </div>
+
+                        <!-- Notes input -->
+                        @if (!todayStatus.HasCheckedIn || (!todayStatus.HasCheckedOut && todayStatus.HasCheckedIn))
+                        {
+                            <div class="row justify-content-center mt-3">
+                                <div class="col-12 col-md-8">
+                                    <div class="input-group input-group-sm">
+                                        <span class="input-group-text bg-light border-end-0">Ghi chú</span>
+                                        <input type="text" class="form-control" placeholder="Ghi chú ca làm (tùy chọn)..." @bind="inputNotes" />
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Today Summary Card -->
+        <div class="col-12 col-lg-5">
+            <div class="card border-0 shadow-sm h-100" style="border-radius: 16px;">
+                <div class="card-header bg-white border-bottom border-light py-3 px-4">
+                    <span class="fw-bold text-dark">CHI TIẾT HÔM NAY</span>
+                </div>
+                <div class="card-body p-4 d-flex flex-column justify-content-around gap-3">
+                    <div class="d-flex align-items-center justify-content-between p-3 rounded-3 bg-light">
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="p-2 rounded-circle bg-success text-white">▶</span>
+                            <div>
+                                <small class="text-muted d-block">GIỜ VÀO (CHECK-IN)</small>
+                                <strong class="fs-5 text-dark">@(todayStatus?.CheckInTime is not null ? FormatTime(todayStatus.CheckInTime) : "--:--:--")</strong>
+                            </div>
+                        </div>
+                        @if (todayStatus?.CheckInTime is not null)
+                        {
+                            <span class="badge bg-success-subtle text-success">Đã ghi nhận</span>
+                        }
+                    </div>
+
+                    <div class="d-flex align-items-center justify-content-between p-3 rounded-3 bg-light">
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="p-2 rounded-circle bg-danger text-white">⏹</span>
+                            <div>
+                                <small class="text-muted d-block">GIỜ RA (CHECK-OUT)</small>
+                                <strong class="fs-5 text-dark">@(todayStatus?.CheckOutTime is not null ? FormatTime(todayStatus.CheckOutTime) : "--:--:--")</strong>
+                            </div>
+                        </div>
+                        @if (todayStatus?.CheckOutTime is not null)
+                        {
+                            <span class="badge bg-primary-subtle text-primary">Đã ghi nhận</span>
+                        }
+                    </div>
+
+                    <div class="d-flex align-items-center justify-content-between p-3 rounded-3 bg-light">
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="p-2 rounded-circle bg-primary text-white">⏱</span>
+                            <div>
+                                <small class="text-muted d-block">TỔNG THỜI GIAN LÀM</small>
+                                <strong class="fs-5 text-primary">@(todayStatus?.ActualHours is not null ? $"{todayStatus.ActualHours:F2} giờ" : "--")</strong>
+                            </div>
+                        </div>
+                        @if (todayStatus?.ActualHours is not null)
+                        {
+                            <span class="badge bg-info-subtle text-info">Tính chuẩn</span>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Attendance History Table -->
+    <div class="card border-0 shadow-sm" style="border-radius: 16px;">
+        <div class="card-header bg-white border-bottom border-light py-3 px-4 d-flex justify-content-between align-items-center">
+            <span class="fw-bold text-dark">LỊCH SỬ CHẤM CÔNG GẦN ĐÂY (14 NGÀY)</span>
+            <button class="btn btn-sm btn-outline-secondary rounded-pill px-3" @onclick="LoadDataAsync" disabled="@isLoading">
+                ↻ Làm mới
+            </button>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light text-secondary small">
+                        <tr>
+                            <th class="ps-4">NGÀY LÀM VIỆC</th>
+                            <th>GIỜ VÀO</th>
+                            <th>GIỜ RA</th>
+                            <th>SỐ GIỜ THỰC TẾ</th>
+                            <th>TRẠNG THÁI</th>
+                            <th class="pe-4">GHI CHÚ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (historyRecords.Count == 0 && !isLoading)
+                        {
+                            <tr>
+                                <td colspan="6" class="text-center py-4 text-muted">
+                                    Chưa có dữ liệu lịch sử chấm công trong 14 ngày qua.
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var rec in historyRecords)
+                            {
+                                <tr>
+                                    <td class="ps-4 fw-semibold text-dark">
+                                        @rec.WorkDate.ToString("dd/MM/yyyy")
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-success-subtle text-success font-monospace">@FormatTime(rec.CheckInTime)</span>
+                                    </td>
+                                    <td>
+                                        @if (rec.CheckOutTime is not null)
+                                        {
+                                            <span class="badge bg-danger-subtle text-danger font-monospace">@FormatTime(rec.CheckOutTime)</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">--</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <strong>@(rec.ActualHours.HasValue ? $"{rec.ActualHours.Value:F2}h" : "--")</strong>
+                                    </td>
+                                    <td>
+                                        @if (rec.CheckOutTime is not null)
+                                        {
+                                            <span class="badge bg-success text-white rounded-pill px-2 py-1">Hoàn thành</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-warning text-dark rounded-pill px-2 py-1">Đang làm việc</span>
+                                        }
+                                    </td>
+                                    <td class="pe-4 text-muted small">
+                                        @(string.IsNullOrWhiteSpace(rec.Notes) ? "-" : rec.Notes)
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private AttendanceTodayResponse? todayStatus;
+    private IReadOnlyList<AttendanceRecordDto> historyRecords = [];
+    private bool isLoading = true;
+    private bool isSubmitting = false;
+    private string? successMessage;
+    private string? errorMessage;
+    private string? inputNotes;
+
+    private System.Threading.Timer? clockTimer;
+    private string currentDateStr = DateTime.Now.ToString("dddd, dd/MM/yyyy", new System.Globalization.CultureInfo("vi-VN"));
+    private string currentTimeStr = DateTime.Now.ToString("HH:mm:ss");
+
+    protected override async Task OnInitializedAsync()
+    {
+        clockTimer = new System.Threading.Timer(_ =>
+        {
+            var now = DateTime.Now;
+            currentDateStr = now.ToString("dddd, dd/MM/yyyy", new System.Globalization.CultureInfo("vi-VN"));
+            currentTimeStr = now.ToString("HH:mm:ss");
+            InvokeAsync(StateHasChanged);
+        }, null, 1000, 1000);
+
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+        try
+        {
+            todayStatus = await AttendanceApiClient.GetTodayStatusAsync();
+            historyRecords = await AttendanceApiClient.GetHistoryAsync(14);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Không thể tải dữ liệu chấm công: " + ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task DoCheckInAsync()
+    {
+        isSubmitting = true;
+        errorMessage = null;
+        successMessage = null;
+        try
+        {
+            var res = await AttendanceApiClient.CheckInAsync(inputNotes);
+            inputNotes = null;
+            successMessage = res?.Message ?? "Điểm danh vào ca thành công!";
+            // Tải lại trạng thái để nút Check-in biến mất và nút Check-out hiện lên ngay lập tức
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private async Task DoCheckOutAsync()
+    {
+        isSubmitting = true;
+        errorMessage = null;
+        successMessage = null;
+        try
+        {
+            var res = await AttendanceApiClient.CheckOutAsync(inputNotes);
+            inputNotes = null;
+            successMessage = res?.Message ?? "Điểm danh ra ca thành công!";
+            // Tải lại trạng thái để nút Check-out biến mất và hiển thị tổng kết ca hoàn thành
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private static string FormatTime(DateTimeOffset? dto)
+    {
+        if (dto is null) return "--:--:--";
+        var local = dto.Value.ToLocalTime();
+        return local.ToString("HH:mm:ss");
+    }
+
+    public void Dispose()
+    {
+        clockTimer?.Dispose();
+    }
+}
