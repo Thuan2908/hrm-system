@@ -5,6 +5,7 @@ using Hrm.Contracts;
 using Hrm.Modules.Auth;
 using Hrm.Modules.Auth.Application;
 using Hrm.Modules.Auth.Infrastructure.Persistence;
+using Hrm.Modules.Attendance;
 using Hrm.Modules.Employees;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -70,6 +71,7 @@ builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
 builder.Services.AddAuthModule(builder.Configuration);
 builder.Services.AddEmployeesModule(builder.Configuration);
+builder.Services.AddAttendanceModule(builder.Configuration);
 
 var healthChecks = builder.Services
     .AddHealthChecks()
@@ -119,11 +121,20 @@ builder.Services
 
 var app = builder.Build();
 
-if (app.Configuration.GetValue<bool>("Database:InitializeAuthSupportSchema"))
+if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("Database:InitializeAuthSupportSchema"))
 {
     await using var scope = app.Services.CreateAsyncScope();
-    await scope.ServiceProvider.GetRequiredService<IAuthDatabaseInitializer>()
-        .InitializeAsync(CancellationToken.None);
+    var authInitializer = scope.ServiceProvider.GetService<IAuthDatabaseInitializer>();
+    if (authInitializer is not null)
+    {
+        await authInitializer.InitializeAsync(CancellationToken.None);
+    }
+
+    var attendanceInitializer = scope.ServiceProvider.GetService<Hrm.Modules.Attendance.Infrastructure.Persistence.IAttendanceDatabaseInitializer>();
+    if (attendanceInitializer is not null)
+    {
+        await attendanceInitializer.InitializeAsync(CancellationToken.None);
+    }
 }
 
 app.UseExceptionHandler();

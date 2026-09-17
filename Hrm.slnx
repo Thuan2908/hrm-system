@@ -1,4 +1,5 @@
 <Solution>
+  <Project Path="Hrm.Runner.csproj" />
   <Folder Name="/apps/" />
   <Folder Name="/apps/api/">
     <Project Path="apps/api/Hrm.Api/Hrm.Api.csproj" />

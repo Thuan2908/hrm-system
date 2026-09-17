@@ -75,7 +75,15 @@ dotnet user-secrets init --project apps/api/Hrm.Api/Hrm.Api.csproj
 dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=<host>;Port=5432;Database=postgres;Username=<user>;Password=<password>;SSL Mode=Require;Trust Server Certificate=true" --project apps/api/Hrm.Api/Hrm.Api.csproj
 ```
 
-Run API and frontend in two terminals:
+### Quick run (Single command)
+
+Run both API and Frontend concurrently in one terminal from the workspace root:
+
+```powershell
+dotnet run
+```
+
+### Or run separately in two terminals:
 
 ```powershell
 dotnet run --project apps/api/Hrm.Api/Hrm.Api.csproj --launch-profile https

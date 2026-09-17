@@ -1,2 +1,57 @@
 @inherits LayoutComponentBase
-<LayoutView Layout="@typeof(MainLayout)">@Body</LayoutView>
+@inject IAuthApiClient AuthApiClient
+@inject NavigationManager Navigation
+
+<div class="admin-shell">
+    <aside class="admin-sidebar" style="background: linear-gradient(180deg, #0b1528 0%, #11203d 100%);">
+        <a class="admin-brand" href="attendance">
+            <span class="admin-brand-mark" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">SR</span>
+            <span><strong>Saigon Retail</strong><small style="color: #34d399; font-weight: 600;">EMPLOYEE PORTAL</small></span>
+        </a>
+        <p class="admin-nav-label">CỔNG NHÂN VIÊN</p>
+        <nav class="admin-nav">
+            <NavLink class="admin-nav-link" href="attendance" Match="NavLinkMatch.All">
+                <span>⏱</span>Chấm công (Check-in/out)
+            </NavLink>
+            <NavLink class="admin-nav-link" href="" Match="NavLinkMatch.All">
+                <span>⌂</span>Trang chủ
+            </NavLink>
+        </nav>
+        <button class="admin-logout" @onclick="LogoutAsync">
+            <span>↪</span>Đăng xuất
+        </button>
+    </aside>
+    <main class="admin-main">
+        <header class="admin-topbar">
+            <div>
+                <span class="admin-topbar-kicker" style="color: #059669;">SAIGON RETAIL HRM</span>
+                <strong>Cổng thông tin &amp; Chấm công Nhân viên</strong>
+            </div>
+            <AuthorizeView>
+                <Authorized Context="authContext">
+                    <div class="admin-user">
+                        <span class="admin-avatar" style="background: #10b981; color: white;">@GetInitial(authContext.User.FindFirst("full_name")?.Value)</span>
+                        <span>
+                            <strong>@authContext.User.FindFirst("full_name")?.Value</strong>
+                            <small class="badge bg-success-subtle text-success border border-success-subtle">Nhân viên</small>
+                        </span>
+                    </div>
+                </Authorized>
+            </AuthorizeView>
+        </header>
+        <article class="admin-content">
+            @Body
+        </article>
+    </main>
+</div>
+
+@code {
+    private async Task LogoutAsync()
+    {
+        await AuthApiClient.LogoutAsync();
+        Navigation.NavigateTo("login", true);
+    }
+
+    private static string GetInitial(string? fullName) =>
+        string.IsNullOrWhiteSpace(fullName) ? "E" : fullName.Trim()[0].ToString().ToUpperInvariant();
+}
