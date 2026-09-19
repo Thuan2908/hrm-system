@@ -7,6 +7,8 @@ using Hrm.Modules.Auth.Application;
 using Hrm.Modules.Auth.Infrastructure.Persistence;
 using Hrm.Modules.Attendance;
 using Hrm.Modules.Employees;
+using Hrm.Modules.Leave;
+using Hrm.Modules.Payroll;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
@@ -72,6 +74,8 @@ builder.Services.AddOpenApi();
 builder.Services.AddAuthModule(builder.Configuration);
 builder.Services.AddEmployeesModule(builder.Configuration);
 builder.Services.AddAttendanceModule(builder.Configuration);
+builder.Services.AddLeaveModule(builder.Configuration);
+builder.Services.AddPayrollModule(builder.Configuration);
 
 var healthChecks = builder.Services
     .AddHealthChecks()
@@ -134,6 +138,18 @@ if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("Databas
     if (attendanceInitializer is not null)
     {
         await attendanceInitializer.InitializeAsync(CancellationToken.None);
+    }
+
+    var leaveInitializer = scope.ServiceProvider.GetService<Hrm.Modules.Leave.Infrastructure.Persistence.ILeaveDatabaseInitializer>();
+    if (leaveInitializer is not null)
+    {
+        await leaveInitializer.InitializeAsync(CancellationToken.None);
+    }
+
+    var payrollInitializer = scope.ServiceProvider.GetService<Hrm.Modules.Payroll.Infrastructure.Persistence.IPayrollDatabaseInitializer>();
+    if (payrollInitializer is not null)
+    {
+        await payrollInitializer.InitializeAsync(CancellationToken.None);
     }
 }
 

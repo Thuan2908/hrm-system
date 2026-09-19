@@ -1,68 +1,34 @@
 @page "/"
+@inject NavigationManager Navigation
+@inject BrowserSessionStore SessionStore
 
-@attribute [Authorize]
+<PageTitle>Saigon Retail HRM</PageTitle>
 
-<PageTitle>Saigon Retail</PageTitle>
-
-<h1>Trung tâm điều hành</h1>
-
-<p class="lead">Nền tảng quản lý nhân sự, kho, mua hàng và bán hàng trên cùng một hệ thống.</p>
-
-<div class="card border-0 shadow-sm p-4 rounded-4 mb-4" style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-left: 5px solid #10b981 !important;">
-    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-        <div>
-            <span class="badge bg-success mb-2 px-3 py-1">NHÂN VIÊN</span>
-            <h3 class="h5 fw-bold text-dark mb-1">Chấm công hàng ngày (Check-in / Check-out)</h3>
-            <p class="text-secondary mb-0">Điểm danh vào ca và tan ca làm việc theo thời gian thực.</p>
-        </div>
-        <a href="attendance" class="btn btn-success px-4 py-2 fw-semibold rounded-pill shadow-sm text-white">
-            Vào màn hình Chấm công &rarr;
-        </a>
+<div class="d-flex align-items-center justify-content-center" style="min-height: 50vh;">
+    <div class="spinner-border text-success" role="status">
+        <span class="visually-hidden">Đang chuyển hướng...</span>
     </div>
 </div>
 
-<div class="row g-3 mt-2">
-    @foreach (var area in Areas)
-    {
-        <div class="col-12 col-md-6 col-xl-4">
-            <section class="card h-100 border-0 shadow-sm">
-                <div class="card-body">
-                    <h2 class="h5">@area.Name</h2>
-                    <p class="text-secondary mb-0">@area.Description</p>
-                </div>
-            </section>
-        </div>
-    }
-</div>
-
 @code {
-    [Inject] private BrowserSessionStore SessionStore { get; set; } = default!;
-    [Inject] private NavigationManager Navigation { get; set; } = default!;
-
     protected override async Task OnInitializedAsync()
     {
         var session = await SessionStore.GetAsync();
-        if (session is not null)
+        if (session is null)
         {
-            var isOnlyEmployee = session.User.Roles.Contains("EMPLOYEE", StringComparer.OrdinalIgnoreCase) 
-                                 && !session.User.Roles.Contains("ADMIN", StringComparer.OrdinalIgnoreCase);
-            if (isOnlyEmployee)
-            {
-                Navigation.NavigateTo("attendance", replace: true);
-                return;
-            }
+            Navigation.NavigateTo("employee-login", true);
+            return;
+        }
+
+        var isAdmin = session.User.Roles.Any(r => r.Equals("ADMIN", StringComparison.OrdinalIgnoreCase));
+        if (isAdmin)
+        {
+            Navigation.NavigateTo("admin/dashboard", true);
+        }
+        else
+        {
+            Navigation.NavigateTo("attendance", true);
         }
     }
-
-    private static readonly AreaSummary[] Areas =
-    [
-        new("Nhân sự", "Hồ sơ, chấm công, nghỉ phép và bảng lương."),
-        new("Kho vận", "Sản phẩm, tồn kho, điều chuyển và kiểm kê."),
-        new("Mua hàng", "Nhà cung cấp, đơn mua và nhận hàng."),
-        new("Bán hàng", "Đơn bán, thanh toán, trả hàng và báo cáo."),
-        new("Quản trị", "Người dùng, vai trò, quyền và nhật ký kiểm toán."),
-        new("Báo cáo", "Chỉ số vận hành xuyên suốt các phân hệ.")
-    ];
-
-    private sealed record AreaSummary(string Name, string Description);
 }
+

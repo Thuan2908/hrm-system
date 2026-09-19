@@ -1,0 +1,126 @@
+@page "/employee/login"
+@page "/employee-login"
+@layout EmployeeAuthLayout
+@using System.ComponentModel.DataAnnotations
+@inject IAuthApiClient AuthApiClient
+@inject BrowserSessionStore SessionStore
+@inject NavigationManager Navigation
+
+<PageTitle>Đăng nhập - Cổng Nhân viên Saigon Retail</PageTitle>
+
+<section class="login-card">
+    <div class="login-card-body">
+        <div class="login-mobile-brand">
+            <span class="auth-brand-mark" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">SR</span>
+            <strong>Saigon Retail HRM</strong>
+        </div>
+        <span class="eyebrow" style="color: #059669; font-weight: 700;">CỔNG NHÂN VIÊN</span>
+        <h1 class="fw-bold">Đăng nhập</h1>
+        <p class="login-subtitle">Nhập tài khoản nhân sự để vào ca làm việc và sử dụng các tiện ích nội bộ.</p>
+
+        @if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <div class="alert alert-danger border-0 shadow-sm" role="alert" style="border-radius: 10px;">
+                <div>@errorMessage</div>
+                @if (showAdminRedirect)
+                {
+                    <div class="mt-2">
+                        <a href="login" class="btn btn-sm btn-outline-danger fw-semibold">
+                            👉 Chuyển sang Cổng Đăng nhập Quản trị viên
+                        </a>
+                    </div>
+                }
+            </div>
+        }
+
+        <EditForm Model="model" OnValidSubmit="LoginAsync" FormName="employee-login">
+            <DataAnnotationsValidator />
+            <div class="mb-3 login-field">
+                <label class="form-label fw-semibold text-secondary" for="username">Tên đăng nhập / Mã nhân viên</label>
+                <InputText id="username" class="form-control form-control-lg" @bind-Value="model.UserName" autocomplete="username" placeholder="Ví dụ: nv_saigon" autofocus />
+                <ValidationMessage For="@(() => model.UserName)" />
+            </div>
+            <div class="mb-4 login-field">
+                <label class="form-label fw-semibold text-secondary" for="password">Mật khẩu</label>
+                <InputText id="password" type="password" class="form-control form-control-lg" @bind-Value="model.Password" autocomplete="current-password" placeholder="Nhập mật khẩu" />
+                <ValidationMessage For="@(() => model.Password)" />
+            </div>
+            <button class="btn btn-lg w-100 login-submit shadow-sm fw-bold text-white mb-3"
+                    style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none; border-radius: 12px;"
+                    type="submit" disabled="@isSubmitting">
+                @(isSubmitting ? "Đang xác thực..." : "Đăng nhập Cổng nhân viên")
+            </button>
+        </EditForm>
+
+        <div class="text-center mb-3">
+            <a href="login" class="text-decoration-none small text-secondary">
+                ← Dành cho Quản trị viên (Admin Login)
+            </a>
+        </div>
+
+        <div class="login-security-note">
+            <span class="security-dot" style="background-color: #10b981;"></span>
+            Phiên đăng nhập được bảo vệ an toàn theo tiêu chuẩn nội bộ.
+        </div>
+    </div>
+</section>
+
+@code {
+    private readonly LoginModel model = new();
+    private string? errorMessage;
+    private bool showAdminRedirect;
+    private bool isSubmitting;
+
+    [SupplyParameterFromQuery]
+    public string? ReturnUrl { get; set; }
+
+    private async Task LoginAsync()
+    {
+        isSubmitting = true;
+        errorMessage = null;
+        showAdminRedirect = false;
+        try
+        {
+            var error = await AuthApiClient.LoginAsync(new LoginRequest(model.UserName, model.Password));
+            if (error is not null)
+            {
+                errorMessage = error.Message;
+                return;
+            }
+
+            var session = await SessionStore.GetAsync();
+            var isAdmin = session?.User.Roles.Any(r => r.Equals("ADMIN", StringComparison.OrdinalIgnoreCase)) == true;
+            if (isAdmin)
+            {
+                // CHẶN TÀI KHOẢN ADMIN: hủy session và thông báo lỗi
+                await AuthApiClient.LogoutAsync();
+                errorMessage = "Tài khoản Quản trị viên (Admin) không được phép đăng nhập tại Cổng Nhân viên. Vui lòng đăng nhập tại Cổng Quản trị.";
+                showAdminRedirect = true;
+                return;
+            }
+
+            string target = !string.IsNullOrWhiteSpace(ReturnUrl) && !ReturnUrl.StartsWith("admin", StringComparison.OrdinalIgnoreCase) && !ReturnUrl.Contains("login")
+                ? ReturnUrl
+                : "attendance";
+
+            Navigation.NavigateTo(target, forceLoad: true);
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Không thể kết nối API. Hãy kiểm tra backend đang chạy.";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private sealed class LoginModel
+    {
+        [Required(ErrorMessage = "Vui lòng nhập tên đăng nhập hoặc mã nhân viên.")]
+        public string UserName { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Vui lòng nhập mật khẩu.")]
+        public string Password { get; set; } = string.Empty;
+    }
+}

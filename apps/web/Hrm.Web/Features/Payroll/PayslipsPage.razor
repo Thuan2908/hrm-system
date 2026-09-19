@@ -1,0 +1,249 @@
+@page "/payslips"
+@layout EmployeeLayout
+@attribute [Authorize]
+@inject IPayrollApiClient PayrollApiClient
+
+<PageTitle>Phiếu lương của tôi - Saigon Retail</PageTitle>
+
+<div class="container-fluid px-0">
+    <!-- Header Hero Banner -->
+    <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #0b1528 0%, #1e3a8a 100%); color: white; border-radius: 16px;">
+        <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <div>
+                <span class="badge bg-emerald-500 text-white mb-2 px-3 py-1" style="background-color: #059669; font-size: 0.85rem; border-radius: 20px;">
+                    ● MINH BẠCH THU NHẬP
+                </span>
+                <h1 class="h3 fw-bold mb-1 text-white">Phiếu lương của tôi</h1>
+                <p class="mb-0 text-white-50">Tra cứu chi tiết thu nhập, ngày công và các khoản trích nộp bảo hiểm theo từng kỳ lương.</p>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-outline-light rounded-pill px-4 py-2" @onclick="LoadDataAsync" disabled="@isLoading">
+                    ↻ Làm mới
+                </button>
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm d-flex align-items-center gap-2 mb-4" role="alert" style="border-radius: 12px;">
+            <span style="font-size: 1.25rem;">⚠</span>
+            <div>@errorMessage</div>
+            <button type="button" class="btn-close ms-auto" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @if (isLoading && payslips.Count == 0)
+    {
+        <div class="py-5 text-center text-muted">
+            <div class="spinner-border text-primary mb-3" role="status"></div>
+            <p>Đang tải thông tin bảng lương...</p>
+        </div>
+    }
+    else if (payslips.Count == 0)
+    {
+        <div class="card border-0 shadow-sm p-5 text-center text-muted" style="border-radius: 16px;">
+            <div class="display-5 text-secondary mb-3">📄</div>
+            <h5 class="fw-bold text-dark">Chưa có phiếu lương nào</h5>
+            <p class="mb-0">Phiếu lương sẽ được phát hành sau khi phòng Nhân sự &amp; Kế toán hoàn tất chốt bảng công hàng tháng.</p>
+        </div>
+    }
+    else
+    {
+        <!-- Latest Period Highlight Card -->
+        @if (selectedPayslip is not null)
+        {
+            <div class="card border-0 shadow-sm mb-4" style="border-radius: 16px; background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); border-left: 6px solid #10b981 !important;">
+                <div class="card-body p-4">
+                    <div class="row g-4 align-items-center">
+                        <div class="col-12 col-md-4">
+                            <span class="text-uppercase small text-muted fw-bold d-block mb-1">KỲ LƯƠNG ĐANG XEM</span>
+                            <h4 class="fw-bold text-dark mb-1">Tháng @selectedPayslip.MonthPeriod/@selectedPayslip.YearPeriod</h4>
+                            <span class="badge bg-success-subtle text-success border border-success px-3 py-1 rounded-pill">
+                                ✓ Đã quyết toán
+                            </span>
+                        </div>
+                        <div class="col-6 col-md-4 text-md-center">
+                            <span class="text-uppercase small text-muted fw-bold d-block mb-1">NGÀY CÔNG THỰC TẾ</span>
+                            <span class="fs-3 fw-bold text-dark">@selectedPayslip.ActualDays</span>
+                            <small class="text-muted d-block">ngày làm việc ghi nhận</small>
+                        </div>
+                        <div class="col-6 col-md-4 text-md-end">
+                            <span class="text-uppercase small text-muted fw-bold d-block mb-1">THỰC LĨNH (NET)</span>
+                            <span class="fs-2 fw-bold text-success font-monospace">@FormatVnd(selectedPayslip.NetSalary)</span>
+                            <small class="text-muted d-block">Đã thanh toán chuyển khoản</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <div class="row g-4">
+            <!-- Left Column: Period List -->
+            <div class="col-12 col-lg-4">
+                <div class="card border-0 shadow-sm h-100" style="border-radius: 16px;">
+                    <div class="card-header bg-white border-bottom border-light py-3 px-4">
+                        <strong class="text-dark">DANH SÁCH KỲ LƯƠNG</strong>
+                    </div>
+                    <div class="list-group list-group-flush p-2">
+                        @foreach (var item in payslips)
+                        {
+                            var isCurrent = selectedPayslip?.Id == item.Id;
+                            <button type="button"
+                                    class="list-group-item list-group-item-action p-3 rounded-3 mb-2 border-0 d-flex justify-content-between align-items-center @(isCurrent ? "bg-primary-subtle text-primary fw-bold" : "")"
+                                    @onclick="() => SelectPayslipAsync(item.Id)">
+                                <div>
+                                    <div class="fw-bold fs-6">Tháng @item.MonthPeriod/@item.YearPeriod</div>
+                                    <div class="small text-muted">@item.ActualDays ngày công</div>
+                                </div>
+                                <div class="text-end">
+                                    <div class="fw-bold text-success font-monospace">@FormatVnd(item.NetSalary)</div>
+                                    <small class="text-muted">Chi tiết →</small>
+                                </div>
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Payslip Detailed Breakdown -->
+            <div class="col-12 col-lg-8">
+                @if (isLoadingDetail)
+                {
+                    <div class="card border-0 shadow-sm p-5 text-center text-muted" style="border-radius: 16px;">
+                        <div class="spinner-border text-primary mb-3" role="status"></div>
+                        <p>Đang tải chi tiết phiếu lương...</p>
+                    </div>
+                }
+                else if (selectedPayslip is not null)
+                {
+                    <div class="card border-0 shadow-sm" style="border-radius: 16px;">
+                        <div class="card-header bg-white border-bottom border-light py-3 px-4 d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong class="text-dark fs-5">BẢNG KÊ CHI TIẾT THU NHẬP</strong>
+                                <small class="text-muted d-block">Kỳ lương: Tháng @selectedPayslip.MonthPeriod năm @selectedPayslip.YearPeriod</small>
+                            </div>
+                            <span class="badge bg-light text-secondary border px-3 py-2 rounded-pill font-monospace">
+                                ID: #@selectedPayslip.Id
+                            </span>
+                        </div>
+                        <div class="card-body p-4">
+                            <!-- Section A: Thu nhập -->
+                            <div class="mb-4">
+                                <h6 class="fw-bold text-primary mb-3 border-bottom pb-2">
+                                    A. CÁC KHOẢN THU NHẬP (GROSS)
+                                </h6>
+                                <table class="table table-sm table-borderless align-middle mb-0">
+                                    <tbody>
+                                        <tr>
+                                            <td class="text-muted">1. Số ngày công thực tế ghi nhận</td>
+                                            <td class="text-end fw-bold text-dark">@selectedPayslip.ActualDays ngày</td>
+                                        </tr>
+                                        <tr class="border-top">
+                                            <td class="fw-bold text-dark fs-6 pt-2">TỔNG THU NHẬP GỘP (GROSS):</td>
+                                            <td class="text-end fw-bold text-primary fs-6 pt-2 font-monospace">
+                                                @FormatVnd(selectedPayslip.GrossSalary)
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Section B: Khấu trừ -->
+                            <div class="mb-4">
+                                <h6 class="fw-bold text-danger mb-3 border-bottom pb-2">
+                                    B. CÁC KHOẢN TRÍCH NỘP &amp; KHẤU TRỪ THEO LUẬT
+                                </h6>
+                                <table class="table table-sm table-borderless align-middle mb-0">
+                                    <tbody>
+                                        <tr>
+                                            <td class="text-muted">1. Bảo hiểm Xã hội, Y tế, Thất nghiệp (BHXH)</td>
+                                            <td class="text-end text-danger"> - @FormatVnd(selectedPayslip.BhxhDeduct)</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-muted">2. Thuế Thu nhập Cá nhân (TNCN)</td>
+                                            <td class="text-end text-danger"> - @FormatVnd(selectedPayslip.TaxDeduct)</td>
+                                        </tr>
+                                        <tr class="border-top">
+                                            <td class="fw-bold text-dark fs-6 pt-2">TỔNG CÁC KHOẢN KHẤU TRỪ:</td>
+                                            <td class="text-end fw-bold text-danger fs-6 pt-2 font-monospace">
+                                                - @FormatVnd(selectedPayslip.BhxhDeduct + selectedPayslip.TaxDeduct)
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Section C: Thực lĩnh Net -->
+                            <div class="p-3 rounded-3 d-flex justify-content-between align-items-center"
+                                 style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border: 1px solid #10b981;">
+                                <div>
+                                    <small class="text-success text-uppercase fw-bold d-block">THỰC LĨNH CHUYỂN KHOẢN (NET)</small>
+                                    <span class="text-muted small">Đã bao gồm phụ cấp và trừ nghĩa vụ bảo hiểm &amp; thuế</span>
+                                </div>
+                                <div class="text-end">
+                                    <span class="fs-2 fw-bold text-success font-monospace">@FormatVnd(selectedPayslip.NetSalary)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private IReadOnlyList<PayslipSummaryDto> payslips = [];
+    private PayslipDetailDto? selectedPayslip;
+    private bool isLoading = true;
+    private bool isLoadingDetail = false;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+        try
+        {
+            payslips = await PayrollApiClient.GetMyPayslipsAsync();
+            if (payslips.Count > 0)
+            {
+                await SelectPayslipAsync(payslips[0].Id);
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Không thể tải danh sách phiếu lương: " + ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task SelectPayslipAsync(long id)
+    {
+        isLoadingDetail = true;
+        try
+        {
+            selectedPayslip = await PayrollApiClient.GetPayslipDetailAsync(id);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Lỗi khi lấy chi tiết phiếu lương: " + ex.Message;
+        }
+        finally
+        {
+            isLoadingDetail = false;
+        }
+    }
+
+    private static string FormatVnd(decimal amount) =>
+        amount.ToString("#,##0", new System.Globalization.CultureInfo("vi-VN")) + " ₫";
+}

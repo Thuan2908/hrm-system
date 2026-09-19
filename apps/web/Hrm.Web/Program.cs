@@ -20,5 +20,7 @@ builder.Services.AddScoped<AuthenticationStateProvider>(provider =>
 builder.Services.AddScoped<IAuthApiClient, AuthApiClient>();
 builder.Services.AddScoped<AdminApiClient>();
 builder.Services.AddScoped<IAttendanceApiClient, AttendanceApiClient>();
+builder.Services.AddScoped<ILeaveApiClient, LeaveApiClient>();
+builder.Services.AddScoped<IPayrollApiClient, PayrollApiClient>();
 
 await builder.Build().RunAsync();

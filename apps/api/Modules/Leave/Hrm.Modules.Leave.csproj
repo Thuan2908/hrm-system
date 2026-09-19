@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -6,4 +6,15 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="EFCore.NamingConventions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../../shared/Hrm.Contracts/Hrm.Contracts.csproj" />
+    <ProjectReference Include="../../../../shared/Hrm.SharedKernel/Hrm.SharedKernel.csproj" />
+    <ProjectReference Include="../Auth/Hrm.Modules.Auth.csproj" />
+  </ItemGroup>
 </Project>
