@@ -22,6 +22,7 @@
         {
             <div class="alert alert-danger border-0 shadow-sm" role="alert" style="border-radius: 10px;">
                 <div>@errorMessage</div>
+
             </div>
         }
 
@@ -44,6 +45,8 @@
             </button>
         </EditForm>
 
+
+
         <div class="login-security-note">
             <span class="security-dot" style="background-color: #10b981;"></span>
             Phiên đăng nhập được bảo vệ an toàn theo tiêu chuẩn nội bộ.
@@ -63,6 +66,7 @@
     {
         isSubmitting = true;
         errorMessage = null;
+
         try
         {
             var error = await AuthApiClient.LoginAsync(new LoginRequest(model.UserName, model.Password));
