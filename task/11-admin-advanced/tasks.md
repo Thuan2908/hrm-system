@@ -1,7 +1,7 @@
 # Epic 11 — Admin Advanced Management
 
 ## ADM-001 — Admin UI isolation
-**Mục tiêu:** Tách hoàn toàn Admin UI khỏi HR và Employee UI.
+**Mục tiêu:** Tách hoàn toàn Admin UI khỏi HR/Warehouse/Sales.
 
 **Acceptance Criteria:**
 - Route `/admin/*` riêng

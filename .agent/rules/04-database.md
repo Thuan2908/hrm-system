@@ -7,7 +7,7 @@
 - Schema change dùng EF Core Migrations.
 - Core table có CreatedAt/UpdatedAt.
 - Dữ liệu lịch sử dùng status/soft delete.
-- Payroll, attendance, leave, audit giữ lịch sử.
+- Payroll, attendance, leave, inventory, sales, audit giữ lịch sử.
 - Cân nhắc index cho search/filter/report.
 - Không dùng PostgreSQL-specific syntax.
 - Không dùng Supabase anon key để EF Core kết nối database.

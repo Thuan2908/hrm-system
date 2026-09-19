@@ -46,6 +46,7 @@
 - `docs/decisions/ADR-008-file-storage.md`
 - `docs/decisions/ADR-009-admin-separation.md`
 - `docs/decisions/ADR-010-payroll-finalization.md`
+- `docs/decisions/ADR-011-retail-domain-expansion.md`
 - `docs/decisions/ADR-012-no-hard-delete-accounts.md`
 - `docs/decisions/ADR-013-blazor-frontend.md`
 - `docs/decisions/ADR-014-dotnet-monorepo-tooling.md`
@@ -76,6 +77,10 @@
 - `task/09-deployment/tasks.md`
 - `task/10-product-handover/tasks.md`
 - `task/11-admin-advanced/tasks.md`
+- `task/12-product-supplier/tasks.md`
+- `task/13-warehouse-inventory/tasks.md`
+- `task/14-procurement/tasks.md`
+- `task/15-sales/tasks.md`
 - `task/README.md`
 - `task/templates/bug-template.md`
 - `task/templates/change-request-template.md`

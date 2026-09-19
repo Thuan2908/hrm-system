@@ -24,7 +24,7 @@
 ## Frontend
 - Razor component không chứa domain business logic.
 - API call qua typed service/client.
-- Layout tách Admin/HR/Employee.
+- Layout tách Admin/HR/Warehouse/Procurement/Sales/Employee.
 - Không truy cập database trực tiếp từ Blazor.
 
 ## Backend

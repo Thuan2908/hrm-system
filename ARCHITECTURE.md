@@ -86,6 +86,12 @@ apps/api/
 │       ├── Attendance/
 │       ├── Leave/
 │       ├── Payroll/
+│       ├── Products/
+│       ├── Suppliers/
+│       ├── Warehouses/
+│       ├── Inventory/
+│       ├── Procurement/
+│       ├── Sales/
 │       ├── Reports/
 │       └── Audit/
 └── tests/

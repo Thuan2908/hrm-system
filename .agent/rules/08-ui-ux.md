@@ -5,9 +5,12 @@
 - Bảng dữ liệu hỗ trợ search/filter khi PRD yêu cầu.
 - Hành động phá hủy/khóa/finalize cần confirmation.
 
-## UI Separation
+## Multi-domain UI Separation
 - `/admin/*`: Admin
-- `/hr/*`: HR Manager / Leader
-- Employee self-service dùng shell riêng (`/dashboard`, `/profile`, `/attendance`, `/leave`, `/payslips`).
+- `/hr/*`: HR Manager
+- `/warehouse/*`: Warehouse
+- `/procurement/*`: Procurement
+- `/sales/*`: Sales
+- Employee self-service dùng shell riêng phù hợp.
 
 Có thể dùng chung design system nhưng không dùng chung navigation/menu nghiệp vụ.

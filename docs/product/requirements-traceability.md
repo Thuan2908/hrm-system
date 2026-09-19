@@ -13,6 +13,11 @@
 | Chuyển đổi dữ liệu | operations | OPS-001..OPS-003 |
 
 | Admin advanced search/filter/sort | auth/users/admin | ADM-001..ADM-006 |
+| Product management | products | CAT-001..CAT-005 |
+| Supplier management | suppliers | CAT-006..CAT-010 |
+| Warehouse & Inventory | warehouses/inventory | INV-001..INV-010 |
+| Procurement | procurement | PUR-001..PUR-006 |
+| Sales | sales | SAL-001..SAL-008 |
 
 ## Milestone 2 implementation status
 

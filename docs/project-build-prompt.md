@@ -1,12 +1,12 @@
-# Master Prompt — Xây dựng Hệ thống HRM Saigon Retail JSC
+# Master Prompt — Xây dựng Saigon Retail Management System
 
 > Sao chép toàn bộ nội dung tài liệu này làm prompt khởi tạo cho coding agent. Agent phải làm việc tuần tự, kiểm tra kết quả sau từng milestone và không được bỏ qua các quy tắc bảo mật, phân quyền, migration hoặc test.
 
 ## 1. Vai trò và mục tiêu
 
-Bạn là Principal Software Engineer kiêm Solution Architect chịu trách nhiệm xây dựng hoàn chỉnh **Hệ thống HRM Saigon Retail JSC** từ documentation baseline hiện có.
+Bạn là Principal Software Engineer kiêm Solution Architect chịu trách nhiệm xây dựng hoàn chỉnh **Saigon Retail Management System** từ documentation baseline hiện có.
 
-Hệ thống phục vụ Saigon Retail JSC với khoảng 250 nhân sự, 12 cửa hàng tại TP.HCM và các nhóm nghiệp vụ HR, Admin, Leader và Employee Self-Service.
+Hệ thống phục vụ Saigon Retail JSC với khoảng 250 nhân sự, 12 cửa hàng tại TP.HCM và các nhóm nghiệp vụ HR, Admin, Warehouse, Procurement, Sales và Employee Self-Service.
 
 Mục tiêu cuối cùng:
 
@@ -15,7 +15,7 @@ Mục tiêu cuối cùng:
 - Xây dựng backend ASP.NET Core Web API bằng C#.
 - Dùng Entity Framework Core và Npgsql để kết nối PostgreSQL do Supabase quản lý.
 - Triển khai modular monolith với boundary rõ ràng.
-- Hoàn thành Auth, RBAC, Admin, Core HR, Attendance, Leave, Payroll, Reporting, ESS và Audit.
+- Hoàn thành Auth, RBAC, Admin, HRM, Attendance, Leave, Payroll, Reporting, ESS, Product, Supplier, Warehouse, Inventory, Procurement, Sales và Audit.
 - Có migrations, seed data tối thiểu, unit test, integration test và E2E test.
 - Có cấu hình local/dev/test/staging/production, Docker, CI, health check, logging và observability.
 - Không làm lộ bất kỳ secret nào ở source code hoặc Blazor WebAssembly.
@@ -123,6 +123,12 @@ hrm-system/
 │   │       ├── Attendance/
 │   │       ├── Leave/
 │   │       ├── Payroll/
+│   │       ├── Products/
+│   │       ├── Suppliers/
+│   │       ├── Warehouses/
+│   │       ├── Inventory/
+│   │       ├── Procurement/
+│   │       ├── Sales/
 │   │       ├── Reports/
 │   │       ├── Audit/
 │   │       └── Files/
@@ -163,6 +169,7 @@ Quy tắc bắt buộc:
 - Module A không truy cập repository hoặc `DbContext` nội bộ của module B.
 - Cross-module read/write qua public contract.
 - Reports chỉ đọc, không sửa dữ liệu domain.
+- Sales và Procurement không ghi thẳng bảng Inventory.
 - Payroll không sửa Employee hoặc Attendance trực tiếp.
 - Audit là cross-cutting capability nhưng event/audit contract phải rõ.
 - SharedKernel chỉ chứa primitive/cross-cutting abstraction thực sự dùng chung; không biến thành nơi chứa business logic hỗn hợp.
@@ -240,11 +247,16 @@ Thiết kế entity và migration theo module. Tối thiểu cần:
 - TimeAttendances, TimesheetPeriods và AttendanceDisputes.
 - LeaveRequests, ApprovalHistories và Attachments.
 - PayrollPeriods, Payrolls, PayrollItems/Components và PayrollAdjustments.
+- Products, Suppliers, Warehouses, Inventories và StockMovements.
+- PurchaseOrders và PurchaseOrderItems/GoodsReceipts.
+- SalesOrders và SalesOrderItems.
 - AuditLogs.
 
 Quy tắc schema:
 
-- Unique index cho employee code, role code và permission code.
+- Unique index cho employee code, product code, supplier code, warehouse code, role code và permission code.
+- Unique constraint `WarehouseId + ProductId` cho Inventory.
+- Concurrency token hoặc chiến lược optimistic concurrency cho inventory và các aggregate dễ tranh chấp.
 - Check constraint bảo vệ quantity/amount hợp lệ khi phù hợp.
 - `CreatedAt`, `UpdatedAt`, actor và status ở entity cần audit/lifecycle.
 - Không cascade delete dữ liệu lịch sử nhạy cảm.
@@ -331,6 +343,9 @@ Tạo các layout/navigation độc lập:
 
 - `AdminLayout` cho `/admin/*`.
 - `HrLayout` cho `/hr/*`.
+- `WarehouseLayout` cho `/warehouse/*`.
+- `ProcurementLayout` cho `/procurement/*`.
+- `SalesLayout` cho `/sales/*`.
 - `EmployeeLayout` cho employee self-service.
 
 Tối thiểu có các route trong `docs/frontend/screens.md`.
@@ -403,17 +418,52 @@ Quy tắc component:
 - Employee chỉ xem payslip của mình nếu không có permission đặc biệt.
 - Bank export chỉ từ finalized payroll và bảo vệ thông tin ngân hàng.
 
+### Product và Supplier
+
+- Code duy nhất; lifecycle Active/Inactive.
+- Search/filter/sort/pagination theo business rules.
+- Deactivate thay hard-delete khi có history/reference.
+- Product/Supplier UI thuộc Sales/Procurement shell phù hợp, không thuộc Admin shell.
+
+### Inventory
+
+- Balance duy nhất theo Warehouse + Product.
+- Receive/issue/transfer luôn tạo StockMovement.
+- Không âm tồn nếu không có business exception được duyệt.
+- Posted movement không sửa trực tiếp; reverse/adjust có reason và audit.
+- Receive/issue/transfer phải atomic và chống lost update.
+
+### Procurement
+
+- PO phải có supplier hợp lệ và ít nhất một item.
+- State transitions được định nghĩa và kiểm tra.
+- Goods receipt gọi Inventory public contract và tạo receive movements atomically.
+- PO/receipt finalized không hard-delete.
+
+### Sales
+
+- Sales order có ít nhất một item và product hợp lệ.
+- Total tính server-side từ dữ liệu hợp lệ.
+- Confirm order dùng permission và audit.
+- Xuất kho qua Inventory contract, không truy cập InventoryDbContext.
+- Xác định transaction strategy rõ để tránh order confirmed nhưng stock không giảm.
+
 ### Reports
 
 - Read-only.
 - Chỉ đọc dữ liệu người dùng có quyền.
 - Payroll reports dùng finalized payroll.
 - Không lộ individual salary khi report chỉ cần aggregate.
-- Có headcount, education, tenure, salary range, payroll summary và audit.
+- Có headcount, education, tenure, salary range, payroll summary, audit và sales baseline.
 
 ## 14. Transaction và concurrency
 
 - Một module dùng EF transaction cho aggregate change nội bộ.
+- Sales/Procurement gọi Inventory qua application contract.
+- Vì là modular monolith cùng process/database, thiết kế unit-of-work/orchestration rõ để đảm bảo atomicity khi thích hợp.
+- Nếu không thể atomic hoàn toàn, dùng idempotency key, explicit status và recoverable workflow; document trong ADR.
+- Inventory update phải dùng optimistic concurrency hoặc atomic SQL update có kiểm tra quantity.
+- Retry phải nhận biết concurrency conflict và không tạo movement trùng.
 - Command quan trọng nên có operation/reference ID duy nhất để chống xử lý lặp.
 
 ## 15. Audit
@@ -427,7 +477,10 @@ Audit tối thiểu:
 - Attendance correction và timesheet close.
 - Leave approve/reject.
 - Payroll finalize/adjust/export.
+- Inventory post/reverse/adjust.
+- PO/Sales order approval/confirmation.
 - Backup restore.
+- Cross-domain permission elevation.
 
 Audit record không chứa password, token, signing key, full connection string hoặc dữ liệu ngân hàng đầy đủ.
 
@@ -442,6 +495,8 @@ Kiểm tra domain/application rules, tối thiểu:
 - Payroll formula, BHXH, PIT, rounding và finalization.
 - Offboarding revoke access.
 - RBAC default deny.
+- Inventory không âm, transfer và reversal.
+- PO/Sales order state transitions.
 
 ### Architecture tests
 
@@ -465,10 +520,10 @@ Kiểm tra dependency direction và module boundaries đã mô tả.
 ### E2E
 
 - Dùng Playwright.
-- Critical flows: onboarding → login; leave → Leader → HR; attendance → close → payroll → payslip; admin lock/deactivate.
+- Critical flows: onboarding → login; leave → Leader → HR; attendance → close → payroll → payslip; procurement → goods receipt → stock; sales order → stock issue; admin lock/deactivate.
 - Chạy cả happy path và denied path.
 
-Không dùng test UI làm bằng chứng duy nhất cho payroll hoặc security.
+Không dùng test UI làm bằng chứng duy nhất cho payroll, security hoặc inventory integrity.
 
 ## 17. Observability và vận hành
 
@@ -477,7 +532,7 @@ Không dùng test UI làm bằng chứng duy nhất cho payroll hoặc security.
 - OpenTelemetry cho ASP.NET Core, outgoing HTTP và runtime metrics.
 - Health endpoints tách liveness/readiness.
 - Readiness kiểm tra database với timeout hợp lý.
-- Metrics tối thiểu: request rate/error/latency, DB health, auth failures và payroll batch.
+- Metrics tối thiểu: request rate/error/latency, DB health, auth failures, payroll batch và inventory conflicts.
 - Backup/PITR dùng capability Supabase/PostgreSQL phù hợp với plan; document RPO/RTO.
 - Có restore drill và evidence.
 
@@ -532,9 +587,14 @@ Thực hiện theo milestone, không làm đồng thời quá nhiều domain ch�
 10. Attendance và Leave.
 11. Payroll và payslip.
 12. Reporting và ESS.
-13. Data migration tooling.
-14. Full test/UAT/security/performance hardening.
-15. Docker, CI/CD, staging, production runbooks và handover.
+13. Product và Supplier.
+14. Warehouse và Inventory.
+15. Procurement.
+16. Sales.
+17. Cross-domain transaction hardening.
+18. Data migration tooling.
+19. Full test/UAT/security/performance hardening.
+20. Docker, CI/CD, staging, production runbooks và handover.
 
 Sau mỗi milestone:
 

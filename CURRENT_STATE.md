@@ -6,7 +6,7 @@
 
 ## Đã hoàn thành
 
-- Solution `Hrm.slnx` gồm các project: API host, Blazor WebAssembly, shared libraries, các HRM business modules và test projects.
+- Solution `Hrm.slnx` gồm 24 projects: API host, Blazor WebAssembly, shared libraries, 14 business modules và 5 test projects.
 - Central Package Management, shared build/analyzer rules, local `dotnet-ef` tool manifest và `.gitignore`.
 - API v1 baseline: response envelope, exception handler, OpenAPI, CORS, liveness/readiness health checks và OpenTelemetry.
 - PostgreSQL/Supabase persistence baseline bằng EF Core + Npgsql + snake_case.
@@ -21,7 +21,7 @@
 
 ## Chưa triển khai
 
-- Các vertical slice nghiệp vụ trong Employees, Attendance, Leave, Payroll, Reports, Audit và Files.
+- Các vertical slice nghiệp vụ trong Employees, Attendance, Leave, Payroll, Products, Suppliers, Warehouses, Inventory, Procurement, Sales, Reports, Audit và Files.
 - PostgreSQL Testcontainers integration tests thực tế và Playwright E2E thực tế.
 - CI/CD, deployment, backup/restore drill, monitoring production và product handover.
 - Flow quên mật khẩu không thuộc phạm vi theo quyết định sản phẩm; Admin vẫn có chức năng reset mật khẩu.
