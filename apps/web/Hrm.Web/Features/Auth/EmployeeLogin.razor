@@ -22,14 +22,7 @@
         {
             <div class="alert alert-danger border-0 shadow-sm" role="alert" style="border-radius: 10px;">
                 <div>@errorMessage</div>
-                @if (showAdminRedirect)
-                {
-                    <div class="mt-2">
-                        <a href="login" class="btn btn-sm btn-outline-danger fw-semibold">
-                            👉 Chuyển sang Cổng Đăng nhập Quản trị viên
-                        </a>
-                    </div>
-                }
+
             </div>
         }
 
@@ -52,11 +45,7 @@
             </button>
         </EditForm>
 
-        <div class="text-center mb-3">
-            <a href="login" class="text-decoration-none small text-secondary">
-                ← Dành cho Quản trị viên (Admin Login)
-            </a>
-        </div>
+
 
         <div class="login-security-note">
             <span class="security-dot" style="background-color: #10b981;"></span>
@@ -68,7 +57,6 @@
 @code {
     private readonly LoginModel model = new();
     private string? errorMessage;
-    private bool showAdminRedirect;
     private bool isSubmitting;
 
     [SupplyParameterFromQuery]
@@ -78,7 +66,7 @@
     {
         isSubmitting = true;
         errorMessage = null;
-        showAdminRedirect = false;
+
         try
         {
             var error = await AuthApiClient.LoginAsync(new LoginRequest(model.UserName, model.Password));
@@ -94,8 +82,7 @@
             {
                 // CHẶN TÀI KHOẢN ADMIN: hủy session và thông báo lỗi
                 await AuthApiClient.LogoutAsync();
-                errorMessage = "Tài khoản Quản trị viên (Admin) không được phép đăng nhập tại Cổng Nhân viên. Vui lòng đăng nhập tại Cổng Quản trị.";
-                showAdminRedirect = true;
+                errorMessage = "Tài khoản Quản trị viên không được phép đăng nhập tại Cổng Nhân viên.";
                 return;
             }
 
