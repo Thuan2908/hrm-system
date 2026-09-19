@@ -11,6 +11,9 @@ public interface IAuthApiClient
     Task<bool> RefreshAsync(CancellationToken cancellationToken = default);
     Task LogoutAsync(CancellationToken cancellationToken = default);
     Task<string?> GetAccessTokenAsync(CancellationToken cancellationToken = default);
+    Task HeartbeatAsync(CancellationToken cancellationToken = default);
+    Task<ApiError?> UpdateProfileAsync(UpdateProfileRequest request, CancellationToken cancellationToken = default);
+    Task<ApiError?> ChangePasswordAsync(ChangePasswordRequest request, CancellationToken cancellationToken = default);
 }
 
 public sealed class AuthApiClient(
@@ -22,7 +25,12 @@ public sealed class AuthApiClient(
 
     public async Task<ApiError?> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
     {
-        using var response = await httpClient.PostAsJsonAsync("api/v1/auth/login", request, cancellationToken);
+        var deviceId = !string.IsNullOrWhiteSpace(request.DeviceId)
+            ? request.DeviceId
+            : await sessionStore.GetOrCreateDeviceIdAsync();
+
+        var payload = request with { DeviceId = deviceId };
+        using var response = await httpClient.PostAsJsonAsync("api/v1/auth/login", payload, cancellationToken);
         var envelope = await response.Content.ReadFromJsonAsync<ApiResponse<AuthTokenResponse>>(cancellationToken);
         if (!response.IsSuccessStatusCode || envelope is null || !envelope.Success || envelope.Data is null)
         {
@@ -103,6 +111,84 @@ public sealed class AuthApiClient(
         }
 
         return current.AccessToken;
+    }
+
+    public async Task HeartbeatAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var token = await GetAccessTokenAsync(cancellationToken);
+            if (string.IsNullOrWhiteSpace(token)) return;
+
+            var deviceId = await sessionStore.GetOrCreateDeviceIdAsync();
+            using var request = new HttpRequestMessage(HttpMethod.Post, "api/v1/auth/heartbeat")
+            {
+                Content = JsonContent.Create(new HeartbeatRequest(deviceId))
+            };
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            using var response = await httpClient.SendAsync(request, cancellationToken);
+        }
+        catch
+        {
+            // Heartbeat failures should be silent
+        }
+    }
+
+    public async Task<ApiError?> UpdateProfileAsync(UpdateProfileRequest request, CancellationToken cancellationToken = default)
+    {
+        var token = await GetAccessTokenAsync(cancellationToken);
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return new ApiError("AUTH_UNAUTHORIZED", "Bạn chưa đăng nhập.", []);
+        }
+
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Put, "api/v1/auth/profile")
+        {
+            Content = JsonContent.Create(request)
+        };
+        httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        using var response = await httpClient.SendAsync(httpRequest, cancellationToken);
+        var envelope = await response.Content.ReadFromJsonAsync<ApiResponse<UserSessionDto>>(cancellationToken);
+
+        if (!response.IsSuccessStatusCode || envelope is null || !envelope.Success || envelope.Data is null)
+        {
+            return envelope?.Error ?? new ApiError("PROFILE_UPDATE_FAILED", "Không thể cập nhật hồ sơ.", []);
+        }
+
+        // Cập nhật session và AuthenticationState để UI phản chiếu ngay lập tức
+        var currentSession = await sessionStore.GetAsync();
+        if (currentSession is not null)
+        {
+            var updatedSession = currentSession with { User = envelope.Data };
+            await sessionStore.SaveAsync(updatedSession);
+            authenticationStateProvider.SetAuthenticated(updatedSession);
+        }
+
+        return null;
+    }
+
+    public async Task<ApiError?> ChangePasswordAsync(ChangePasswordRequest request, CancellationToken cancellationToken = default)
+    {
+        var token = await GetAccessTokenAsync(cancellationToken);
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return new ApiError("AUTH_UNAUTHORIZED", "Bạn chưa đăng nhập.", []);
+        }
+
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "api/v1/auth/change-password")
+        {
+            Content = JsonContent.Create(request)
+        };
+        httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        using var response = await httpClient.SendAsync(httpRequest, cancellationToken);
+        var envelope = await response.Content.ReadFromJsonAsync<ApiResponse<object>>(cancellationToken);
+
+        if (!response.IsSuccessStatusCode || envelope is null || !envelope.Success)
+        {
+            return envelope?.Error ?? new ApiError("PASSWORD_CHANGE_FAILED", "Không thể đổi mật khẩu.", []);
+        }
+
+        return null;
     }
 
     private async Task ClearAsync()

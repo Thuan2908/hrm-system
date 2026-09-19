@@ -15,10 +15,13 @@ namespace Hrm.Modules.Auth.Application;
 
 public interface IAuthService
 {
-    Task<AuthTokenResponse> LoginAsync(LoginRequest request, string? ipAddress, CancellationToken cancellationToken);
+    Task<AuthTokenResponse> LoginAsync(LoginRequest request, string? ipAddress, string? userAgent, CancellationToken cancellationToken);
     Task<AuthTokenResponse> RefreshAsync(RefreshTokenRequest request, string? ipAddress, CancellationToken cancellationToken);
     Task LogoutAsync(LogoutRequest request, string? ipAddress, CancellationToken cancellationToken);
     Task<UserSessionDto> GetSessionAsync(long userId, CancellationToken cancellationToken);
+    Task UpdateHeartbeatAsync(long userId, string? deviceId, CancellationToken cancellationToken);
+    Task<UserSessionDto> UpdateProfileAsync(long userId, UpdateProfileRequest request, CancellationToken cancellationToken);
+    Task ChangePasswordAsync(long userId, ChangePasswordRequest request, CancellationToken cancellationToken);
 }
 
 public sealed class AuthService(
@@ -31,6 +34,7 @@ public sealed class AuthService(
     public async Task<AuthTokenResponse> LoginAsync(
         LoginRequest request,
         string? ipAddress,
+        string? userAgent,
         CancellationToken cancellationToken)
     {
         var user = await dbContext.Users
@@ -70,6 +74,58 @@ public sealed class AuthService(
             user.SecurityState.LockoutEnd = null;
         }
 
+        // Kiểm tra phiên đăng nhập đồng thời đối với tài khoản nhân viên (EMPLOYEE)
+        var isEmployee = user.Role.Name.Equals("EMPLOYEE", StringComparison.OrdinalIgnoreCase);
+        if (isEmployee)
+        {
+            var existingSession = await dbContext.ActiveSessions
+                .SingleOrDefaultAsync(s => s.UserId == user.Id, cancellationToken);
+
+            if (existingSession is not null)
+            {
+                var isDifferentDevice = !string.IsNullOrWhiteSpace(request.DeviceId)
+                    && !string.Equals(existingSession.DeviceId, request.DeviceId, StringComparison.Ordinal);
+
+                // Phiên coi là đang hoạt động nếu có heartbeat trong vòng 3 phút qua
+                var isSessionActive = existingSession.LastSeenAt > now.AddMinutes(-3);
+
+                if (isDifferentDevice && isSessionActive)
+                {
+                    throw new DomainException(
+                        "AUTH_ALREADY_LOGGED_IN",
+                        "Tài khoản này hiện đang đăng nhập trên một thiết bị khác. Vui lòng đăng xuất trên thiết bị cũ trước khi tiếp tục.");
+                }
+            }
+        }
+
+        // Cập nhật hoặc ghi nhận phiên hoạt động
+        var currentSession = await dbContext.ActiveSessions
+            .SingleOrDefaultAsync(s => s.UserId == user.Id, cancellationToken);
+
+        var deviceId = !string.IsNullOrWhiteSpace(request.DeviceId)
+            ? request.DeviceId
+            : Guid.NewGuid().ToString("N");
+
+        if (currentSession is null)
+        {
+            dbContext.ActiveSessions.Add(new UserActiveSession
+            {
+                UserId = user.Id,
+                DeviceId = deviceId,
+                IpAddress = ipAddress,
+                UserAgent = userAgent,
+                CreatedAt = now,
+                LastSeenAt = now
+            });
+        }
+        else
+        {
+            currentSession.DeviceId = deviceId;
+            currentSession.IpAddress = ipAddress;
+            currentSession.UserAgent = userAgent;
+            currentSession.LastSeenAt = now;
+        }
+
         user.LastLoginAt = now.UtcDateTime;
         await dbContext.SaveChangesAsync(cancellationToken);
         return await IssueTokenPairAsync(user, ipAddress, now, cancellationToken);
@@ -95,6 +151,14 @@ public sealed class AuthService(
         storedToken.RevokedByIp = ipAddress;
         var response = await IssueTokenPairAsync(storedToken.User, ipAddress, now, cancellationToken);
         storedToken.ReplacedByTokenHash = HashToken(response.RefreshToken);
+
+        var activeSession = await dbContext.ActiveSessions
+            .SingleOrDefaultAsync(s => s.UserId == storedToken.UserId, cancellationToken);
+        if (activeSession is not null)
+        {
+            activeSession.LastSeenAt = now;
+        }
+
         await dbContext.SaveChangesAsync(cancellationToken);
         return response;
     }
@@ -103,11 +167,38 @@ public sealed class AuthService(
     {
         var storedToken = await dbContext.RefreshTokens.SingleOrDefaultAsync(
             token => token.TokenHash == HashToken(request.RefreshToken), cancellationToken);
-        if (storedToken is null || storedToken.RevokedAt is not null) return;
+        if (storedToken is not null)
+        {
+            if (storedToken.RevokedAt is null)
+            {
+                storedToken.RevokedAt = timeProvider.GetUtcNow();
+                storedToken.RevokedByIp = ipAddress;
+            }
 
-        storedToken.RevokedAt = timeProvider.GetUtcNow();
-        storedToken.RevokedByIp = ipAddress;
-        await dbContext.SaveChangesAsync(cancellationToken);
+            var session = await dbContext.ActiveSessions
+                .SingleOrDefaultAsync(s => s.UserId == storedToken.UserId, cancellationToken);
+            if (session is not null)
+            {
+                dbContext.ActiveSessions.Remove(session);
+            }
+
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+    }
+
+    public async Task UpdateHeartbeatAsync(long userId, string? deviceId, CancellationToken cancellationToken)
+    {
+        var session = await dbContext.ActiveSessions
+            .SingleOrDefaultAsync(s => s.UserId == userId, cancellationToken);
+        if (session is not null)
+        {
+            session.LastSeenAt = timeProvider.GetUtcNow();
+            if (!string.IsNullOrWhiteSpace(deviceId))
+            {
+                session.DeviceId = deviceId;
+            }
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
     }
 
     public async Task<UserSessionDto> GetSessionAsync(long userId, CancellationToken cancellationToken)
@@ -118,6 +209,50 @@ public sealed class AuthService(
             .SingleOrDefaultAsync(item => item.Id == userId, cancellationToken)
             ?? throw new DomainException("AUTH_USER_NOT_FOUND", "Không tìm thấy tài khoản.");
         return await CreateSessionAsync(user, cancellationToken);
+    }
+
+    public async Task<UserSessionDto> UpdateProfileAsync(long userId, UpdateProfileRequest request, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.FullName))
+        {
+            throw new DomainException("AUTH_INVALID_FULL_NAME", "Họ và tên không được để trống.");
+        }
+
+        var user = await dbContext.Users
+            .Include(item => item.Employee)
+            .Include(item => item.Role)
+            .SingleOrDefaultAsync(item => item.Id == userId, cancellationToken)
+            ?? throw new DomainException("AUTH_USER_NOT_FOUND", "Không tìm thấy tài khoản.");
+
+        user.Employee.FullName = request.FullName.Trim();
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return await CreateSessionAsync(user, cancellationToken);
+    }
+
+    public async Task ChangePasswordAsync(long userId, ChangePasswordRequest request, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.CurrentPassword))
+        {
+            throw new DomainException("AUTH_INVALID_PASSWORD", "Vui lòng nhập mật khẩu hiện tại.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.NewPassword) || request.NewPassword.Length < 3)
+        {
+            throw new DomainException("AUTH_PASSWORD_TOO_SHORT", "Mật khẩu mới phải có tối thiểu 3 ký tự.");
+        }
+
+        var user = await dbContext.Users
+            .SingleOrDefaultAsync(item => item.Id == userId, cancellationToken)
+            ?? throw new DomainException("AUTH_USER_NOT_FOUND", "Không tìm thấy tài khoản.");
+
+        if (!VerifyPassword(request.CurrentPassword, user.PasswordHash))
+        {
+            throw new DomainException("AUTH_INCORRECT_CURRENT_PASSWORD", "Mật khẩu hiện tại không chính xác.");
+        }
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword.Trim());
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     private async Task<AuthTokenResponse> IssueTokenPairAsync(

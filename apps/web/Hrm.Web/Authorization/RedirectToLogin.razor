@@ -8,15 +8,11 @@
 
         if (!string.IsNullOrWhiteSpace(relativePath) && relativePath.StartsWith("admin", StringComparison.OrdinalIgnoreCase))
         {
-            Navigation.NavigateTo($"login?returnUrl={returnUrl}");
+            Navigation.NavigateTo($"admin_login?returnUrl={returnUrl}");
         }
         else
         {
-            var target = string.IsNullOrWhiteSpace(relativePath) || relativePath == "/"
-                ? "employee-login"
-                : $"employee-login?returnUrl={returnUrl}";
-
-            Navigation.NavigateTo(target);
+            Navigation.NavigateTo($"employee-login?returnUrl={returnUrl}");
         }
     }
 }

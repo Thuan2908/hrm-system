@@ -111,6 +111,26 @@ public sealed class AdminController(IAdminService adminService) : ControllerBase
         return Ok(ApiResponse.Ok(result));
     }
 
+    [HttpPost("roles")]
+    [Authorize(Policy = PermissionCodes.AdminRbacManage)]
+    public async Task<ActionResult<ApiResponse<RoleDto>>> CreateRole(
+        CreateRoleRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await adminService.CreateRoleAsync(request, GetActorId(), cancellationToken);
+        return Created($"api/v1/admin/roles/{result.Id}", ApiResponse.Ok(result));
+    }
+
+    [HttpDelete("roles/{roleId:long}")]
+    [Authorize(Policy = PermissionCodes.AdminRbacManage)]
+    public async Task<ActionResult<ApiResponse<object>>> DeleteRole(
+        long roleId,
+        CancellationToken cancellationToken)
+    {
+        await adminService.DeleteRoleAsync(roleId, GetActorId(), cancellationToken);
+        return Ok(ApiResponse.Ok<object>(new { }));
+    }
+
     [HttpPut("roles/{roleId:long}/permissions")]
     [Authorize(Policy = PermissionCodes.AdminRbacManage)]
     public async Task<ActionResult<ApiResponse<object>>> SetRolePermissions(

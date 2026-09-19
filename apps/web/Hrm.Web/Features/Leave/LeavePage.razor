@@ -1,3 +1,4 @@
+@page "/employee/leave"
 @page "/leave"
 @layout EmployeeLayout
 @attribute [Authorize]
@@ -7,10 +8,10 @@
 
 <div class="container-fluid px-0">
     <!-- Header Hero Banner -->
-    <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #0b1528 0%, #1e3a8a 100%); color: white; border-radius: 16px;">
+    <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #052e22 0%, #065f46 50%, #047857 100%); color: white; border-radius: 18px; box-shadow: 0 12px 30px rgba(5, 46, 34, 0.25) !important;">
         <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
             <div>
-                <span class="badge bg-emerald-500 text-white mb-2 px-3 py-1" style="background-color: #059669; font-size: 0.85rem; border-radius: 20px;">
+                <span class="badge text-white mb-2 px-3 py-1" style="background-color: #10b981; font-size: 0.85rem; border-radius: 20px; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);">
                     ● NGHỈ PHÉP &amp; NGHỈ BÙ
                 </span>
                 <h1 class="h3 fw-bold mb-1 text-white">Quản lý Đơn xin nghỉ phép</h1>
@@ -45,7 +46,7 @@
     <!-- Leave Balance KPI Cards -->
     <div class="row g-3 mb-4">
         <div class="col-6 col-md-3">
-            <div class="card border-0 shadow-sm h-100" style="border-radius: 16px;">
+            <div class="card border-0 shadow-sm h-100" style="border-radius: 16px; border-top: 4px solid #10b981 !important;">
                 <div class="card-body p-3 text-center">
                     <small class="text-muted text-uppercase fw-semibold d-block mb-1">Tổng phép năm</small>
                     <span class="fs-2 fw-bold text-dark">@(balance?.TotalAnnualEntitlement.ToString("0.#") ?? "12")</span>
@@ -54,7 +55,7 @@
             </div>
         </div>
         <div class="col-6 col-md-3">
-            <div class="card border-0 shadow-sm h-100" style="border-radius: 16px;">
+            <div class="card border-0 shadow-sm h-100" style="border-radius: 16px; border-top: 4px solid #f43f5e !important;">
                 <div class="card-body p-3 text-center">
                     <small class="text-muted text-uppercase fw-semibold d-block mb-1">Đã sử dụng</small>
                     <span class="fs-2 fw-bold text-danger">@(balance?.UsedAnnualDays.ToString("0.#") ?? "0")</span>
@@ -63,16 +64,16 @@
             </div>
         </div>
         <div class="col-6 col-md-3">
-            <div class="card border-0 shadow-sm h-100" style="border-radius: 16px;">
+            <div class="card border-0 shadow-sm h-100" style="border-radius: 16px; border-top: 4px solid #059669 !important; background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%);">
                 <div class="card-body p-3 text-center">
-                    <small class="text-muted text-uppercase fw-semibold d-block mb-1">Số ngày còn lại</small>
-                    <span class="fs-2 fw-bold text-success">@(balance?.RemainingAnnualDays.ToString("0.#") ?? "12")</span>
+                    <small class="text-uppercase fw-bold d-block mb-1" style="color: #059669;">Số ngày còn lại</small>
+                    <span class="fs-2 fw-bold" style="color: #059669;">@(balance?.RemainingAnnualDays.ToString("0.#") ?? "12")</span>
                     <span class="text-muted small d-block">ngày khả dụng</span>
                 </div>
             </div>
         </div>
         <div class="col-6 col-md-3">
-            <div class="card border-0 shadow-sm h-100" style="border-radius: 16px;">
+            <div class="card border-0 shadow-sm h-100" style="border-radius: 16px; border-top: 4px solid #f59e0b !important;">
                 <div class="card-body p-3 text-center">
                     <small class="text-muted text-uppercase fw-semibold d-block mb-1">Đang chờ duyệt</small>
                     <span class="fs-2 fw-bold text-warning">@(balance?.PendingRequestsCount.ToString() ?? "0")</span>
@@ -106,9 +107,9 @@
                             @if (estimatedDays > 0)
                             {
                                 <div class="col-12">
-                                    <div class="p-3 bg-light rounded-3 d-flex align-items-center justify-content-between border">
+                                    <div class="p-3 bg-light rounded-3 d-flex align-items-center justify-content-between border" style="border-color: #d1fae5 !important;">
                                         <span class="small text-muted">Số ngày nghỉ dự tính (không tính Chủ Nhật):</span>
-                                        <span class="badge bg-primary fs-6 px-3 py-1">@estimatedDays ngày</span>
+                                        <span class="badge bg-success fs-6 px-3 py-1" style="background-color: #059669 !important;">@estimatedDays ngày</span>
                                     </div>
                                 </div>
                             }
@@ -119,8 +120,8 @@
                             </div>
 
                             <div class="col-12 text-end">
-                                <button type="submit" class="btn btn-primary px-4 py-2 fw-semibold rounded-pill shadow-sm"
-                                        style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none;"
+                                <button type="submit" class="btn text-white px-4 py-2 fw-semibold rounded-pill shadow-sm"
+                                        style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none; box-shadow: 0 6px 18px rgba(16, 185, 129, 0.35) !important;"
                                         disabled="@isSubmitting">
                                     @if (isSubmitting)
                                     {
@@ -172,7 +173,7 @@
     <div class="card border-0 shadow-sm" style="border-radius: 16px;">
         <div class="card-header bg-white border-bottom border-light py-3 px-4 d-flex justify-content-between align-items-center">
             <strong class="text-dark">LỊCH SỬ ĐƠN NGHỈ PHÉP CỦA BẠN</strong>
-            <span class="badge bg-light text-secondary">@(requests.Count) đơn</span>
+            <span class="badge bg-success-subtle text-success border border-success-subtle">@(requests.Count) đơn</span>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">

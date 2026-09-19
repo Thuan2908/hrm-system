@@ -15,6 +15,7 @@ public sealed class AuthDbContext(DbContextOptions<AuthDbContext> options) : DbC
     public DbSet<UserAccountMetadata> UserAccountMetadata => Set<UserAccountMetadata>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<AuditLogEntry> AuditLogs => Set<AuditLogEntry>();
+    public DbSet<UserActiveSession> ActiveSessions => Set<UserActiveSession>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -133,6 +134,19 @@ public sealed class AuthDbContext(DbContextOptions<AuthDbContext> options) : DbC
             entity.Property(entry => entry.BeforeJson).HasColumnName("before_json").HasColumnType("jsonb");
             entity.Property(entry => entry.AfterJson).HasColumnName("after_json").HasColumnType("jsonb");
             entity.Property(entry => entry.CreatedAt).HasColumnName("created_at");
+        });
+
+        builder.Entity<UserActiveSession>(entity =>
+        {
+            entity.ToTable("user_active_sessions");
+            entity.HasKey(session => session.UserId);
+            entity.Property(session => session.UserId).HasColumnName("user_id").ValueGeneratedNever();
+            entity.Property(session => session.DeviceId).HasColumnName("device_id");
+            entity.Property(session => session.IpAddress).HasColumnName("ip_address");
+            entity.Property(session => session.UserAgent).HasColumnName("user_agent");
+            entity.Property(session => session.CreatedAt).HasColumnName("created_at");
+            entity.Property(session => session.LastSeenAt).HasColumnName("last_seen_at");
+            entity.HasOne(session => session.User).WithOne().HasForeignKey<UserActiveSession>(session => session.UserId);
         });
     }
 }

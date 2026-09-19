@@ -1,3 +1,4 @@
+@page "/employee/attendance"
 @page "/attendance"
 @page "/dashboard"
 @layout EmployeeLayout
@@ -9,17 +10,17 @@
 
 <div class="container-fluid px-0">
     <!-- Header Hero Banner -->
-    <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #0b1528 0%, #1e3a8a 100%); color: white; border-radius: 16px;">
+    <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #052e22 0%, #065f46 50%, #047857 100%); color: white; border-radius: 18px; box-shadow: 0 12px 30px rgba(5, 46, 34, 0.25) !important;">
         <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
             <div>
-                <span class="badge bg-emerald-500 text-white mb-2 px-3 py-1" style="background-color: #059669; font-size: 0.85rem; border-radius: 20px;">
+                <span class="badge bg-emerald-500 text-white mb-2 px-3 py-1" style="background-color: #10b981; font-size: 0.85rem; border-radius: 20px; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);">
                     ● HỆ THỐNG ĐIỂM DANH THỜI GIAN THỰC
                 </span>
                 <h1 class="h3 fw-bold mb-1 text-white">Chấm công hàng ngày</h1>
                 <p class="mb-0 text-white-50">Ghi nhận giờ vào và giờ ra ca làm việc chính xác và minh bạch.</p>
             </div>
-            <div class="text-md-end bg-black bg-opacity-25 p-3 px-4 rounded-4 border border-white border-opacity-10">
-                <div class="text-uppercase small text-white-50" style="letter-spacing: 1px;">@currentDateStr</div>
+            <div class="text-md-end p-3 px-4 rounded-4" style="background: rgba(0, 0, 0, 0.28); border: 1px solid rgba(52, 211, 153, 0.25);">
+                <div class="text-uppercase small" style="color: #6ee7b7; letter-spacing: 1px;">@currentDateStr</div>
                 <div class="display-6 fw-bold text-white font-monospace">@currentTimeStr</div>
             </div>
         </div>
@@ -51,7 +52,7 @@
                     <span class="fw-bold text-dark">TRẠNG THÁI HÔM NAY</span>
                     @if (isLoading)
                     {
-                        <span class="spinner-border spinner-border-sm text-primary" role="status"></span>
+                        <span class="spinner-border spinner-border-sm text-success" role="status"></span>
                     }
                     else if (todayStatus is not null)
                     {
@@ -69,7 +70,7 @@
                         }
                         else
                         {
-                            <span class="badge bg-primary-subtle text-primary border border-primary px-3 py-2 rounded-pill fw-semibold">
+                            <span class="badge bg-success-subtle text-success border border-success px-3 py-2 rounded-pill fw-semibold">
                                 ✓ Đã hoàn thành ca
                             </span>
                         }
@@ -79,7 +80,7 @@
                     @if (isLoading && todayStatus is null)
                     {
                         <div class="py-5 text-center text-muted">
-                            <div class="spinner-border text-primary mb-3" role="status"></div>
+                            <div class="spinner-border text-success mb-3" role="status"></div>
                             <p>Đang tải trạng thái chấm công...</p>
                         </div>
                     }
@@ -190,21 +191,21 @@
                         </div>
                         @if (todayStatus?.CheckOutTime is not null)
                         {
-                            <span class="badge bg-primary-subtle text-primary">Đã ghi nhận</span>
+                            <span class="badge bg-success-subtle text-success border border-success-subtle">Đã ghi nhận</span>
                         }
                     </div>
 
                     <div class="d-flex align-items-center justify-content-between p-3 rounded-3 bg-light">
                         <div class="d-flex align-items-center gap-3">
-                            <span class="p-2 rounded-circle bg-primary text-white">⏱</span>
+                            <span class="p-2 rounded-circle bg-success text-white">⏱</span>
                             <div>
                                 <small class="text-muted d-block">TỔNG THỜI GIAN LÀM</small>
-                                <strong class="fs-5 text-primary">@(todayStatus?.ActualHours is not null ? $"{todayStatus.ActualHours:F2} giờ" : "--")</strong>
+                                <strong class="fs-5 text-success">@(todayStatus?.ActualHours is not null ? $"{todayStatus.ActualHours:F2} giờ" : "--")</strong>
                             </div>
                         </div>
                         @if (todayStatus?.ActualHours is not null)
                         {
-                            <span class="badge bg-info-subtle text-info">Tính chuẩn</span>
+                            <span class="badge bg-success-subtle text-success border border-success-subtle">Tính chuẩn</span>
                         }
                     </div>
                 </div>
@@ -216,7 +217,7 @@
     <div class="card border-0 shadow-sm" style="border-radius: 16px;">
         <div class="card-header bg-white border-bottom border-light py-3 px-4 d-flex justify-content-between align-items-center">
             <span class="fw-bold text-dark">LỊCH SỬ CHẤM CÔNG GẦN ĐÂY (14 NGÀY)</span>
-            <button class="btn btn-sm btn-outline-secondary rounded-pill px-3" @onclick="LoadDataAsync" disabled="@isLoading">
+            <button class="btn btn-sm btn-outline-success rounded-pill px-3" @onclick="LoadDataAsync" disabled="@isLoading">
                 ↻ Làm mới
             </button>
         </div>

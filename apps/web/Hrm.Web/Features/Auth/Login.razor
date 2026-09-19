@@ -1,4 +1,4 @@
-@page "/login"
+@page "/admin_login"
 @layout AuthLayout
 @using System.ComponentModel.DataAnnotations
 @inject IAuthApiClient AuthApiClient
@@ -35,11 +35,6 @@
                 @(isSubmitting ? "Đang xác thực..." : "Đăng nhập")
             </button>
         </EditForm>
-        <div class="text-center mb-3">
-            <a href="employee-login" class="text-decoration-none small text-primary fw-semibold">
-                Bạn là Nhân viên? Đăng nhập Cổng nhân viên tại đây →
-            </a>
-        </div>
         <div class="login-security-note">
             <span class="security-dot"></span>
             Phiên đăng nhập được bảo vệ bằng JWT và refresh-token rotation.
@@ -85,7 +80,7 @@
                 }
                 else
                 {
-                    target = "attendance";
+                    target = "employee/attendance";
                 }
             }
 

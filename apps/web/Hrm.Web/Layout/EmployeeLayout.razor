@@ -1,60 +1,85 @@
 @inherits LayoutComponentBase
+@implements IDisposable
 @inject IAuthApiClient AuthApiClient
 @inject NavigationManager Navigation
 
-<div class="admin-shell">
-    <aside class="admin-sidebar" style="background: linear-gradient(180deg, #0b1528 0%, #11203d 100%);">
-        <a class="admin-brand" href="attendance">
-            <span class="admin-brand-mark" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">SR</span>
-            <span><strong>Saigon Retail</strong><small style="color: #34d399; font-weight: 600;">EMPLOYEE PORTAL</small></span>
+<div class="emp-shell">
+    <aside class="emp-sidebar">
+        <a class="emp-brand" href="employee/attendance">
+            <span class="emp-brand-mark">SR</span>
+            <span><strong>Saigon Retail</strong><small>EMPLOYEE PORTAL</small></span>
         </a>
-        <p class="admin-nav-label">CỔNG NHÂN VIÊN</p>
-        <nav class="admin-nav">
-            <NavLink class="admin-nav-link" href="attendance" Match="NavLinkMatch.All">
+        <p class="emp-nav-label">CỔNG NHÂN VIÊN</p>
+        <nav class="emp-nav">
+            <NavLink class="emp-nav-link" href="employee/attendance" Match="NavLinkMatch.All">
                 <span>⏱</span>Chấm công (Check-in/out)
             </NavLink>
-            <NavLink class="admin-nav-link" href="leave">
+            <NavLink class="emp-nav-link" href="employee/leave">
                 <span>📝</span>Đơn xin nghỉ phép
             </NavLink>
-            <NavLink class="admin-nav-link" href="payslips">
+            <NavLink class="emp-nav-link" href="employee/payslips">
                 <span>💰</span>Phiếu lương của tôi
             </NavLink>
         </nav>
-        <button class="admin-logout" @onclick="LogoutAsync">
+        <button class="emp-logout" @onclick="LogoutAsync">
             <span>↪</span>Đăng xuất
         </button>
     </aside>
-    <main class="admin-main">
-        <header class="admin-topbar">
+    <main class="emp-main">
+        <header class="emp-topbar">
             <div>
-                <span class="admin-topbar-kicker" style="color: #059669;">SAIGON RETAIL HRM</span>
-                <strong>Cổng thông tin &amp; Chấm công Nhân viên</strong>
+                <span class="emp-topbar-kicker">SAIGON RETAIL HRM</span>
+                <strong class="text-dark">Cổng thông tin &amp; Chấm công Nhân viên</strong>
             </div>
             <AuthorizeView>
                 <Authorized Context="authContext">
-                    <div class="admin-user">
-                        <span class="admin-avatar" style="background: #10b981; color: white;">@GetInitial(authContext.User.FindFirst("full_name")?.Value)</span>
+                    <a class="emp-user text-decoration-none" href="employee/profile" title="Bấm vào đây để xem và chỉnh sửa thông tin cá nhân">
+                        <span class="emp-avatar">@GetInitial(authContext.User.FindFirst("full_name")?.Value)</span>
                         <span>
-                            <strong>@authContext.User.FindFirst("full_name")?.Value</strong>
-                            <small class="badge bg-success-subtle text-success border border-success-subtle">Nhân viên</small>
+                            <strong class="text-dark">@authContext.User.FindFirst("full_name")?.Value</strong>
+                            <small class="badge bg-success-subtle text-success border border-success-subtle">Nhân viên ✎</small>
                         </span>
-                    </div>
+                    </a>
                 </Authorized>
             </AuthorizeView>
         </header>
-        <article class="admin-content">
+        <article class="emp-content">
             @Body
         </article>
     </main>
 </div>
 
 @code {
+    private System.Threading.Timer? heartbeatTimer;
+
+    protected override void OnInitialized()
+    {
+        // Gửi heartbeat duy trì trạng thái phiên hoạt động mỗi 60s
+        heartbeatTimer = new System.Threading.Timer(async _ =>
+        {
+            try
+            {
+                await AuthApiClient.HeartbeatAsync();
+            }
+            catch
+            {
+                // Silent
+            }
+        }, null, TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(60));
+    }
+
     private async Task LogoutAsync()
     {
+        heartbeatTimer?.Dispose();
         await AuthApiClient.LogoutAsync();
         Navigation.NavigateTo("employee-login", true);
     }
 
     private static string GetInitial(string? fullName) =>
         string.IsNullOrWhiteSpace(fullName) ? "E" : fullName.Trim()[0].ToString().ToUpperInvariant();
+
+    public void Dispose()
+    {
+        heartbeatTimer?.Dispose();
+    }
 }
