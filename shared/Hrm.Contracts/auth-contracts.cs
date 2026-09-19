@@ -1,6 +1,8 @@
 namespace Hrm.Contracts;
 
-public sealed record LoginRequest(string UserName, string Password);
+public sealed record LoginRequest(string UserName, string Password, string? DeviceId = null);
+
+public sealed record HeartbeatRequest(string? DeviceId = null);
 
 public sealed record RefreshTokenRequest(string RefreshToken);
 

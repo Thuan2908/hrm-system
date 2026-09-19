@@ -2,12 +2,14 @@
 @layout EmployeeLayout
 @attribute [Authorize]
 @inject IPayrollApiClient PayrollApiClient
+@inject IJSRuntime JSRuntime
+@inject BrowserSessionStore SessionStore
 
 <PageTitle>Phiếu lương của tôi - Saigon Retail</PageTitle>
 
 <div class="container-fluid px-0">
-    <!-- Header Hero Banner -->
-    <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #052e22 0%, #065f46 50%, #047857 100%); color: white; border-radius: 18px; box-shadow: 0 12px 30px rgba(5, 46, 34, 0.25) !important;">
+    <!-- Header Hero Banner (Hidden when printing) -->
+    <div class="card border-0 shadow-sm mb-4 d-print-none" style="background: linear-gradient(135deg, #052e22 0%, #065f46 50%, #047857 100%); color: white; border-radius: 18px; box-shadow: 0 12px 30px rgba(5, 46, 34, 0.25) !important;">
         <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
             <div>
                 <span class="badge text-white mb-2 px-3 py-1" style="background-color: #10b981; font-size: 0.85rem; border-radius: 20px; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);">
@@ -26,7 +28,7 @@
 
     @if (!string.IsNullOrWhiteSpace(errorMessage))
     {
-        <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm d-flex align-items-center gap-2 mb-4" role="alert" style="border-radius: 12px;">
+        <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm d-flex align-items-center gap-2 mb-4 d-print-none" role="alert" style="border-radius: 12px;">
             <span style="font-size: 1.25rem;">⚠</span>
             <div>@errorMessage</div>
             <button type="button" class="btn-close ms-auto" @onclick="() => errorMessage = null"></button>
@@ -50,10 +52,10 @@
     }
     else
     {
-        <!-- Latest Period Highlight Card -->
+        <!-- Latest Period Highlight Card (Hidden when printing) -->
         @if (selectedPayslip is not null)
         {
-            <div class="card border-0 shadow-sm mb-4" style="border-radius: 16px; background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%); border-left: 6px solid #10b981 !important;">
+            <div class="card border-0 shadow-sm mb-4 d-print-none" style="border-radius: 16px; background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%); border-left: 6px solid #10b981 !important;">
                 <div class="card-body p-4">
                     <div class="row g-4 align-items-center">
                         <div class="col-12 col-md-4">
@@ -79,8 +81,8 @@
         }
 
         <div class="row g-4">
-            <!-- Left Column: Period List -->
-            <div class="col-12 col-lg-4">
+            <!-- Left Column: Period List (Hidden when printing) -->
+            <div class="col-12 col-lg-4 d-print-none">
                 <div class="card border-0 shadow-sm h-100" style="border-radius: 16px;">
                     <div class="card-header bg-white border-bottom border-light py-3 px-4">
                         <strong class="text-dark">DANH SÁCH KỲ LƯƠNG</strong>
@@ -117,31 +119,50 @@
                 }
                 else if (selectedPayslip is not null)
                 {
-                    <div class="card border-0 shadow-sm" style="border-radius: 16px;">
+                    <div id="printable-payslip" class="card border-0 shadow-sm" style="border-radius: 16px;">
                         <div class="card-header bg-white border-bottom border-light py-3 px-4 d-flex justify-content-between align-items-center">
                             <div>
                                 <strong class="text-dark fs-5">BẢNG KÊ CHI TIẾT THU NHẬP</strong>
                                 <small class="text-muted d-block">Kỳ lương: Tháng @selectedPayslip.MonthPeriod năm @selectedPayslip.YearPeriod</small>
                             </div>
-                            <span class="badge bg-light text-secondary border px-3 py-2 rounded-pill font-monospace">
-                                ID: #@selectedPayslip.Id
-                            </span>
+                            <div class="d-flex align-items-center gap-2">
+                                <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 fw-semibold shadow-sm d-print-none"
+                                        @onclick="PrintPayslipAsync">
+                                    🖨️ In phiếu lương
+                                </button>
+                                <span class="badge bg-light text-secondary border px-3 py-2 rounded-pill font-monospace d-print-none">
+                                    ID: #@selectedPayslip.Id
+                                </span>
+                            </div>
                         </div>
-                        <div class="card-body p-4">
+                        <div class="card-body p-4 payslip-body">
+                            <!-- Print Header (Visible only on Print/PDF) -->
+                            <div class="d-none d-print-block text-center pb-2 mb-3 border-bottom payslip-print-header">
+                                <div class="fw-bold text-uppercase fs-6">CÔNG TY CỔ PHẦN SAIGON RETAIL</div>
+                                <div class="small text-muted" style="font-size: 8.5pt;">Hệ thống Quản trị Nhân sự &amp; Tiền lương</div>
+                                <h3 class="fw-bold mt-2 mb-1 text-dark" style="font-size: 15pt;">PHIẾU LƯƠNG NHÂN VIÊN</h3>
+                                <div class="text-secondary fw-semibold small">Kỳ lương: Tháng @selectedPayslip.MonthPeriod năm @selectedPayslip.YearPeriod</div>
+                                <div class="mt-2 small text-secondary d-flex justify-content-between px-2" style="font-size: 9pt;">
+                                    <span>Họ và tên: <strong class="text-dark">@(employeeFullName ?? "Nhân viên")</strong></span>
+                                    <span>Mã phiếu: <strong class="text-dark">#@selectedPayslip.Id</strong></span>
+                                    <span>Ngày in: <strong class="text-dark">@DateTime.Now.ToString("dd/MM/yyyy HH:mm")</strong></span>
+                                </div>
+                            </div>
+
                             <!-- Section A: Thu nhập -->
-                            <div class="mb-4">
-                                <h6 class="fw-bold text-success mb-3 border-bottom pb-2">
+                            <div class="mb-3 payslip-section">
+                                <h6 class="fw-bold text-success mb-2 border-bottom pb-1" style="font-size: 10pt;">
                                     A. CÁC KHOẢN THU NHẬP (GROSS)
                                 </h6>
                                 <table class="table table-sm table-borderless align-middle mb-0">
                                     <tbody>
                                         <tr>
-                                            <td class="text-muted">1. Số ngày công thực tế ghi nhận</td>
-                                            <td class="text-end fw-bold text-dark">@selectedPayslip.ActualDays ngày</td>
+                                            <td class="text-muted py-1">1. Số ngày công thực tế ghi nhận</td>
+                                            <td class="text-end fw-bold text-dark py-1">@selectedPayslip.ActualDays ngày</td>
                                         </tr>
                                         <tr class="border-top">
-                                            <td class="fw-bold text-dark fs-6 pt-2">TỔNG THU NHẬP GỘP (GROSS):</td>
-                                            <td class="text-end fw-bold text-success fs-6 pt-2 font-monospace">
+                                            <td class="fw-bold text-dark pt-1 pb-1">TỔNG THU NHẬP GỘP (GROSS):</td>
+                                            <td class="text-end fw-bold text-success pt-1 pb-1 font-monospace">
                                                 @FormatVnd(selectedPayslip.GrossSalary)
                                             </td>
                                         </tr>
@@ -150,23 +171,23 @@
                             </div>
 
                             <!-- Section B: Khấu trừ -->
-                            <div class="mb-4">
-                                <h6 class="fw-bold text-danger mb-3 border-bottom pb-2">
+                            <div class="mb-3 payslip-section">
+                                <h6 class="fw-bold text-danger mb-2 border-bottom pb-1" style="font-size: 10pt;">
                                     B. CÁC KHOẢN TRÍCH NỘP &amp; KHẤU TRỪ THEO LUẬT
                                 </h6>
                                 <table class="table table-sm table-borderless align-middle mb-0">
                                     <tbody>
                                         <tr>
-                                            <td class="text-muted">1. Bảo hiểm Xã hội, Y tế, Thất nghiệp (BHXH)</td>
-                                            <td class="text-end text-danger"> - @FormatVnd(selectedPayslip.BhxhDeduct)</td>
+                                            <td class="text-muted py-1">1. Bảo hiểm Xã hội, Y tế, Thất nghiệp (BHXH)</td>
+                                            <td class="text-end text-danger py-1"> - @FormatVnd(selectedPayslip.BhxhDeduct)</td>
                                         </tr>
                                         <tr>
-                                            <td class="text-muted">2. Thuế Thu nhập Cá nhân (TNCN)</td>
-                                            <td class="text-end text-danger"> - @FormatVnd(selectedPayslip.TaxDeduct)</td>
+                                            <td class="text-muted py-1">2. Thuế Thu nhập Cá nhân (TNCN)</td>
+                                            <td class="text-end text-danger py-1"> - @FormatVnd(selectedPayslip.TaxDeduct)</td>
                                         </tr>
                                         <tr class="border-top">
-                                            <td class="fw-bold text-dark fs-6 pt-2">TỔNG CÁC KHOẢN KHẤU TRỪ:</td>
-                                            <td class="text-end fw-bold text-danger fs-6 pt-2 font-monospace">
+                                            <td class="fw-bold text-dark pt-1 pb-1">TỔNG CÁC KHOẢN KHẤU TRỪ:</td>
+                                            <td class="text-end fw-bold text-danger pt-1 pb-1 font-monospace">
                                                 - @FormatVnd(selectedPayslip.BhxhDeduct + selectedPayslip.TaxDeduct)
                                             </td>
                                         </tr>
@@ -175,14 +196,34 @@
                             </div>
 
                             <!-- Section C: Thực lĩnh Net -->
-                            <div class="p-3 rounded-3 d-flex justify-content-between align-items-center"
+                            <div class="p-3 rounded-3 d-flex justify-content-between align-items-center mb-3 payslip-net-box"
                                  style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border: 1px solid #10b981;">
                                 <div>
-                                    <small class="text-success text-uppercase fw-bold d-block">THỰC LĨNH CHUYỂN KHOẢN (NET)</small>
-                                    <span class="text-muted small">Đã bao gồm phụ cấp và trừ nghĩa vụ bảo hiểm &amp; thuế</span>
+                                    <small class="text-success text-uppercase fw-bold d-block" style="font-size: 8.5pt;">THỰC LĨNH CHUYỂN KHOẢN (NET)</small>
+                                    <span class="text-muted small" style="font-size: 8pt;">Đã bao gồm phụ cấp và trừ nghĩa vụ bảo hiểm &amp; thuế</span>
                                 </div>
                                 <div class="text-end">
-                                    <span class="fs-2 fw-bold text-success font-monospace">@FormatVnd(selectedPayslip.NetSalary)</span>
+                                    <span class="fs-3 fw-bold text-success font-monospace">@FormatVnd(selectedPayslip.NetSalary)</span>
+                                </div>
+                            </div>
+
+                            <!-- Print Signatures (Visible only on Print/PDF) -->
+                            <div class="d-none d-print-flex justify-content-between mt-3 pt-2 text-center payslip-signatures">
+                                <div style="width: 30%;">
+                                    <div class="fw-bold" style="font-size: 9.5pt;">Người lập biểu</div>
+                                    <div class="text-muted fst-italic" style="font-size: 8pt;">(Ký, ghi rõ họ tên)</div>
+                                    <div style="height: 48px;"></div>
+                                </div>
+                                <div style="width: 30%;">
+                                    <div class="fw-bold" style="font-size: 9.5pt;">Kế toán trưởng</div>
+                                    <div class="text-muted fst-italic" style="font-size: 8pt;">(Ký, ghi rõ họ tên)</div>
+                                    <div style="height: 48px;"></div>
+                                </div>
+                                <div style="width: 30%;">
+                                    <div class="fw-bold" style="font-size: 9.5pt;">Người nhận (Nhân viên)</div>
+                                    <div class="text-muted fst-italic" style="font-size: 8pt;">(Ký, ghi rõ họ tên)</div>
+                                    <div style="height: 48px;"></div>
+                                    <div class="fw-semibold text-dark" style="font-size: 9pt;">@(employeeFullName ?? "")</div>
                                 </div>
                             </div>
                         </div>
@@ -199,10 +240,18 @@
     private bool isLoading = true;
     private bool isLoadingDetail = false;
     private string? errorMessage;
+    private string? employeeFullName;
 
     protected override async Task OnInitializedAsync()
     {
+        var session = await SessionStore.GetAsync();
+        employeeFullName = session?.User.FullName ?? session?.User.UserName;
         await LoadDataAsync();
+    }
+
+    private async Task PrintPayslipAsync()
+    {
+        await JSRuntime.InvokeVoidAsync("window.print");
     }
 
     private async Task LoadDataAsync()

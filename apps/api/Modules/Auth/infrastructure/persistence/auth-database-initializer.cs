@@ -58,6 +58,16 @@ public sealed class AuthDatabaseInitializer(AuthDbContext dbContext) : IAuthData
             );
             CREATE INDEX IF NOT EXISTS ix_audit_logs_created_at ON audit_logs(created_at);
             CREATE INDEX IF NOT EXISTS ix_audit_logs_entity ON audit_logs(entity_type, entity_id);
+
+            CREATE TABLE IF NOT EXISTS user_active_sessions (
+                user_id bigint PRIMARY KEY REFERENCES users(user_id) ON DELETE CASCADE,
+                device_id text NOT NULL,
+                ip_address varchar(64) NULL,
+                user_agent text NULL,
+                created_at timestamp with time zone NOT NULL,
+                last_seen_at timestamp with time zone NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS ix_user_active_sessions_last_seen_at ON user_active_sessions(last_seen_at);
             """, cancellationToken);
 
         foreach (var code in PermissionCodes.All)

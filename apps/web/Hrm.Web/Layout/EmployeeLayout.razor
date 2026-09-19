@@ -1,4 +1,5 @@
 @inherits LayoutComponentBase
+@implements IDisposable
 @inject IAuthApiClient AuthApiClient
 @inject NavigationManager Navigation
 
@@ -49,12 +50,36 @@
 </div>
 
 @code {
+    private System.Threading.Timer? heartbeatTimer;
+
+    protected override void OnInitialized()
+    {
+        // Gửi heartbeat duy trì trạng thái phiên hoạt động mỗi 60s
+        heartbeatTimer = new System.Threading.Timer(async _ =>
+        {
+            try
+            {
+                await AuthApiClient.HeartbeatAsync();
+            }
+            catch
+            {
+                // Silent
+            }
+        }, null, TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(60));
+    }
+
     private async Task LogoutAsync()
     {
+        heartbeatTimer?.Dispose();
         await AuthApiClient.LogoutAsync();
-        Navigation.NavigateTo("admin_login", true);
+        Navigation.NavigateTo("employee-login", true);
     }
 
     private static string GetInitial(string? fullName) =>
         string.IsNullOrWhiteSpace(fullName) ? "E" : fullName.Trim()[0].ToString().ToUpperInvariant();
+
+    public void Dispose()
+    {
+        heartbeatTimer?.Dispose();
+    }
 }
