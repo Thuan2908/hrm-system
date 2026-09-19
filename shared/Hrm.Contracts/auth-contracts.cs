@@ -20,3 +20,7 @@ public sealed record UserSessionDto(
     string FullName,
     IReadOnlyCollection<string> Roles,
     IReadOnlyCollection<string> Permissions);
+
+public sealed record UpdateProfileRequest(string FullName);
+
+public sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);

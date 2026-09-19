@@ -5,19 +5,19 @@
 
 <div class="emp-shell">
     <aside class="emp-sidebar">
-        <a class="emp-brand" href="attendance">
+        <a class="emp-brand" href="employee/attendance">
             <span class="emp-brand-mark">SR</span>
             <span><strong>Saigon Retail</strong><small>EMPLOYEE PORTAL</small></span>
         </a>
         <p class="emp-nav-label">CỔNG NHÂN VIÊN</p>
         <nav class="emp-nav">
-            <NavLink class="emp-nav-link" href="attendance" Match="NavLinkMatch.All">
+            <NavLink class="emp-nav-link" href="employee/attendance" Match="NavLinkMatch.All">
                 <span>⏱</span>Chấm công (Check-in/out)
             </NavLink>
-            <NavLink class="emp-nav-link" href="leave">
+            <NavLink class="emp-nav-link" href="employee/leave">
                 <span>📝</span>Đơn xin nghỉ phép
             </NavLink>
-            <NavLink class="emp-nav-link" href="payslips">
+            <NavLink class="emp-nav-link" href="employee/payslips">
                 <span>💰</span>Phiếu lương của tôi
             </NavLink>
         </nav>
@@ -33,13 +33,13 @@
             </div>
             <AuthorizeView>
                 <Authorized Context="authContext">
-                    <div class="emp-user">
+                    <a class="emp-user text-decoration-none" href="employee/profile" title="Bấm vào đây để xem và chỉnh sửa thông tin cá nhân">
                         <span class="emp-avatar">@GetInitial(authContext.User.FindFirst("full_name")?.Value)</span>
                         <span>
                             <strong class="text-dark">@authContext.User.FindFirst("full_name")?.Value</strong>
-                            <small class="badge bg-success-subtle text-success border border-success-subtle">Nhân viên</small>
+                            <small class="badge bg-success-subtle text-success border border-success-subtle">Nhân viên ✎</small>
                         </span>
-                    </div>
+                    </a>
                 </Authorized>
             </AuthorizeView>
         </header>

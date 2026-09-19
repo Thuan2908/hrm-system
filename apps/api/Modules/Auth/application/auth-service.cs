@@ -20,6 +20,8 @@ public interface IAuthService
     Task LogoutAsync(LogoutRequest request, string? ipAddress, CancellationToken cancellationToken);
     Task<UserSessionDto> GetSessionAsync(long userId, CancellationToken cancellationToken);
     Task UpdateHeartbeatAsync(long userId, string? deviceId, CancellationToken cancellationToken);
+    Task<UserSessionDto> UpdateProfileAsync(long userId, UpdateProfileRequest request, CancellationToken cancellationToken);
+    Task ChangePasswordAsync(long userId, ChangePasswordRequest request, CancellationToken cancellationToken);
 }
 
 public sealed class AuthService(
@@ -207,6 +209,50 @@ public sealed class AuthService(
             .SingleOrDefaultAsync(item => item.Id == userId, cancellationToken)
             ?? throw new DomainException("AUTH_USER_NOT_FOUND", "Không tìm thấy tài khoản.");
         return await CreateSessionAsync(user, cancellationToken);
+    }
+
+    public async Task<UserSessionDto> UpdateProfileAsync(long userId, UpdateProfileRequest request, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.FullName))
+        {
+            throw new DomainException("AUTH_INVALID_FULL_NAME", "Họ và tên không được để trống.");
+        }
+
+        var user = await dbContext.Users
+            .Include(item => item.Employee)
+            .Include(item => item.Role)
+            .SingleOrDefaultAsync(item => item.Id == userId, cancellationToken)
+            ?? throw new DomainException("AUTH_USER_NOT_FOUND", "Không tìm thấy tài khoản.");
+
+        user.Employee.FullName = request.FullName.Trim();
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return await CreateSessionAsync(user, cancellationToken);
+    }
+
+    public async Task ChangePasswordAsync(long userId, ChangePasswordRequest request, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.CurrentPassword))
+        {
+            throw new DomainException("AUTH_INVALID_PASSWORD", "Vui lòng nhập mật khẩu hiện tại.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.NewPassword) || request.NewPassword.Length < 3)
+        {
+            throw new DomainException("AUTH_PASSWORD_TOO_SHORT", "Mật khẩu mới phải có tối thiểu 3 ký tự.");
+        }
+
+        var user = await dbContext.Users
+            .SingleOrDefaultAsync(item => item.Id == userId, cancellationToken)
+            ?? throw new DomainException("AUTH_USER_NOT_FOUND", "Không tìm thấy tài khoản.");
+
+        if (!VerifyPassword(request.CurrentPassword, user.PasswordHash))
+        {
+            throw new DomainException("AUTH_INCORRECT_CURRENT_PASSWORD", "Mật khẩu hiện tại không chính xác.");
+        }
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword.Trim());
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     private async Task<AuthTokenResponse> IssueTokenPairAsync(

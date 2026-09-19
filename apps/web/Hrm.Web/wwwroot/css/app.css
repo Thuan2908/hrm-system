@@ -470,6 +470,16 @@ code {
     display: flex;
     align-items: center;
     gap: .75rem;
+    padding: .4rem .75rem;
+    border-radius: .95rem;
+    transition: all .2s ease;
+    border: 1px solid transparent;
+}
+
+.emp-user:hover {
+    background: rgba(16, 185, 129, 0.08);
+    border-color: rgba(16, 185, 129, 0.25);
+    transform: translateY(-1px);
 }
 
 .emp-user > span:last-child {

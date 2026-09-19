@@ -88,7 +88,7 @@
 
             string target = !string.IsNullOrWhiteSpace(ReturnUrl) && !ReturnUrl.StartsWith("admin", StringComparison.OrdinalIgnoreCase) && !ReturnUrl.Contains("login")
                 ? ReturnUrl
-                : "attendance";
+                : "employee/attendance";
 
             Navigation.NavigateTo(target, forceLoad: true);
         }

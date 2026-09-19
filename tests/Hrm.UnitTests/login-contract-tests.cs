@@ -31,4 +31,19 @@ public sealed class LoginContractTests
         Assert.Null(req1.DeviceId);
         Assert.Equal("dev-99", req2.DeviceId);
     }
+
+    [Fact]
+    public void UpdateProfileRequestValidatesCorrectly()
+    {
+        var req = new UpdateProfileRequest("Nguyễn Văn A");
+        Assert.Equal("Nguyễn Văn A", req.FullName);
+    }
+
+    [Fact]
+    public void ChangePasswordRequestValidatesCorrectly()
+    {
+        var req = new ChangePasswordRequest("OldPass123", "NewPass456");
+        Assert.Equal("OldPass123", req.CurrentPassword);
+        Assert.Equal("NewPass456", req.NewPassword);
+    }
 }
