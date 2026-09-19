@@ -31,28 +31,28 @@ internal static class Program
 
         try
         {
-            Console.WriteLine("[Runner] Starting Backend API (https://localhost:7060)...");
+            Console.WriteLine("[Runner] Starting Backend API (http://localhost:5172)...");
             _apiProcess = StartProject(
                 rootDir,
                 "apps/api/Hrm.Api/Hrm.Api.csproj",
-                "https",
+                "http",
                 "API",
                 ConsoleColor.Cyan);
 
-            Console.WriteLine("[Runner] Starting Frontend Web (https://localhost:7100)...");
+            Console.WriteLine("[Runner] Starting Frontend Web (http://localhost:5296)...");
             _webProcess = StartProject(
                 rootDir,
                 "apps/web/Hrm.Web/Hrm.Web.csproj",
-                "https",
+                "http",
                 "WEB",
                 ConsoleColor.Green);
 
             Console.WriteLine("-------------------------------------------------------------------");
             Console.WriteLine(" ✨ Both applications are launching:");
-            Console.WriteLine("    👉 Frontend UI: https://localhost:7100");
-            Console.WriteLine("    👉 Backend API: https://localhost:7060");
-            Console.WriteLine("    👉 Swagger/OpenAPI: https://localhost:7060/openapi/v1.json");
-            Console.WriteLine("    👉 Health: https://localhost:7060/health/ready");
+            Console.WriteLine("    👉 Frontend UI: http://localhost:5296");
+            Console.WriteLine("    👉 Backend API: http://localhost:5172");
+            Console.WriteLine("    👉 Swagger/OpenAPI: http://localhost:5172/openapi/v1.json");
+            Console.WriteLine("    👉 Health: http://localhost:5172/health/ready");
             Console.WriteLine("    👉 Press [Ctrl+C] to stop both services.");
             Console.WriteLine("-------------------------------------------------------------------");
 

@@ -13,8 +13,11 @@
             <NavLink class="admin-nav-link" href="attendance" Match="NavLinkMatch.All">
                 <span>⏱</span>Chấm công (Check-in/out)
             </NavLink>
-            <NavLink class="admin-nav-link" href="" Match="NavLinkMatch.All">
-                <span>⌂</span>Trang chủ
+            <NavLink class="admin-nav-link" href="leave">
+                <span>📝</span>Đơn xin nghỉ phép
+            </NavLink>
+            <NavLink class="admin-nav-link" href="payslips">
+                <span>💰</span>Phiếu lương của tôi
             </NavLink>
         </nav>
         <button class="admin-logout" @onclick="LogoutAsync">
@@ -49,7 +52,7 @@
     private async Task LogoutAsync()
     {
         await AuthApiClient.LogoutAsync();
-        Navigation.NavigateTo("login", true);
+        Navigation.NavigateTo("employee-login", true);
     }
 
     private static string GetInitial(string? fullName) =>
