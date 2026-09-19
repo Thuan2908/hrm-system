@@ -1,0 +1,286 @@
+@page "/employee/profile"
+@layout EmployeeLayout
+@attribute [Authorize]
+@inject IAuthApiClient AuthApiClient
+@inject BrowserSessionStore SessionStore
+
+<PageTitle>Hồ sơ cá nhân - Saigon Retail</PageTitle>
+
+<div class="container-fluid px-0">
+    <!-- Header Hero Banner -->
+    <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #052e22 0%, #065f46 50%, #047857 100%); color: white; border-radius: 18px; box-shadow: 0 12px 30px rgba(5, 46, 34, 0.25) !important;">
+        <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <div>
+                <span class="badge text-white mb-2 px-3 py-1" style="background-color: #10b981; font-size: 0.85rem; border-radius: 20px; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);">
+                    ● TÀI KHOẢN &amp; HỒ SƠ
+                </span>
+                <h1 class="h3 fw-bold mb-1 text-white">Hồ sơ cá nhân</h1>
+                <p class="mb-0 text-white-50">Xem thông tin định danh, cập nhật họ tên và thay đổi mật khẩu bảo mật.</p>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <a class="btn btn-outline-light rounded-pill px-4 py-2" href="employee/attendance">
+                    ← Về trang Chấm công
+                </a>
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(globalSuccessMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm d-flex align-items-center gap-2 mb-4" role="alert" style="border-radius: 12px; background-color: #ecfdf5; color: #065f46;">
+            <span style="font-size: 1.25rem;">✓</span>
+            <div>@globalSuccessMessage</div>
+            <button type="button" class="btn-close ms-auto" @onclick="() => globalSuccessMessage = null"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(globalErrorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm d-flex align-items-center gap-2 mb-4" role="alert" style="border-radius: 12px;">
+            <span style="font-size: 1.25rem;">⚠</span>
+            <div>@globalErrorMessage</div>
+            <button type="button" class="btn-close ms-auto" @onclick="() => globalErrorMessage = null"></button>
+        </div>
+    }
+
+    <div class="row g-4">
+        <!-- Cột trái: Thông tin tổng quan -->
+        <div class="col-12 col-lg-4">
+            <div class="card border-0 shadow-sm text-center p-4 h-100" style="border-radius: 16px;">
+                <div class="card-body p-2 d-flex flex-column align-items-center">
+                    <div class="mb-3 d-grid place-items-center rounded-circle text-white fw-bold shadow"
+                         style="width: 5.5rem; height: 5.5rem; font-size: 2.2rem; background: linear-gradient(135deg, #10b981 0%, #047857 100%);">
+                        @GetInitial(currentFullName)
+                    </div>
+
+                    <h4 class="fw-bold text-dark mb-1">@(currentFullName ?? "Nhân viên")</h4>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1 rounded-pill mb-4">
+                        ● Đang hoạt động (Active)
+                    </span>
+
+                    <div class="w-100 text-start border-top pt-3">
+                        <div class="d-flex justify-content-between py-2 border-bottom">
+                            <span class="text-muted small">Tên đăng nhập:</span>
+                            <strong class="text-dark font-monospace">@userName</strong>
+                        </div>
+                        <div class="d-flex justify-content-between py-2 border-bottom">
+                            <span class="text-muted small">Mã nhân viên:</span>
+                            <strong class="text-dark font-monospace">#@userId</strong>
+                        </div>
+                        <div class="d-flex justify-content-between py-2 border-bottom">
+                            <span class="text-muted small">Vai trò hệ thống:</span>
+                            <span class="badge bg-light text-secondary border">@roleName</span>
+                        </div>
+                        <div class="d-flex justify-content-between py-2">
+                            <span class="text-muted small">Đơn vị:</span>
+                            <strong class="text-dark">Saigon Retail HRM</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cột phải: Form cập nhật thông tin và đổi mật khẩu -->
+        <div class="col-12 col-lg-8">
+            <div class="d-flex flex-column gap-4">
+                <!-- Card 1: Chỉnh sửa họ và tên -->
+                <div class="card border-0 shadow-sm" style="border-radius: 16px;">
+                    <div class="card-header bg-white border-bottom border-light py-3 px-4">
+                        <strong class="text-dark fs-5">CHỈNH SỬA THÔNG TIN CÁ NHÂN</strong>
+                    </div>
+                    <div class="card-body p-4">
+                        <EditForm Model="profileModel" OnValidSubmit="HandleUpdateProfileAsync">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold text-secondary" for="fullNameInput">Họ và tên đầy đủ</label>
+                                <InputText id="fullNameInput" class="form-control form-control-lg" @bind-Value="profileModel.FullName" placeholder="Nhập họ và tên đầy đủ của bạn..." />
+                                <small class="text-muted d-block mt-1">Tên này sẽ hiển thị trên góc Topbar, bảng công, đơn nghỉ phép và phiếu lương của bạn.</small>
+                            </div>
+
+                            <button type="submit" class="btn text-white fw-bold px-4 py-2 rounded-pill shadow-sm"
+                                    style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);"
+                                    disabled="@isUpdatingProfile">
+                                @if (isUpdatingProfile)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                    <span>Đang lưu...</span>
+                                }
+                                else
+                                {
+                                    <span>💾 Lưu thay đổi họ tên</span>
+                                }
+                            </button>
+                        </EditForm>
+                    </div>
+                </div>
+
+                <!-- Card 2: Đổi mật khẩu -->
+                <div class="card border-0 shadow-sm" style="border-radius: 16px;">
+                    <div class="card-header bg-white border-bottom border-light py-3 px-4">
+                        <strong class="text-dark fs-5">BẢO MẬT &amp; ĐỔI MẬT KHẨU</strong>
+                    </div>
+                    <div class="card-body p-4">
+                        <EditForm Model="passwordModel" OnValidSubmit="HandleChangePasswordAsync">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold text-secondary" for="currentPasswordInput">Mật khẩu hiện tại</label>
+                                <InputText id="currentPasswordInput" type="password" class="form-control" @bind-Value="passwordModel.CurrentPassword" placeholder="Nhập mật khẩu đang sử dụng..." />
+                            </div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label fw-semibold text-secondary" for="newPasswordInput">Mật khẩu mới</label>
+                                    <InputText id="newPasswordInput" type="password" class="form-control" @bind-Value="passwordModel.NewPassword" placeholder="Tối thiểu 3 ký tự..." />
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label fw-semibold text-secondary" for="confirmPasswordInput">Xác nhận mật khẩu mới</label>
+                                    <InputText id="confirmPasswordInput" type="password" class="form-control" @bind-Value="passwordModel.ConfirmPassword" placeholder="Nhập lại mật khẩu mới..." />
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-outline-success fw-bold px-4 py-2 rounded-pill shadow-sm"
+                                    disabled="@isChangingPassword">
+                                @if (isChangingPassword)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                    <span>Đang cập nhật...</span>
+                                }
+                                else
+                                {
+                                    <span>🔑 Cập nhật mật khẩu mới</span>
+                                }
+                            </button>
+                        </EditForm>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string? currentFullName;
+    private string? userName;
+    private string? roleName;
+    private long userId;
+
+    private ProfileFormModel profileModel = new();
+    private PasswordFormModel passwordModel = new();
+
+    private bool isUpdatingProfile = false;
+    private bool isChangingPassword = false;
+
+    private string? globalSuccessMessage;
+    private string? globalErrorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var session = await SessionStore.GetAsync();
+        if (session is not null)
+        {
+            userId = session.User.Id;
+            userName = session.User.UserName;
+            currentFullName = session.User.FullName;
+            roleName = session.User.Roles.FirstOrDefault() ?? "Nhân viên";
+
+            profileModel.FullName = currentFullName ?? "";
+        }
+    }
+
+    private async Task HandleUpdateProfileAsync()
+    {
+        if (string.IsNullOrWhiteSpace(profileModel.FullName))
+        {
+            globalErrorMessage = "Vui lòng nhập họ và tên đầy đủ.";
+            return;
+        }
+
+        isUpdatingProfile = true;
+        globalSuccessMessage = null;
+        globalErrorMessage = null;
+
+        try
+        {
+            var err = await AuthApiClient.UpdateProfileAsync(new UpdateProfileRequest(profileModel.FullName.Trim()));
+            if (err is not null)
+            {
+                globalErrorMessage = err.Message;
+            }
+            else
+            {
+                currentFullName = profileModel.FullName.Trim();
+                globalSuccessMessage = "Cập nhật họ và tên thành công!";
+            }
+        }
+        catch (Exception ex)
+        {
+            globalErrorMessage = "Lỗi khi cập nhật hồ sơ: " + ex.Message;
+        }
+        finally
+        {
+            isUpdatingProfile = false;
+        }
+    }
+
+    private async Task HandleChangePasswordAsync()
+    {
+        if (string.IsNullOrWhiteSpace(passwordModel.CurrentPassword))
+        {
+            globalErrorMessage = "Vui lòng nhập mật khẩu hiện tại.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(passwordModel.NewPassword) || passwordModel.NewPassword.Length < 3)
+        {
+            globalErrorMessage = "Mật khẩu mới phải có tối thiểu 3 ký tự.";
+            return;
+        }
+
+        if (passwordModel.NewPassword != passwordModel.ConfirmPassword)
+        {
+            globalErrorMessage = "Xác nhận mật khẩu mới không trùng khớp.";
+            return;
+        }
+
+        isChangingPassword = true;
+        globalSuccessMessage = null;
+        globalErrorMessage = null;
+
+        try
+        {
+            var err = await AuthApiClient.ChangePasswordAsync(new ChangePasswordRequest(
+                passwordModel.CurrentPassword, passwordModel.NewPassword));
+
+            if (err is not null)
+            {
+                globalErrorMessage = err.Message;
+            }
+            else
+            {
+                globalSuccessMessage = "Đổi mật khẩu thành công!";
+                passwordModel = new PasswordFormModel();
+            }
+        }
+        catch (Exception ex)
+        {
+            globalErrorMessage = "Lỗi khi đổi mật khẩu: " + ex.Message;
+        }
+        finally
+        {
+            isChangingPassword = false;
+        }
+    }
+
+    private static string GetInitial(string? fullName) =>
+        string.IsNullOrWhiteSpace(fullName) ? "N" : fullName.Trim()[0].ToString().ToUpperInvariant();
+
+    private sealed class ProfileFormModel
+    {
+        public string FullName { get; set; } = string.Empty;
+    }
+
+    private sealed class PasswordFormModel
+    {
+        public string CurrentPassword { get; set; } = string.Empty;
+        public string NewPassword { get; set; } = string.Empty;
+        public string ConfirmPassword { get; set; } = string.Empty;
+    }
+}
