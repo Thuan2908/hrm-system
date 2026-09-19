@@ -22,15 +22,3 @@ MVP ưu tiên:
 4. Leave approval
 5. Payroll
 6. Reporting
-
-## Expanded retail domains
-- Products
-- Suppliers
-- Warehouse/Inventory
-- Procurement
-- Sales
-
-New user groups:
-- Warehouse Manager / Staff
-- Procurement Manager
-- Sales Manager / Staff

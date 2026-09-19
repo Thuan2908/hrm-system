@@ -34,15 +34,3 @@ PRD-001 -> PRD-006
 
 ## Epic 11 — Admin Advanced Management
 ADM-001 -> ADM-006
-
-## Epic 12 — Product & Supplier
-CAT-001 -> CAT-010
-
-## Epic 13 — Warehouse & Inventory
-INV-001 -> INV-010
-
-## Epic 14 — Procurement
-PUR-001 -> PUR-006
-
-## Epic 15 — Sales
-SAL-001 -> SAL-008
