@@ -1,4 +1,4 @@
-# Saigon Retail Management System
+# HRM System — Saigon Retail JSC
 
 ## Architecture
 - Monorepo
@@ -35,13 +35,11 @@ Backend uses a separate secret connection string.
 
 ## Domains
 - Admin/RBAC
-- HRM
-- Products
-- Suppliers
-- Warehouse/Inventory
-- Procurement
-- Sales
-- Reports
+- Core HR (Employees, Departments, Positions)
+- Attendance & Leave
+- Payroll
+- Reports & Analytics
+- Employee Self-Service (ESS)
 - Audit
 
 ## Development references

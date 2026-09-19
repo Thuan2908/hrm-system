@@ -11,16 +11,10 @@ apps/web/
 ├── Layout/
 │   ├── AdminLayout.razor
 │   ├── HrLayout.razor
-│   ├── WarehouseLayout.razor
-│   ├── ProcurementLayout.razor
-│   ├── SalesLayout.razor
 │   └── EmployeeLayout.razor
 ├── Pages/
 │   ├── Admin/
 │   ├── Hr/
-│   ├── Warehouse/
-│   ├── Procurement/
-│   ├── Sales/
 │   └── Employee/
 ├── Features/
 ├── Services/
