@@ -45,53 +45,6 @@ public sealed class PayrollDatabaseInitializer(PayrollDbContext dbContext) : IPa
                   WHERE rp.role_id = r.role_id AND rp.perm_id = p.perm_id);
             """, cancellationToken);
 
-        // 5. Seed dữ liệu lương mẫu vào bảng payrolls cho nhân viên để có dữ liệu xem ngay lập tức
-        // Kỳ lương Tháng 8/2026
-        await dbContext.Database.ExecuteSqlRawAsync("""
-            INSERT INTO payrolls (
-                emp_id, month_period, year_period,
-                actual_days, gross_sal, bhxh_deduct, tax_deduct, net_sal
-            )
-            SELECT
-                u.emp_id,
-                8,
-                2026,
-                25.5,
-                17350000.00,
-                1575000.00,
-                350000.00,
-                15425000.00
-            FROM users u
-            WHERE u.emp_id IS NOT NULL
-              AND NOT EXISTS (
-                  SELECT 1 FROM payrolls p
-                  WHERE p.emp_id = u.emp_id AND p.month_period = 8 AND p.year_period = 2026
-              );
-            """, cancellationToken);
-
-        // Kỳ lương Tháng 7/2026
-        await dbContext.Database.ExecuteSqlRawAsync("""
-            INSERT INTO payrolls (
-                emp_id, month_period, year_period,
-                actual_days, gross_sal, bhxh_deduct, tax_deduct, net_sal
-            )
-            SELECT
-                u.emp_id,
-                7,
-                2026,
-                26.0,
-                16500000.00,
-                1575000.00,
-                320000.00,
-                14605000.00
-            FROM users u
-            WHERE u.emp_id IS NOT NULL
-              AND NOT EXISTS (
-                  SELECT 1 FROM payrolls p
-                  WHERE p.emp_id = u.emp_id AND p.month_period = 7 AND p.year_period = 2026
-              );
-            """, cancellationToken);
-
         await transaction.CommitAsync(cancellationToken);
     }
 }

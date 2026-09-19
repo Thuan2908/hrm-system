@@ -39,14 +39,98 @@
 <section class="card border-0 shadow-sm">
     <div class="card-body">
         <div class="row g-2 mb-3">
-            <div class="col-md-4"><input class="form-control" placeholder="Họ tên, mã NV hoặc username" @bind="keyword" @bind:event="oninput" /></div>
-            <div class="col-md-2"><select class="form-select" @bind="department"><option value="">Mọi phòng ban</option>@foreach (var item in departments){<option value="@item">@item</option>}</select></div>
-            <div class="col-md-2"><select class="form-select" @bind="role"><option value="">Mọi vai trò</option>@foreach (var item in roles){<option value="@item.Name">@item.Name</option>}</select></div>
-            <div class="col-md-2"><select class="form-select" @bind="status"><option value="">Mọi trạng thái</option><option value="ACTIVE">Active</option><option value="LOCKED">Locked</option><option value="INACTIVE">Inactive</option></select></div>
-            <div class="col-md-2"><button class="btn btn-outline-primary w-100" @onclick="SearchAsync">Tìm kiếm</button></div>
-            <div class="col-md-3"><select class="form-select" @bind="sortBy"><option value="createdAt">Ngày tạo</option><option value="lastLogin">Đăng nhập cuối</option><option value="username">Username</option></select></div>
-            <div class="col-md-3"><select class="form-select" @bind="sortDirection"><option value="desc">Giảm dần</option><option value="asc">Tăng dần</option></select></div>
+            <div class="col-md-3">
+                <label class="form-label small text-secondary mb-1">Tìm kiếm</label>
+                <div class="input-group">
+                    <input class="form-control" placeholder="Họ tên, mã NV hoặc username..." value="@keyword" @oninput="OnKeywordInput" @onkeyup="HandleKeyUp" />
+                    @if (!string.IsNullOrWhiteSpace(keyword))
+                    {
+                        <button class="btn btn-outline-secondary" type="button" @onclick="ClearKeywordAsync">✕</button>
+                    }
+                </div>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-secondary mb-1">Phòng ban</label>
+                <select class="form-select" value="@department" @onchange="OnDepartmentChanged">
+                    <option value="">Mọi phòng ban</option>
+                    @foreach (var item in departments)
+                    {
+                        <option value="@item">@item</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-secondary mb-1">Vai trò</label>
+                <select class="form-select" value="@role" @onchange="OnRoleChanged">
+                    <option value="">Mọi vai trò</option>
+                    @foreach (var item in roles)
+                    {
+                        <option value="@item.Name">@item.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-secondary mb-1">Trạng thái</label>
+                <select class="form-select" value="@status" @onchange="OnStatusChanged">
+                    <option value="">Mọi trạng thái</option>
+                    <option value="ACTIVE">Hoạt động (Active)</option>
+                    <option value="LOCKED">Bị khóa (Locked)</option>
+                    <option value="INACTIVE">Vô hiệu hóa (Inactive)</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small text-secondary mb-1">Sắp xếp</label>
+                <div class="input-group">
+                    <select class="form-select" value="@sortBy" @onchange="OnSortByChanged">
+                        <option value="createdAt">Ngày tạo</option>
+                        <option value="lastLogin">Đăng nhập cuối</option>
+                        <option value="username">Username</option>
+                    </select>
+                    <select class="form-select" style="max-width: 100px;" value="@sortDirection" @onchange="OnSortDirectionChanged">
+                        <option value="desc">Giảm</option>
+                        <option value="asc">Tăng</option>
+                    </select>
+                </div>
+            </div>
         </div>
+
+        @if (HasActiveFilters)
+        {
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-3 bg-light p-2 rounded">
+                <span class="small text-secondary fw-semibold">Bộ lọc đang áp dụng:</span>
+                @if (!string.IsNullOrWhiteSpace(keyword))
+                {
+                    <span class="badge text-bg-primary d-inline-flex align-items-center gap-1">
+                        Từ khóa: "@keyword"
+                        <span role="button" class="ms-1" @onclick="ClearKeywordAsync">✕</span>
+                    </span>
+                }
+                @if (!string.IsNullOrWhiteSpace(department))
+                {
+                    <span class="badge text-bg-info text-dark d-inline-flex align-items-center gap-1">
+                        Phòng ban: @department
+                        <span role="button" class="ms-1" @onclick="ClearDepartmentAsync">✕</span>
+                    </span>
+                }
+                @if (!string.IsNullOrWhiteSpace(role))
+                {
+                    <span class="badge text-bg-warning text-dark d-inline-flex align-items-center gap-1">
+                        Vai trò: @role
+                        <span role="button" class="ms-1" @onclick="ClearRoleAsync">✕</span>
+                    </span>
+                }
+                @if (!string.IsNullOrWhiteSpace(status))
+                {
+                    <span class="badge text-bg-secondary d-inline-flex align-items-center gap-1">
+                        Trạng thái: @status
+                        <span role="button" class="ms-1" @onclick="ClearStatusAsync">✕</span>
+                    </span>
+                }
+                <button class="btn btn-link btn-sm p-0 ms-auto text-decoration-none small text-danger" @onclick="ClearFiltersAsync">
+                    Xóa tất cả bộ lọc
+                </button>
+            </div>
+        }
 
         @if (isLoading)
         {
@@ -54,13 +138,13 @@
         }
         else if (users.Count == 0)
         {
-            <p class="text-secondary mb-0">Không có tài khoản phù hợp.</p>
+            <p class="text-secondary mb-0">Không tìm thấy nhân sự/tài khoản phù hợp.</p>
         }
         else
         {
             <div class="table-responsive">
                 <table class="table align-middle">
-                    <thead><tr><th>Tài khoản</th><th>Vai trò</th><th>Trạng thái</th><th>Ngày tạo</th><th>Đăng nhập cuối</th><th class="text-end">Thao tác</th></tr></thead>
+                    <thead><tr><th>Tài khoản / Nhân sự</th><th>Vai trò</th><th>Trạng thái</th><th>Ngày tạo</th><th>Đăng nhập cuối</th><th class="text-end">Thao tác</th></tr></thead>
                     <tbody>
                     @foreach (var user in users)
                     {
@@ -82,7 +166,7 @@
                 </table>
             </div>
             <div class="d-flex justify-content-between align-items-center">
-                <span class="text-secondary">Tổng: @total</span>
+                <span class="text-secondary">Tổng: @total nhân sự</span>
                 <div><button class="btn btn-sm btn-outline-secondary me-2" disabled="@(page <= 1)" @onclick="PreviousPageAsync">Trước</button><button class="btn btn-sm btn-outline-secondary" disabled="@(page * 20 >= total)" @onclick="NextPageAsync">Sau</button></div>
             </div>
         }
@@ -107,6 +191,7 @@
     private int page = 1;
     private long total;
     private IEnumerable<string> departments => employees.Select(item => item.Department).Distinct().OrderBy(item => item);
+    private bool HasActiveFilters => !string.IsNullOrWhiteSpace(keyword) || !string.IsNullOrWhiteSpace(department) || !string.IsNullOrWhiteSpace(role) || !string.IsNullOrWhiteSpace(status);
 
     protected override async Task OnInitializedAsync()
     {
@@ -122,6 +207,71 @@
     private async Task SearchAsync() { page = 1; await LoadAsync(); }
     private async Task PreviousPageAsync() { page--; await LoadAsync(); }
     private async Task NextPageAsync() { page++; await LoadAsync(); }
+
+    private async Task HandleKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SearchAsync();
+        }
+    }
+
+    private async Task OnKeywordInput(ChangeEventArgs e)
+    {
+        keyword = e.Value?.ToString();
+        page = 1;
+        await LoadAsync();
+    }
+
+    private async Task OnDepartmentChanged(ChangeEventArgs e)
+    {
+        department = e.Value?.ToString();
+        page = 1;
+        await LoadAsync();
+    }
+
+    private async Task OnRoleChanged(ChangeEventArgs e)
+    {
+        role = e.Value?.ToString();
+        page = 1;
+        await LoadAsync();
+    }
+
+    private async Task OnStatusChanged(ChangeEventArgs e)
+    {
+        status = e.Value?.ToString();
+        page = 1;
+        await LoadAsync();
+    }
+
+    private async Task OnSortByChanged(ChangeEventArgs e)
+    {
+        sortBy = e.Value?.ToString() ?? "createdAt";
+        page = 1;
+        await LoadAsync();
+    }
+
+    private async Task OnSortDirectionChanged(ChangeEventArgs e)
+    {
+        sortDirection = e.Value?.ToString() ?? "desc";
+        page = 1;
+        await LoadAsync();
+    }
+
+    private async Task ClearKeywordAsync() { keyword = null; page = 1; await LoadAsync(); }
+    private async Task ClearDepartmentAsync() { department = null; page = 1; await LoadAsync(); }
+    private async Task ClearRoleAsync() { role = null; page = 1; await LoadAsync(); }
+    private async Task ClearStatusAsync() { status = null; page = 1; await LoadAsync(); }
+
+    private async Task ClearFiltersAsync()
+    {
+        keyword = null;
+        department = null;
+        role = null;
+        status = null;
+        page = 1;
+        await LoadAsync();
+    }
 
     private async Task LoadAsync()
     {

@@ -20,6 +20,13 @@
             <NavLink class="emp-nav-link" href="payslips">
                 <span>💰</span>Phiếu lương của tôi
             </NavLink>
+            <AuthorizeView Policy="@PermissionCodes.EmployeeRead">
+                <Authorized>
+                    <NavLink class="emp-nav-link" href="employees">
+                        <span>👥</span>Tìm kiếm nhân sự
+                    </NavLink>
+                </Authorized>
+            </AuthorizeView>
         </nav>
         <button class="emp-logout" @onclick="LogoutAsync">
             <span>↪</span>Đăng xuất

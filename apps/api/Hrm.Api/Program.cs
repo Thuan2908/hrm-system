@@ -134,6 +134,12 @@ if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("Databas
         await authInitializer.InitializeAsync(CancellationToken.None);
     }
 
+    var employeesInitializer = scope.ServiceProvider.GetService<Hrm.Modules.Employees.Infrastructure.Persistence.IEmployeesDatabaseInitializer>();
+    if (employeesInitializer is not null)
+    {
+        await employeesInitializer.InitializeAsync(CancellationToken.None);
+    }
+
     var attendanceInitializer = scope.ServiceProvider.GetService<Hrm.Modules.Attendance.Infrastructure.Persistence.IAttendanceDatabaseInitializer>();
     if (attendanceInitializer is not null)
     {

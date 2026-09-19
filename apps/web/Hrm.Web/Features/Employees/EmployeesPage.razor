@@ -1,0 +1,503 @@
+@page "/employees"
+@layout EmployeeLayout
+@attribute [Authorize(Policy = PermissionCodes.EmployeeRead)]
+@inject EmployeeApiClient EmployeeApiClient
+
+<PageTitle>Danh mục & Tìm kiếm Nhân sự</PageTitle>
+
+<div class="d-flex justify-content-between align-items-start gap-3 mb-4">
+    <div>
+        <h1 class="h3 mb-1">Danh mục & Tìm kiếm Nhân sự</h1>
+        <p class="text-secondary mb-0">Tra cứu thông tin hồ sơ nhân sự, điều chuyển phòng ban và bổ nhiệm chức danh.</p>
+    </div>
+    <AuthorizeView Policy="@PermissionCodes.EmployeeWrite">
+        <Authorized>
+            <button class="btn btn-primary" @onclick="OpenCreateModal">
+                <i class="bi bi-person-plus me-1"></i>Tiếp nhận nhân sự mới
+            </button>
+        </Authorized>
+    </AuthorizeView>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(message))
+{
+    <div class="alert @(hasError ? "alert-danger" : "alert-success") alert-dismissible fade show" role="alert">
+        @message
+        <button type="button" class="btn-close" @onclick="() => message = null"></button>
+    </div>
+}
+
+<section class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <div class="row g-2 mb-3">
+            <div class="col-md-3">
+                <label class="form-label small text-secondary mb-1">Từ khóa tìm kiếm</label>
+                <div class="input-group">
+                    <input class="form-control" placeholder="Họ tên, Mã NV, Email hoặc Số ĐT..." value="@keyword" @oninput="OnKeywordInput" @onkeyup="HandleKeyUp" />
+                    @if (!string.IsNullOrWhiteSpace(keyword))
+                    {
+                        <button class="btn btn-outline-secondary" type="button" @onclick="ClearKeywordAsync">✕</button>
+                    }
+                </div>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-secondary mb-1">Phòng ban</label>
+                <select class="form-select" value="@selectedDepartmentId" @onchange="OnDepartmentChanged">
+                    <option value="0">Tất cả phòng ban</option>
+                    @foreach (var dept in departments)
+                    {
+                        <option value="@dept.Id">@dept.Name (@dept.Code)</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-secondary mb-1">Chức danh</label>
+                <select class="form-select" value="@selectedPositionId" @onchange="OnPositionChanged">
+                    <option value="0">Tất cả chức danh</option>
+                    @foreach (var pos in positions)
+                    {
+                        <option value="@pos.Id">@pos.Title (@pos.Code)</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-secondary mb-1">Trạng thái</label>
+                <select class="form-select" value="@status" @onchange="OnStatusChanged">
+                    <option value="">Tất cả trạng thái</option>
+                    <option value="ACTIVE">Đang làm việc (ACTIVE)</option>
+                    <option value="RESIGNED">Đã nghỉ việc (RESIGNED)</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small text-secondary mb-1">Sắp xếp</label>
+                <div class="input-group">
+                    <select class="form-select" value="@sortBy" @onchange="OnSortByChanged">
+                        <option value="createdAt">Mới nhất</option>
+                        <option value="code">Mã nhân viên</option>
+                        <option value="name">Họ và tên</option>
+                        <option value="hireDate">Ngày vào làm</option>
+                    </select>
+                    <select class="form-select" style="max-width: 95px;" value="@sortDirection" @onchange="OnSortDirectionChanged">
+                        <option value="desc">Giảm</option>
+                        <option value="asc">Tăng</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        @if (HasActiveFilters)
+        {
+            <div class="d-flex flex-wrap align-items-center gap-2 bg-light p-2 rounded">
+                <span class="small text-secondary fw-semibold">Đang lọc theo:</span>
+                @if (!string.IsNullOrWhiteSpace(keyword))
+                {
+                    <span class="badge text-bg-primary d-inline-flex align-items-center gap-1">
+                        Từ khóa: "@keyword"
+                        <span role="button" class="ms-1" @onclick="ClearKeywordAsync">✕</span>
+                    </span>
+                }
+                @if (selectedDepartmentId > 0)
+                {
+                    var deptName = departments.FirstOrDefault(d => d.Id == selectedDepartmentId)?.Name ?? selectedDepartmentId.ToString();
+                    <span class="badge text-bg-info text-dark d-inline-flex align-items-center gap-1">
+                        Phòng: @deptName
+                        <span role="button" class="ms-1" @onclick="ClearDepartmentAsync">✕</span>
+                    </span>
+                }
+                @if (selectedPositionId > 0)
+                {
+                    var posTitle = positions.FirstOrDefault(p => p.Id == selectedPositionId)?.Title ?? selectedPositionId.ToString();
+                    <span class="badge text-bg-warning text-dark d-inline-flex align-items-center gap-1">
+                        Chức danh: @posTitle
+                        <span role="button" class="ms-1" @onclick="ClearPositionAsync">✕</span>
+                    </span>
+                }
+                @if (!string.IsNullOrWhiteSpace(status))
+                {
+                    <span class="badge text-bg-secondary d-inline-flex align-items-center gap-1">
+                        Trạng thái: @status
+                        <span role="button" class="ms-1" @onclick="ClearStatusAsync">✕</span>
+                    </span>
+                }
+                <button class="btn btn-link btn-sm p-0 ms-auto text-decoration-none small text-danger" @onclick="ClearFiltersAsync">
+                    Xóa tất cả bộ lọc
+                </button>
+            </div>
+        }
+    </div>
+</section>
+
+<section class="card border-0 shadow-sm">
+    <div class="card-body">
+        @if (isLoading)
+        {
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="text-secondary mt-2">Đang tìm kiếm danh sách nhân sự...</p>
+            </div>
+        }
+        else if (employees.Count == 0)
+        {
+            <div class="text-center py-5">
+                <i class="bi bi-people text-secondary fs-1"></i>
+                <p class="text-secondary mt-2 mb-0">Không tìm thấy nhân sự phù hợp với điều kiện tìm kiếm.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table align-middle table-hover">
+                    <thead>
+                        <tr>
+                            <th>Mã & Họ tên</th>
+                            <th>Phòng ban</th>
+                            <th>Chức danh</th>
+                            <th>Liên hệ</th>
+                            <th>Ngày vào làm</th>
+                            <th>Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var emp in employees)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 38px; height: 38px; font-size: 0.9rem;">
+                                            @GetInitials(emp.FullName)
+                                        </div>
+                                        <div>
+                                            <div class="fw-semibold text-dark">@emp.FullName</div>
+                                            <div class="small text-secondary">@emp.Code</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge text-bg-light border text-dark fw-normal">@emp.DepartmentName</span>
+                                </td>
+                                <td>
+                                    <span class="badge text-bg-light border text-dark fw-normal">@emp.PositionTitle</span>
+                                </td>
+                                <td>
+                                    <div class="small"><i class="bi bi-envelope me-1 text-secondary"></i>@emp.Email</div>
+                                    @if (!string.IsNullOrWhiteSpace(emp.Phone))
+                                    {
+                                        <div class="small text-secondary"><i class="bi bi-telephone me-1"></i>@emp.Phone</div>
+                                    }
+                                </td>
+                                <td>@emp.HireDate.ToString("dd/MM/yyyy")</td>
+                                <td>
+                                    <span class="badge @(emp.Status == "ACTIVE" ? "text-bg-success" : "text-bg-secondary")">
+                                        @(emp.Status == "ACTIVE" ? "Đang làm việc" : "Đã nghỉ việc")
+                                    </span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
+                <span class="text-secondary small">Tổng cộng: <strong>@total</strong> nhân sự</span>
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-sm btn-outline-secondary" disabled="@(pageIndex <= 1)" @onclick="PreviousPageAsync">
+                        <i class="bi bi-chevron-left me-1"></i>Trước
+                    </button>
+                    <span class="small text-secondary px-2">Trang @pageIndex / @totalPages</span>
+                    <button class="btn btn-sm btn-outline-secondary" disabled="@(pageIndex >= totalPages)" @onclick="NextPageAsync">
+                        Sau<i class="bi bi-chevron-right ms-1"></i>
+                    </button>
+                </div>
+            </div>
+        }
+    </div>
+</section>
+
+@if (showCreateModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Tiếp nhận nhân sự mới</h5>
+                    <button type="button" class="btn-close" @onclick="CloseCreateModal"></button>
+                </div>
+                <EditForm Model="createModel" OnValidSubmit="CreateEmployeeAsync">
+                    <DataAnnotationsValidator />
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Họ và tên nhân sự <span class="text-danger">*</span></label>
+                                <InputText class="form-control" @bind-Value="createModel.FullName" placeholder="Nhập họ và tên đầy đủ..." />
+                                <ValidationMessage For="@(() => createModel.FullName)" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Phòng ban <span class="text-danger">*</span></label>
+                                <InputSelect class="form-select" @bind-Value="createModel.DepartmentId">
+                                    <option value="0">-- Chọn phòng ban --</option>
+                                    @foreach (var dept in departments)
+                                    {
+                                        <option value="@dept.Id">@dept.Name</option>
+                                    }
+                                </InputSelect>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Chức danh <span class="text-danger">*</span></label>
+                                <InputSelect class="form-select" @bind-Value="createModel.PositionId">
+                                    <option value="0">-- Chọn chức danh --</option>
+                                    @foreach (var pos in positions)
+                                    {
+                                        <option value="@pos.Id">@pos.Title</option>
+                                    }
+                                </InputSelect>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Email cá nhân / làm việc <span class="text-danger">*</span></label>
+                                <InputText class="form-control" @bind-Value="createModel.Email" placeholder="example@saigonretail.vn" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Số điện thoại <span class="text-danger">*</span></label>
+                                <InputText class="form-control" @bind-Value="createModel.Phone" placeholder="09xxxxxxxx" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Ngày vào làm chính thức <span class="text-danger">*</span></label>
+                                <InputDate class="form-control" @bind-Value="createModel.HireDate" />
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Địa chỉ liên hệ</label>
+                                <InputText class="form-control" @bind-Value="createModel.Address" placeholder="Nhập địa chỉ cư trú..." />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" @onclick="CloseCreateModal">Hủy</button>
+                        <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+                            @if (isSubmitting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            Lưu tiếp nhận
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private IReadOnlyCollection<EmployeeDto> employees = [];
+    private IReadOnlyCollection<DepartmentDto> departments = [];
+    private IReadOnlyCollection<PositionDto> positions = [];
+
+    private string? keyword;
+    private long selectedDepartmentId;
+    private long selectedPositionId;
+    private string? status;
+    private string sortBy = "createdAt";
+    private string sortDirection = "desc";
+
+    private bool isLoading;
+    private bool isSubmitting;
+    private bool showCreateModal;
+    private string? message;
+    private bool hasError;
+
+    private int pageIndex = 1;
+    private int pageSize = 15;
+    private long total;
+    private int totalPages => (int)Math.Ceiling((double)total / pageSize);
+
+    private bool HasActiveFilters => !string.IsNullOrWhiteSpace(keyword) || selectedDepartmentId > 0 || selectedPositionId > 0 || !string.IsNullOrWhiteSpace(status);
+    private CreateEmployeeFormModel createModel = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var deptRes = await EmployeeApiClient.GetDepartmentsAsync();
+        departments = deptRes?.Data ?? [];
+        var posRes = await EmployeeApiClient.GetPositionsAsync();
+        positions = posRes?.Data ?? [];
+
+        await LoadAsync();
+    }
+
+    private async Task SearchAsync()
+    {
+        pageIndex = 1;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        isLoading = true;
+        try
+        {
+            var res = await EmployeeApiClient.SearchEmployeesAsync(
+                keyword, selectedDepartmentId, selectedPositionId, status, sortBy, sortDirection == "desc", pageIndex, pageSize);
+
+            employees = res?.Data?.Items ?? [];
+            total = res?.Data?.Total ?? 0;
+            if (res?.Error is not null)
+            {
+                SetMessage(res.Error.Message, true);
+            }
+        }
+        catch (HttpRequestException)
+        {
+            SetMessage("Không thể kết nối đến máy chủ API nhân sự.", true);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task HandleKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SearchAsync();
+        }
+    }
+
+    private async Task OnKeywordInput(ChangeEventArgs e)
+    {
+        keyword = e.Value?.ToString();
+        pageIndex = 1;
+        await LoadAsync();
+    }
+
+    private async Task OnDepartmentChanged(ChangeEventArgs e)
+    {
+        if (long.TryParse(e.Value?.ToString(), out var id))
+        {
+            selectedDepartmentId = id;
+            pageIndex = 1;
+            await LoadAsync();
+        }
+    }
+
+    private async Task OnPositionChanged(ChangeEventArgs e)
+    {
+        if (long.TryParse(e.Value?.ToString(), out var id))
+        {
+            selectedPositionId = id;
+            pageIndex = 1;
+            await LoadAsync();
+        }
+    }
+
+    private async Task OnStatusChanged(ChangeEventArgs e)
+    {
+        status = e.Value?.ToString();
+        pageIndex = 1;
+        await LoadAsync();
+    }
+
+    private async Task OnSortByChanged(ChangeEventArgs e)
+    {
+        sortBy = e.Value?.ToString() ?? "createdAt";
+        pageIndex = 1;
+        await LoadAsync();
+    }
+
+    private async Task OnSortDirectionChanged(ChangeEventArgs e)
+    {
+        sortDirection = e.Value?.ToString() ?? "desc";
+        pageIndex = 1;
+        await LoadAsync();
+    }
+
+    private async Task ClearKeywordAsync() { keyword = null; pageIndex = 1; await LoadAsync(); }
+    private async Task ClearDepartmentAsync() { selectedDepartmentId = 0; pageIndex = 1; await LoadAsync(); }
+    private async Task ClearPositionAsync() { selectedPositionId = 0; pageIndex = 1; await LoadAsync(); }
+    private async Task ClearStatusAsync() { status = null; pageIndex = 1; await LoadAsync(); }
+
+    private async Task ClearFiltersAsync()
+    {
+        keyword = null;
+        selectedDepartmentId = 0;
+        selectedPositionId = 0;
+        status = null;
+        pageIndex = 1;
+        await LoadAsync();
+    }
+
+    private async Task PreviousPageAsync() { pageIndex--; await LoadAsync(); }
+    private async Task NextPageAsync() { pageIndex++; await LoadAsync(); }
+
+    private void OpenCreateModal()
+    {
+        createModel = new CreateEmployeeFormModel
+        {
+            DepartmentId = departments.FirstOrDefault()?.Id ?? 0,
+            PositionId = positions.FirstOrDefault()?.Id ?? 0
+        };
+        showCreateModal = true;
+    }
+
+    private void CloseCreateModal() => showCreateModal = false;
+
+    private async Task CreateEmployeeAsync()
+    {
+        if (createModel.DepartmentId <= 0 || createModel.PositionId <= 0)
+        {
+            SetMessage("Vui lòng chọn đầy đủ phòng ban và chức danh.", true);
+            return;
+        }
+
+        isSubmitting = true;
+        try
+        {
+            var request = new CreateEmployeeRequest(
+                createModel.FullName,
+                createModel.DepartmentId,
+                createModel.PositionId,
+                createModel.Email,
+                createModel.Phone,
+                createModel.Address,
+                createModel.HireDate);
+
+            var res = await EmployeeApiClient.CreateEmployeeAsync(request);
+            if (res?.Success == true)
+            {
+                SetMessage($"Đã tiếp nhận nhân sự mới: {res.Data?.FullName} ({res.Data?.Code}) thành công.", false);
+                showCreateModal = false;
+                await LoadAsync();
+            }
+            else
+            {
+                SetMessage(res?.Error?.Message ?? "Không thể tạo nhân sự mới.", true);
+            }
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private void SetMessage(string text, bool error)
+    {
+        message = text;
+        hasError = error;
+    }
+
+    private static string GetInitials(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "NV";
+        var parts = name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 1) return parts[0][..1].ToUpperInvariant();
+        return $"{parts[0][0]}{parts[^1][0]}".ToUpperInvariant();
+    }
+
+    private sealed class CreateEmployeeFormModel
+    {
+        public string FullName { get; set; } = string.Empty;
+        public long DepartmentId { get; set; }
+        public long PositionId { get; set; }
+        public string Email { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public string? Address { get; set; }
+        public DateTime HireDate { get; set; } = DateTime.Today;
+    }
+}
