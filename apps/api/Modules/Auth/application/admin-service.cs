@@ -21,6 +21,8 @@ public interface IAdminService
     Task SetRolesAsync(long userId, IReadOnlyCollection<string> roles, long actorUserId, CancellationToken cancellationToken);
     Task ResetPasswordAsync(long userId, string newPassword, long actorUserId, CancellationToken cancellationToken);
     Task<IReadOnlyCollection<RoleDto>> GetRolesAsync(CancellationToken cancellationToken);
+    Task<RoleDto> CreateRoleAsync(CreateRoleRequest request, long actorUserId, CancellationToken cancellationToken);
+    Task DeleteRoleAsync(long roleId, long actorUserId, CancellationToken cancellationToken);
     Task SetRolePermissionsAsync(long roleId, IReadOnlyCollection<string> permissions, long actorUserId, CancellationToken cancellationToken);
     Task<PagedResult<AuditLogDto>> SearchAuditAsync(string? action, int page, int pageSize, CancellationToken cancellationToken);
 }
@@ -99,26 +101,31 @@ public sealed class AdminService(AuthDbContext dbContext, TimeProvider timeProvi
         if (await dbContext.Users.AnyAsync(user => EF.Functions.ILike(user.UserName, request.UserName.Trim()), cancellationToken))
             throw new DomainException("USERNAME_EXISTS", "Tên đăng nhập đã tồn tại.");
 
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
-        await dbContext.Database.ExecuteSqlRawAsync("LOCK TABLE users IN EXCLUSIVE MODE", cancellationToken);
-        var user = new ApplicationUser
+        var strategy = dbContext.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async () =>
         {
-            Id = (await dbContext.Users.MaxAsync(item => (long?)item.Id, cancellationToken) ?? 0) + 1,
-            EmployeeId = employee.Id,
-            RoleId = role.Id,
-            UserName = request.UserName.Trim(),
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password, 12),
-            IsActive = true,
-            Employee = employee,
-            Role = role
-        };
-        dbContext.Users.Add(user);
-        user.Metadata = new UserAccountMetadata { UserId = user.Id, CreatedAt = timeProvider.GetUtcNow() };
-        await dbContext.SaveChangesAsync(cancellationToken);
-        await AddAuditAsync(actorUserId, "admin.user.created", "User", IdText(user.Id), null,
-            new { user.UserName, user.EmployeeId, Role = role.Name }, cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
-        return MapUser(user, timeProvider.GetUtcNow());
+            await using var transaction = await dbContext.Database.BeginTransactionAsync(
+                IsolationLevel.Serializable, cancellationToken);
+            await dbContext.Database.ExecuteSqlRawAsync("LOCK TABLE users IN EXCLUSIVE MODE", cancellationToken);
+            var user = new ApplicationUser
+            {
+                Id = (await dbContext.Users.MaxAsync(item => (long?)item.Id, cancellationToken) ?? 0) + 1,
+                EmployeeId = employee.Id,
+                RoleId = role.Id,
+                UserName = request.UserName.Trim(),
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password, 12),
+                IsActive = true,
+                Employee = employee,
+                Role = role
+            };
+            dbContext.Users.Add(user);
+            user.Metadata = new UserAccountMetadata { UserId = user.Id, CreatedAt = timeProvider.GetUtcNow() };
+            await dbContext.SaveChangesAsync(cancellationToken);
+            await AddAuditAsync(actorUserId, "admin.user.created", "User", IdText(user.Id), null,
+                new { user.UserName, user.EmployeeId, Role = role.Name }, cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return MapUser(user, timeProvider.GetUtcNow());
+        });
     }
 
     public async Task<AdminUserDto> UpdateUserAsync(
@@ -194,6 +201,86 @@ public sealed class AdminService(AuthDbContext dbContext, TimeProvider timeProvi
                             select new { grant.RoleId, permission.Code }).ToArrayAsync(cancellationToken);
         return roles.Select(role => new RoleDto(role.Id, role.Name, role.Description, true,
             grants.Where(grant => grant.RoleId == role.Id).Select(grant => grant.Code).OrderBy(code => code).ToArray())).ToArray();
+    }
+
+    public async Task<RoleDto> CreateRoleAsync(
+        CreateRoleRequest request, long actorUserId, CancellationToken cancellationToken)
+    {
+        var name = request.Name.Trim();
+        if (string.IsNullOrWhiteSpace(name))
+            throw new DomainException("ROLE_NAME_INVALID", "Vui lòng nhập tên vai trò.");
+
+        var description = string.IsNullOrWhiteSpace(request.Description) ? null : request.Description.Trim();
+        if (description?.Length > 250)
+            throw new DomainException("ROLE_DESCRIPTION_INVALID", "Mô tả vai trò không được vượt quá 250 ký tự.");
+
+        var requestedPermissions = request.Permissions.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        var definitions = await dbContext.Permissions
+            .Where(item => requestedPermissions.Contains(item.Code))
+            .ToArrayAsync(cancellationToken);
+        if (definitions.Length != requestedPermissions.Length)
+            throw new DomainException("PERMISSION_INVALID", "Danh sách quyền chứa mã không hợp lệ.");
+
+        var strategy = dbContext.Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await dbContext.Database.BeginTransactionAsync(
+                IsolationLevel.Serializable, cancellationToken);
+            await dbContext.Database.ExecuteSqlRawAsync("LOCK TABLE roles IN EXCLUSIVE MODE", cancellationToken);
+            if (await dbContext.Roles.AnyAsync(role => EF.Functions.ILike(role.Name, name), cancellationToken))
+                throw new DomainException("ROLE_EXISTS", $"Vai trò '{name}' đã tồn tại.");
+
+            var role = new ApplicationRole
+            {
+                Id = (await dbContext.Roles.MaxAsync(item => (long?)item.Id, cancellationToken) ?? 0) + 1,
+                Name = name,
+                Description = description
+            };
+            dbContext.Roles.Add(role);
+            dbContext.RolePermissions.AddRange(definitions.Select(permission => new RolePermissionGrant
+            {
+                Role = role,
+                RoleId = role.Id,
+                Permission = permission,
+                PermissionId = permission.Id
+            }));
+            await dbContext.SaveChangesAsync(cancellationToken);
+            await AddAuditAsync(actorUserId, "admin.role.created", "Role", IdText(role.Id), null,
+                new { role.Name, role.Description, Permissions = requestedPermissions }, cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+
+            return new RoleDto(role.Id, role.Name, role.Description, true,
+                requestedPermissions.OrderBy(code => code).ToArray());
+        });
+    }
+
+    public async Task DeleteRoleAsync(long roleId, long actorUserId, CancellationToken cancellationToken)
+    {
+        var strategy = dbContext.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await dbContext.Database.BeginTransactionAsync(
+                IsolationLevel.Serializable, cancellationToken);
+            await dbContext.Database.ExecuteSqlRawAsync("LOCK TABLE roles IN EXCLUSIVE MODE", cancellationToken);
+
+            var role = await dbContext.Roles.SingleOrDefaultAsync(item => item.Id == roleId, cancellationToken)
+                ?? throw new DomainException("ROLE_NOT_FOUND", "Không tìm thấy vai trò.");
+            if (role.Name.Equals("ADMIN", StringComparison.OrdinalIgnoreCase))
+                throw new DomainException("ROLE_ADMIN_PROTECTED", "Không thể xóa vai trò ADMIN.");
+            if (await dbContext.Users.AnyAsync(user => user.RoleId == roleId, cancellationToken))
+                throw new DomainException("ROLE_IN_USE", "Không thể xóa vai trò đang được gán cho tài khoản.");
+
+            var grants = await dbContext.RolePermissions
+                .Where(item => item.RoleId == roleId)
+                .ToArrayAsync(cancellationToken);
+            dbContext.RolePermissions.RemoveRange(grants);
+            dbContext.Roles.Remove(role);
+            await dbContext.SaveChangesAsync(cancellationToken);
+            await AddAuditAsync(actorUserId, "admin.role.deleted", "Role", IdText(role.Id),
+                new { role.Name, role.Description, Permissions = grants.Select(item => item.PermissionId).ToArray() },
+                null, cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+        });
     }
 
     public async Task SetRolePermissionsAsync(

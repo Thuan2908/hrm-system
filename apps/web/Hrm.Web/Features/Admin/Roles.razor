@@ -2,15 +2,62 @@
 @layout AdminLayout
 @attribute [Authorize(Roles = "ADMIN")]
 @inject AdminApiClient AdminApiClient
+@inject IJSRuntime JsRuntime
 
 <PageTitle>Vai trò và quyền</PageTitle>
 
-<h1 class="h3">Vai trò và quyền</h1>
+<div class="d-flex justify-content-between align-items-center gap-3 mb-2">
+    <h1 class="h3 mb-0">Vai trò và quyền</h1>
+    <button class="btn btn-primary" @onclick="ToggleCreateForm">
+        <span class="me-1">+</span> Thêm vai trò
+    </button>
+</div>
 <p class="text-secondary">Backend luôn là authority cuối cùng. Mọi thay đổi permission đều được ghi audit.</p>
 
 @if (!string.IsNullOrWhiteSpace(message))
 {
     <div class="alert @(hasError ? "alert-danger" : "alert-success")">@message</div>
+}
+
+@if (showCreateForm)
+{
+    <section class="card border-0 shadow-sm mb-3">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="h5 mb-0">Tạo vai trò mới</h2>
+                <button type="button" class="btn-close" aria-label="Đóng" @onclick="CancelCreate"></button>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-5">
+                    <label class="form-label" for="role-name">Tên vai trò <span class="text-danger">*</span></label>
+                    <input id="role-name" class="form-control" placeholder="Ví dụ: Quản lý cửa hàng" @bind="newRoleName" />
+                </div>
+                <div class="col-md-7">
+                    <label class="form-label" for="role-description">Mô tả</label>
+                    <input id="role-description" class="form-control" maxlength="250" placeholder="Mô tả trách nhiệm của vai trò" @bind="newRoleDescription" />
+                </div>
+            </div>
+            <hr />
+            <div class="fw-semibold mb-2">Quyền ban đầu</div>
+            <div class="row g-2">
+                @foreach (var permission in PermissionCodes.All)
+                {
+                    <div class="col-md-4 col-xl-3">
+                        <label class="form-check">
+                            <input class="form-check-input" type="checkbox" checked="@newRolePermissions.Contains(permission)" @onchange="args => ToggleNewRolePermission(permission, args)" />
+                            <span class="form-check-label small">@permission</span>
+                        </label>
+                    </div>
+                }
+            </div>
+            <div class="mt-3">
+                <button class="btn btn-primary me-2" disabled="@isCreating" @onclick="CreateRoleAsync">
+                    @(isCreating ? "Đang tạo..." : "Tạo vai trò")
+                </button>
+                <button class="btn btn-outline-secondary" disabled="@isCreating" @onclick="CancelCreate">Hủy</button>
+            </div>
+        </div>
+    </section>
 }
 
 @if (roles.Count == 0)
@@ -27,7 +74,17 @@ else
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start">
                             <div><h2 class="h5 mb-1">@role.Name</h2><p class="text-secondary">@role.Description</p></div>
-                            <button class="btn btn-sm btn-outline-primary" @onclick="() => BeginEdit(role)">Chỉnh quyền</button>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-outline-primary" @onclick="() => BeginEdit(role)">Chỉnh quyền</button>
+                                @if (!role.Name.Equals("ADMIN", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    <button class="btn btn-sm btn-outline-danger"
+                                            disabled="@(deletingRoleId == role.Id)"
+                                            @onclick="() => DeleteRoleAsync(role)">
+                                        @(deletingRoleId == role.Id ? "Đang xóa..." : "Xóa")
+                                    </button>
+                                }
+                            </div>
                         </div>
                         <div class="d-flex flex-wrap gap-1">
                             @foreach (var permission in role.Permissions)
@@ -61,7 +118,13 @@ else
 @code {
     private IReadOnlyCollection<RoleDto> roles = [];
     private readonly HashSet<string> selectedPermissions = new(StringComparer.Ordinal);
+    private readonly HashSet<string> newRolePermissions = new(StringComparer.Ordinal);
     private long? editingRoleId;
+    private long? deletingRoleId;
+    private bool showCreateForm;
+    private bool isCreating;
+    private string newRoleName = string.Empty;
+    private string newRoleDescription = string.Empty;
     private string? message;
     private bool hasError;
 
@@ -89,6 +152,89 @@ else
     }
 
     private void CancelEdit() { editingRoleId = null; selectedPermissions.Clear(); }
+
+    private void ToggleCreateForm()
+    {
+        showCreateForm = !showCreateForm;
+        message = null;
+        if (!showCreateForm) ResetCreateForm();
+    }
+
+    private void ToggleNewRolePermission(string permission, ChangeEventArgs args)
+    {
+        if (args.Value is true) newRolePermissions.Add(permission);
+        else newRolePermissions.Remove(permission);
+    }
+
+    private void CancelCreate()
+    {
+        showCreateForm = false;
+        ResetCreateForm();
+    }
+
+    private void ResetCreateForm()
+    {
+        newRoleName = string.Empty;
+        newRoleDescription = string.Empty;
+        newRolePermissions.Clear();
+    }
+
+    private async Task CreateRoleAsync()
+    {
+        if (string.IsNullOrWhiteSpace(newRoleName))
+        {
+            hasError = true;
+            message = "Vui lòng nhập tên vai trò.";
+            return;
+        }
+
+        isCreating = true;
+        try
+        {
+            var response = await AdminApiClient.CreateRoleAsync(new CreateRoleRequest(
+                newRoleName, newRoleDescription, newRolePermissions.ToArray()));
+            hasError = response?.Success != true;
+            message = hasError
+                ? response?.Error?.Message ?? "Không thể tạo vai trò."
+                : $"Đã tạo vai trò {response?.Data?.Name}.";
+            if (!hasError)
+            {
+                CancelCreate();
+                await LoadAsync();
+            }
+        }
+        finally
+        {
+            isCreating = false;
+        }
+    }
+
+    private async Task DeleteRoleAsync(RoleDto role)
+    {
+        var confirmed = await JsRuntime.InvokeAsync<bool>(
+            "confirm", $"Bạn có chắc muốn xóa vai trò '{role.Name}'? Thao tác này không thể hoàn tác.");
+        if (!confirmed) return;
+
+        deletingRoleId = role.Id;
+        message = null;
+        try
+        {
+            var response = await AdminApiClient.DeleteRoleAsync(role.Id);
+            hasError = response?.Success != true;
+            message = hasError
+                ? response?.Error?.Message ?? "Không thể xóa vai trò."
+                : $"Đã xóa vai trò {role.Name}.";
+            if (!hasError)
+            {
+                if (editingRoleId == role.Id) CancelEdit();
+                await LoadAsync();
+            }
+        }
+        finally
+        {
+            deletingRoleId = null;
+        }
+    }
 
     private async Task SaveAsync()
     {
