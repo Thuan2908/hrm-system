@@ -7,7 +7,28 @@ namespace Hrm.Web.Authorization;
 public sealed class BrowserSessionStore(IJSRuntime jsRuntime)
 {
     private const string StorageKey = "hrm.auth.session";
+    private const string DeviceKey = "hrm.auth.device_id";
     private static readonly JsonSerializerOptions SerializerOptions = new(JsonSerializerDefaults.Web);
+
+    public async ValueTask<string> GetOrCreateDeviceIdAsync()
+    {
+        try
+        {
+            var deviceId = await jsRuntime.InvokeAsync<string?>("localStorage.getItem", DeviceKey);
+            if (!string.IsNullOrWhiteSpace(deviceId))
+            {
+                return deviceId;
+            }
+
+            var newId = Guid.NewGuid().ToString("N");
+            await jsRuntime.InvokeVoidAsync("localStorage.setItem", DeviceKey, newId);
+            return newId;
+        }
+        catch
+        {
+            return Guid.NewGuid().ToString("N");
+        }
+    }
 
     public async ValueTask<AuthTokenResponse?> GetAsync()
     {

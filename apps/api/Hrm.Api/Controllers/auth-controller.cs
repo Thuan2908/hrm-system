@@ -16,7 +16,7 @@ public sealed class AuthController(IAuthService authService) : ControllerBase
         LoginRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await authService.LoginAsync(request, GetIpAddress(), cancellationToken);
+        var result = await authService.LoginAsync(request, GetIpAddress(), GetUserAgent(), cancellationToken);
         return Ok(ApiResponse.Ok(result, new ApiMeta(TraceId: HttpContext.TraceIdentifier)));
     }
 
@@ -41,6 +41,16 @@ public sealed class AuthController(IAuthService authService) : ControllerBase
     }
 
     [Authorize]
+    [HttpPost("heartbeat")]
+    public async Task<ActionResult<ApiResponse<object>>> Heartbeat(
+        [FromBody] HeartbeatRequest? request,
+        CancellationToken cancellationToken)
+    {
+        await authService.UpdateHeartbeatAsync(GetUserId(), request?.DeviceId, cancellationToken);
+        return Ok(ApiResponse.Ok<object>(new { status = "ok" }));
+    }
+
+    [Authorize]
     [HttpGet("me")]
     public async Task<ActionResult<ApiResponse<UserSessionDto>>> GetCurrentUser(CancellationToken cancellationToken)
     {
@@ -54,4 +64,6 @@ public sealed class AuthController(IAuthService authService) : ControllerBase
             : throw new UnauthorizedAccessException("User identifier is missing.");
 
     private string? GetIpAddress() => HttpContext.Connection.RemoteIpAddress?.ToString();
+
+    private string? GetUserAgent() => HttpContext.Request.Headers.UserAgent.ToString();
 }

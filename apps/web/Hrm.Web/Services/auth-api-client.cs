@@ -11,6 +11,7 @@ public interface IAuthApiClient
     Task<bool> RefreshAsync(CancellationToken cancellationToken = default);
     Task LogoutAsync(CancellationToken cancellationToken = default);
     Task<string?> GetAccessTokenAsync(CancellationToken cancellationToken = default);
+    Task HeartbeatAsync(CancellationToken cancellationToken = default);
 }
 
 public sealed class AuthApiClient(
@@ -22,7 +23,12 @@ public sealed class AuthApiClient(
 
     public async Task<ApiError?> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
     {
-        using var response = await httpClient.PostAsJsonAsync("api/v1/auth/login", request, cancellationToken);
+        var deviceId = !string.IsNullOrWhiteSpace(request.DeviceId)
+            ? request.DeviceId
+            : await sessionStore.GetOrCreateDeviceIdAsync();
+
+        var payload = request with { DeviceId = deviceId };
+        using var response = await httpClient.PostAsJsonAsync("api/v1/auth/login", payload, cancellationToken);
         var envelope = await response.Content.ReadFromJsonAsync<ApiResponse<AuthTokenResponse>>(cancellationToken);
         if (!response.IsSuccessStatusCode || envelope is null || !envelope.Success || envelope.Data is null)
         {
@@ -103,6 +109,27 @@ public sealed class AuthApiClient(
         }
 
         return current.AccessToken;
+    }
+
+    public async Task HeartbeatAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var token = await GetAccessTokenAsync(cancellationToken);
+            if (string.IsNullOrWhiteSpace(token)) return;
+
+            var deviceId = await sessionStore.GetOrCreateDeviceIdAsync();
+            using var request = new HttpRequestMessage(HttpMethod.Post, "api/v1/auth/heartbeat")
+            {
+                Content = JsonContent.Create(new HeartbeatRequest(deviceId))
+            };
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            using var response = await httpClient.SendAsync(request, cancellationToken);
+        }
+        catch
+        {
+            // Heartbeat failures should be silent
+        }
     }
 
     private async Task ClearAsync()

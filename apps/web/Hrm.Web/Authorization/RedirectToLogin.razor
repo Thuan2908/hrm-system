@@ -3,7 +3,16 @@
 @code {
     protected override void OnInitialized()
     {
-        var returnUrl = Uri.EscapeDataString(Navigation.ToBaseRelativePath(Navigation.Uri));
-        Navigation.NavigateTo($"admin_login?returnUrl={returnUrl}");
+        var relativePath = Navigation.ToBaseRelativePath(Navigation.Uri);
+        var returnUrl = Uri.EscapeDataString(relativePath);
+
+        if (!string.IsNullOrWhiteSpace(relativePath) && relativePath.StartsWith("admin", StringComparison.OrdinalIgnoreCase))
+        {
+            Navigation.NavigateTo($"admin_login?returnUrl={returnUrl}");
+        }
+        else
+        {
+            Navigation.NavigateTo($"employee-login?returnUrl={returnUrl}");
+        }
     }
 }
