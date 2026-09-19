@@ -42,6 +42,11 @@ public sealed record RoleDto(
     bool IsActive,
     IReadOnlyCollection<string> Permissions);
 
+public sealed record CreateRoleRequest(
+    string Name,
+    string? Description,
+    IReadOnlyCollection<string> Permissions);
+
 public sealed record SetRolePermissionsRequest(IReadOnlyCollection<string> Permissions);
 
 public sealed record AuditLogDto(

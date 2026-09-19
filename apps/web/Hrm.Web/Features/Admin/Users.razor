@@ -171,7 +171,7 @@
 
     private async Task ResetPasswordAsync(AdminUserDto user)
     {
-        var password = await JsRuntime.InvokeAsync<string?>("prompt", $"Nhập mật khẩu mới cho {user.UserName} (ít nhất 12 ký tự):");
+        var password = await JsRuntime.InvokeAsync<string?>("prompt", $"Nhập mật khẩu mới cho {user.UserName}");
         if (string.IsNullOrWhiteSpace(password)) return;
         var response = await AdminApiClient.ResetPasswordAsync(user.Id, password);
         SetMessage(response?.Success == true ? "Đã đặt lại mật khẩu và thu hồi các phiên cũ." : response?.Error?.Message ?? "Không thể đặt lại mật khẩu.", response?.Success != true);

@@ -63,6 +63,16 @@ public sealed class AdminApiClient(HttpClient httpClient, IAuthApiClient authApi
     public Task<ApiResponse<IReadOnlyCollection<RoleDto>>?> GetRolesAsync(CancellationToken cancellationToken = default) =>
         SendAsync<IReadOnlyCollection<RoleDto>>(HttpMethod.Get, "api/v1/admin/roles", null, cancellationToken);
 
+    public Task<ApiResponse<RoleDto>?> CreateRoleAsync(
+        CreateRoleRequest request,
+        CancellationToken cancellationToken = default) =>
+        SendAsync<RoleDto>(HttpMethod.Post, "api/v1/admin/roles", request, cancellationToken);
+
+    public Task<ApiResponse<object>?> DeleteRoleAsync(
+        long roleId,
+        CancellationToken cancellationToken = default) =>
+        SendAsync<object>(HttpMethod.Delete, $"api/v1/admin/roles/{roleId}", null, cancellationToken);
+
     public Task<ApiResponse<object>?> SetRolePermissionsAsync(
         long roleId,
         IReadOnlyCollection<string> permissions,
