@@ -7,10 +7,10 @@
 
 <div class="container-fluid px-0">
     <!-- Header Hero Banner -->
-    <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #0b1528 0%, #1e3a8a 100%); color: white; border-radius: 16px;">
+    <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #052e22 0%, #065f46 50%, #047857 100%); color: white; border-radius: 18px; box-shadow: 0 12px 30px rgba(5, 46, 34, 0.25) !important;">
         <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
             <div>
-                <span class="badge bg-emerald-500 text-white mb-2 px-3 py-1" style="background-color: #059669; font-size: 0.85rem; border-radius: 20px;">
+                <span class="badge text-white mb-2 px-3 py-1" style="background-color: #10b981; font-size: 0.85rem; border-radius: 20px; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);">
                     ● MINH BẠCH THU NHẬP
                 </span>
                 <h1 class="h3 fw-bold mb-1 text-white">Phiếu lương của tôi</h1>
@@ -36,7 +36,7 @@
     @if (isLoading && payslips.Count == 0)
     {
         <div class="py-5 text-center text-muted">
-            <div class="spinner-border text-primary mb-3" role="status"></div>
+            <div class="spinner-border text-success mb-3" role="status"></div>
             <p>Đang tải thông tin bảng lương...</p>
         </div>
     }
@@ -53,7 +53,7 @@
         <!-- Latest Period Highlight Card -->
         @if (selectedPayslip is not null)
         {
-            <div class="card border-0 shadow-sm mb-4" style="border-radius: 16px; background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); border-left: 6px solid #10b981 !important;">
+            <div class="card border-0 shadow-sm mb-4" style="border-radius: 16px; background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%); border-left: 6px solid #10b981 !important;">
                 <div class="card-body p-4">
                     <div class="row g-4 align-items-center">
                         <div class="col-12 col-md-4">
@@ -90,7 +90,7 @@
                         {
                             var isCurrent = selectedPayslip?.Id == item.Id;
                             <button type="button"
-                                    class="list-group-item list-group-item-action p-3 rounded-3 mb-2 border-0 d-flex justify-content-between align-items-center @(isCurrent ? "bg-primary-subtle text-primary fw-bold" : "")"
+                                    class="list-group-item list-group-item-action p-3 rounded-3 mb-2 border-0 d-flex justify-content-between align-items-center @(isCurrent ? "bg-success-subtle text-success fw-bold border border-success-subtle" : "")"
                                     @onclick="() => SelectPayslipAsync(item.Id)">
                                 <div>
                                     <div class="fw-bold fs-6">Tháng @item.MonthPeriod/@item.YearPeriod</div>
@@ -111,7 +111,7 @@
                 @if (isLoadingDetail)
                 {
                     <div class="card border-0 shadow-sm p-5 text-center text-muted" style="border-radius: 16px;">
-                        <div class="spinner-border text-primary mb-3" role="status"></div>
+                        <div class="spinner-border text-success mb-3" role="status"></div>
                         <p>Đang tải chi tiết phiếu lương...</p>
                     </div>
                 }
@@ -130,7 +130,7 @@
                         <div class="card-body p-4">
                             <!-- Section A: Thu nhập -->
                             <div class="mb-4">
-                                <h6 class="fw-bold text-primary mb-3 border-bottom pb-2">
+                                <h6 class="fw-bold text-success mb-3 border-bottom pb-2">
                                     A. CÁC KHOẢN THU NHẬP (GROSS)
                                 </h6>
                                 <table class="table table-sm table-borderless align-middle mb-0">
@@ -141,7 +141,7 @@
                                         </tr>
                                         <tr class="border-top">
                                             <td class="fw-bold text-dark fs-6 pt-2">TỔNG THU NHẬP GỘP (GROSS):</td>
-                                            <td class="text-end fw-bold text-primary fs-6 pt-2 font-monospace">
+                                            <td class="text-end fw-bold text-success fs-6 pt-2 font-monospace">
                                                 @FormatVnd(selectedPayslip.GrossSalary)
                                             </td>
                                         </tr>
