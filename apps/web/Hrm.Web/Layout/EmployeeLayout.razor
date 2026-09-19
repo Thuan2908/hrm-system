@@ -52,7 +52,7 @@
     private async Task LogoutAsync()
     {
         await AuthApiClient.LogoutAsync();
-        Navigation.NavigateTo("employee-login", true);
+        Navigation.NavigateTo("admin_login", true);
     }
 
     private static string GetInitial(string? fullName) =>
