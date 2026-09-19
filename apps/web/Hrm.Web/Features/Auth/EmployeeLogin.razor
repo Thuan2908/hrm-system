@@ -80,7 +80,7 @@
             var isAdmin = session?.User.Roles.Any(r => r.Equals("ADMIN", StringComparison.OrdinalIgnoreCase)) == true;
             if (isAdmin)
             {
-                // CHẶN TÀI KHOẢN ADMIN: hủy session và thông báo lỗi
+                // CHẶN TÀI KHOẢN ADMIN: hủy session và thông báo chặn, tuyệt đối không gợi ý link
                 await AuthApiClient.LogoutAsync();
                 errorMessage = "Tài khoản Quản trị viên không được phép đăng nhập tại Cổng Nhân viên.";
                 return;

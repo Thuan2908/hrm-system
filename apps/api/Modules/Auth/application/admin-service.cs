@@ -281,9 +281,8 @@ public sealed class AdminService(AuthDbContext dbContext, TimeProvider timeProvi
 
     private static void EnsurePassword(string password)
     {
-        if (password.Length < 12 || !password.Any(char.IsUpper) || !password.Any(char.IsLower) ||
-            !password.Any(char.IsDigit) || password.All(char.IsLetterOrDigit))
-            throw new DomainException("PASSWORD_WEAK", "Mật khẩu cần ít nhất 12 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt.");
+        if (password.Length < 3)
+            throw new DomainException("PASSWORD_WEAK", "Mật khẩu cần ít nhất 3 ký tự.");
     }
 
     private static (int Page, int PageSize) NormalizePaging(int page, int pageSize) =>
