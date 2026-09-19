@@ -1,6 +1,6 @@
 # .NET Requirements
 
-Tài liệu này là danh mục dependency để một developer mới clone/pull repository có thể chuẩn bị môi trường và restore toàn bộ thư viện .NET của Saigon Retail Management System.
+Tài liệu này là danh mục dependency để một developer mới clone/pull repository có thể chuẩn bị môi trường và restore toàn bộ thư viện .NET của hệ thống HRM Saigon Retail JSC.
 
 Phiên bản NuGet được quản lý tập trung trong `Directory.Packages.props`. Không ghi version trực tiếp trong từng `.csproj`.
 

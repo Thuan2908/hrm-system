@@ -15,24 +15,6 @@
 - `/hr/payroll`
 - `/hr/reports`
 
-## Warehouse
-- `/warehouse/dashboard`
-- `/warehouse/inventory`
-- `/warehouse/movements`
-- `/warehouse/transfers`
-
-## Procurement
-- `/procurement/dashboard`
-- `/procurement/suppliers`
-- `/procurement/purchase-orders`
-- `/procurement/goods-receipts`
-
-## Sales
-- `/sales/dashboard`
-- `/sales/products`
-- `/sales/orders`
-- `/sales/reports`
-
 ## Admin
 - `/admin/dashboard`
 - `/admin/users`

@@ -6,7 +6,7 @@ Language: C#
 - Dùng Razor Components.
 - Không gọi PostgreSQL trực tiếp.
 - API calls qua typed HttpClient services.
-- Tách layout theo Admin/HR/Warehouse/Procurement/Sales/Employee.
+- Tách layout theo Admin/HR/Employee.
 - Component không chứa business rule.
 - Backend là authority cho authorization.
 - Không hardcode secrets.
