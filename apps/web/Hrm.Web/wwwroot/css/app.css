@@ -370,6 +370,17 @@ code {
     margin: .5rem 0 .7rem;
 }
 
+.emp-nav-section-title {
+    color: #6ee7b7;
+    opacity: 0.75;
+    font-size: .62rem;
+    font-weight: 850;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    padding: .6rem .75rem .2rem;
+    margin-top: .4rem;
+}
+
 .emp-nav {
     display: flex;
     flex-direction: column;

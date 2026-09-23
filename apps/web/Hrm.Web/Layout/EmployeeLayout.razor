@@ -1,6 +1,7 @@
 @inherits LayoutComponentBase
 @implements IDisposable
 @inject IAuthApiClient AuthApiClient
+@inject BrowserSessionStore SessionStore
 @inject NavigationManager Navigation
 
 <div class="emp-shell">
@@ -11,15 +12,38 @@
         </a>
         <p class="emp-nav-label">CỔNG NHÂN VIÊN</p>
         <nav class="emp-nav">
-            <NavLink class="emp-nav-link" href="employee/attendance" Match="NavLinkMatch.All">
-                <span>⏱</span>Chấm công (Check-in/out)
-            </NavLink>
-            <NavLink class="emp-nav-link" href="employee/leave">
-                <span>📝</span>Đơn xin nghỉ phép
-            </NavLink>
-            <NavLink class="emp-nav-link" href="employee/payslips">
-                <span>💰</span>Phiếu lương của tôi
-            </NavLink>
+            <AuthorizeView>
+                <Authorized Context="authContext">
+                    @{
+                        var groups = GetVisibleNavGroups(authContext.User);
+                        var anyItems = false;
+                    }
+                    @foreach (var group in groups)
+                    {
+                        var items = group.ToList();
+                        if (items.Count > 0)
+                        {
+                            anyItems = true;
+                            if (!string.IsNullOrEmpty(group.Key))
+                            {
+                                <div class="emp-nav-section-title">@group.Key</div>
+                            }
+                            @foreach (var item in items)
+                            {
+                                <NavLink class="emp-nav-link" href="@item.Href" Match="@item.Match">
+                                    <span>@item.Icon</span>@item.Title
+                                </NavLink>
+                            }
+                        }
+                    }
+                    @if (!anyItems)
+                    {
+                        <div class="px-3 py-2 text-muted small text-center" style="color: #6ee7b7 !important;">
+                            Chưa được phân quyền chức năng
+                        </div>
+                    }
+                </Authorized>
+            </AuthorizeView>
         </nav>
         <button class="emp-logout" @onclick="LogoutAsync">
             <span>↪</span>Đăng xuất
@@ -50,27 +74,50 @@
 </div>
 
 @code {
-    private System.Threading.Timer? heartbeatTimer;
+    private System.Threading.Timer? statusScannerTimer;
+    private bool isHandlingKickOut = false;
 
     protected override void OnInitialized()
     {
-        // Gửi heartbeat duy trì trạng thái phiên hoạt động mỗi 60s
-        heartbeatTimer = new System.Threading.Timer(async _ =>
+        // Cơ chế quét tức thời: kiểm tra trạng thái tài khoản/thôi việc mỗi 3 giây
+        // Nếu Admin bấm Khóa hoặc Thôi việc, lập tức hủy phiên và đá về login
+        statusScannerTimer = new System.Threading.Timer(async _ =>
         {
+            if (isHandlingKickOut) return;
+
             try
             {
-                await AuthApiClient.HeartbeatAsync();
+                var status = await AuthApiClient.CheckAccountStatusAsync();
+                if (!status.CanAccess && !isHandlingKickOut)
+                {
+                    isHandlingKickOut = true;
+                    statusScannerTimer?.Dispose();
+                    await SessionStore.ClearAsync();
+                    try
+                    {
+                        await AuthApiClient.LogoutAsync();
+                    }
+                    catch
+                    {
+                        // Silent
+                    }
+
+                    await InvokeAsync(() =>
+                    {
+                        Navigation.NavigateTo($"employee-login?reason={status.Reason}", forceLoad: true);
+                    });
+                }
             }
             catch
             {
                 // Silent
             }
-        }, null, TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(60));
+        }, null, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(3));
     }
 
     private async Task LogoutAsync()
     {
-        heartbeatTimer?.Dispose();
+        statusScannerTimer?.Dispose();
         await AuthApiClient.LogoutAsync();
         Navigation.NavigateTo("employee-login", true);
     }
@@ -78,8 +125,49 @@
     private static string GetInitial(string? fullName) =>
         string.IsNullOrWhiteSpace(fullName) ? "E" : fullName.Trim()[0].ToString().ToUpperInvariant();
 
+    public sealed record EmployeeNavItem(
+        string Title,
+        string Href,
+        string Icon,
+        string? RequiredPermission,
+        string Category,
+        NavLinkMatch Match = NavLinkMatch.Prefix);
+
+    private static readonly IReadOnlyList<EmployeeNavItem> AvailableNavItems =
+    [
+        // Phân hệ Cá nhân (Self-Service)
+        new("Chấm công", "employee/attendance", "⏱", PermissionCodes.AttendanceSelfWrite, "Nghiệp vụ cá nhân", NavLinkMatch.All),
+        new("Đơn xin nghỉ phép", "employee/leave", "📝", PermissionCodes.LeaveSelfCreate, "Nghiệp vụ cá nhân"),
+        new("Phiếu lương của tôi", "employee/payslips", "💰", PermissionCodes.PayrollSelfRead, "Nghiệp vụ cá nhân"),
+        new("Hồ sơ của tôi", "employee/profile", "👤", null, "Nghiệp vụ cá nhân"),
+
+        // Quản lý & Phê duyệt (Management)
+        new("Duyệt chấm công nhóm", "employee/attendance", "📋", PermissionCodes.AttendanceTeamApprove, "Quản lý & Duyệt"),
+        new("Duyệt đơn nghỉ phép", "employee/leave", "✍️", PermissionCodes.LeaveTeamApprove, "Quản lý & Duyệt"),
+        new("Duyệt phép cấp HR", "employee/leave", "📑", PermissionCodes.LeaveHrApprove, "Quản lý & Duyệt"),
+        new("Tính & Chốt bảng lương", "employee/payslips", "💵", PermissionCodes.PayrollRun, "Quản lý & Duyệt"),
+
+        // Phân hệ Chuyên môn & Vận hành (khi Admin cấp quyền)
+        new("Tra cứu Nhân sự", "employees", "👥", PermissionCodes.EmployeeRead, "Chuyên môn & Vận hành"),
+        new("Quản lý Kho hàng", "inventory", "📦", PermissionCodes.InventoryRead, "Chuyên môn & Vận hành"),
+        new("Bán hàng & Đơn hàng", "sales", "💳", PermissionCodes.SalesRead, "Chuyên môn & Vận hành"),
+        new("Mua hàng & Nhà cung cấp", "procurement", "🛒", PermissionCodes.ProcurementRead, "Chuyên môn & Vận hành"),
+        new("Báo cáo & Thống kê", "reports", "📊", PermissionCodes.ReportRead, "Chuyên môn & Vận hành"),
+        new("Nhật ký kiểm toán", "admin/audit", "📜", PermissionCodes.AuditRead, "Hệ thống")
+    ];
+
+    private static IEnumerable<IGrouping<string, EmployeeNavItem>> GetVisibleNavGroups(System.Security.Claims.ClaimsPrincipal user)
+    {
+        var isAdmin = user.IsInRole("ADMIN");
+        return AvailableNavItems
+            .Where(item => string.IsNullOrEmpty(item.RequiredPermission)
+                        || isAdmin
+                        || user.HasClaim("permission", item.RequiredPermission))
+            .GroupBy(item => item.Category);
+    }
+
     public void Dispose()
     {
-        heartbeatTimer?.Dispose();
+        statusScannerTimer?.Dispose();
     }
 }

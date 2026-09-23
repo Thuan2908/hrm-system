@@ -59,6 +59,22 @@ public sealed class AuthController(IAuthService authService) : ControllerBase
     }
 
     [Authorize]
+    [HttpGet("profile")]
+    public async Task<ActionResult<ApiResponse<EmployeeProfileDto>>> GetProfile(CancellationToken cancellationToken)
+    {
+        var result = await authService.GetEmployeeProfileAsync(GetUserId(), cancellationToken);
+        return Ok(ApiResponse.Ok(result));
+    }
+
+    [Authorize]
+    [HttpGet("session-status")]
+    public async Task<ActionResult<ApiResponse<AccountStatusDto>>> GetSessionStatus(CancellationToken cancellationToken)
+    {
+        var result = await authService.CheckAccountStatusAsync(GetUserId(), cancellationToken);
+        return Ok(ApiResponse.Ok(result));
+    }
+
+    [Authorize]
     [HttpPut("profile")]
     public async Task<ActionResult<ApiResponse<UserSessionDto>>> UpdateProfile(
         [FromBody] UpdateProfileRequest request,
