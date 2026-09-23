@@ -12,6 +12,8 @@ public interface IAuthApiClient
     Task LogoutAsync(CancellationToken cancellationToken = default);
     Task<string?> GetAccessTokenAsync(CancellationToken cancellationToken = default);
     Task HeartbeatAsync(CancellationToken cancellationToken = default);
+    Task<AccountStatusDto> CheckAccountStatusAsync(CancellationToken cancellationToken = default);
+    Task<ApiResponse<EmployeeProfileDto>?> GetProfileAsync(CancellationToken cancellationToken = default);
     Task<ApiError?> UpdateProfileAsync(UpdateProfileRequest request, CancellationToken cancellationToken = default);
     Task<ApiError?> ChangePasswordAsync(ChangePasswordRequest request, CancellationToken cancellationToken = default);
 }
@@ -132,6 +134,54 @@ public sealed class AuthApiClient(
         {
             // Heartbeat failures should be silent
         }
+    }
+
+    public async Task<AccountStatusDto> CheckAccountStatusAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var token = await GetAccessTokenAsync(cancellationToken);
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                return new AccountStatusDto(false, true, false, false, "unauthorized", "Phiên đăng nhập không hợp lệ hoặc đã hết hạn.");
+            }
+
+            using var httpRequest = new HttpRequestMessage(HttpMethod.Get, "api/v1/auth/session-status");
+            httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            using var response = await httpClient.SendAsync(httpRequest, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return new AccountStatusDto(false, true, false, false, "locked", "Phiên truy cập bị từ chối hoặc tài khoản đã bị khóa.");
+            }
+
+            var envelope = await response.Content.ReadFromJsonAsync<ApiResponse<AccountStatusDto>>(cancellationToken);
+            return envelope?.Data ?? new AccountStatusDto(false, true, false, false, "unknown", "Không nhận được phản hồi trạng thái hợp lệ.");
+        }
+        catch
+        {
+            // In case of transient network failure, don't immediately force logout unless verified
+            return new AccountStatusDto(true, false, false, true, "active", "Đang hoạt động");
+        }
+    }
+
+    public async Task<ApiResponse<EmployeeProfileDto>?> GetProfileAsync(CancellationToken cancellationToken = default)
+    {
+        var token = await GetAccessTokenAsync(cancellationToken);
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return null;
+        }
+
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Get, "api/v1/auth/profile");
+        httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        using var response = await httpClient.SendAsync(httpRequest, cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            return null;
+        }
+
+        return await response.Content.ReadFromJsonAsync<ApiResponse<EmployeeProfileDto>>(cancellationToken);
     }
 
     public async Task<ApiError?> UpdateProfileAsync(UpdateProfileRequest request, CancellationToken cancellationToken = default)

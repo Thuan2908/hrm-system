@@ -62,6 +62,32 @@
     [SupplyParameterFromQuery]
     public string? ReturnUrl { get; set; }
 
+    [SupplyParameterFromQuery]
+    public string? Reason { get; set; }
+
+    protected override void OnInitialized()
+    {
+        if (!string.IsNullOrWhiteSpace(Reason))
+        {
+            if (Reason.Equals("locked", StringComparison.OrdinalIgnoreCase))
+            {
+                errorMessage = "Tài khoản của bạn đã bị khóa bởi Quản trị viên. Phiên làm việc đã kết thúc.";
+            }
+            else if (Reason.Equals("resigned", StringComparison.OrdinalIgnoreCase) || Reason.Equals("offboarded", StringComparison.OrdinalIgnoreCase))
+            {
+                errorMessage = "Hồ sơ nhân viên đã chuyển sang trạng thái Thôi việc. Tài khoản đã bị chấm dứt quyền truy cập.";
+            }
+            else if (Reason.Equals("inactive", StringComparison.OrdinalIgnoreCase))
+            {
+                errorMessage = "Tài khoản của bạn đang bị vô hiệu hóa. Vui lòng liên hệ bộ phận nhân sự.";
+            }
+            else
+            {
+                errorMessage = "Phiên làm việc đã hết hạn hoặc quyền truy cập đã bị thu hồi.";
+            }
+        }
+    }
+
     private async Task LoginAsync()
     {
         isSubmitting = true;

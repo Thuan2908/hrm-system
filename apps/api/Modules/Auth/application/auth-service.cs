@@ -19,6 +19,8 @@ public interface IAuthService
     Task<AuthTokenResponse> RefreshAsync(RefreshTokenRequest request, string? ipAddress, CancellationToken cancellationToken);
     Task LogoutAsync(LogoutRequest request, string? ipAddress, CancellationToken cancellationToken);
     Task<UserSessionDto> GetSessionAsync(long userId, CancellationToken cancellationToken);
+    Task<EmployeeProfileDto> GetEmployeeProfileAsync(long userId, CancellationToken cancellationToken);
+    Task<AccountStatusDto> CheckAccountStatusAsync(long userId, CancellationToken cancellationToken);
     Task UpdateHeartbeatAsync(long userId, string? deviceId, CancellationToken cancellationToken);
     Task<UserSessionDto> UpdateProfileAsync(long userId, UpdateProfileRequest request, CancellationToken cancellationToken);
     Task ChangePasswordAsync(long userId, ChangePasswordRequest request, CancellationToken cancellationToken);
@@ -211,6 +213,135 @@ public sealed class AuthService(
         return await CreateSessionAsync(user, cancellationToken);
     }
 
+    public async Task<EmployeeProfileDto> GetEmployeeProfileAsync(long userId, CancellationToken cancellationToken)
+    {
+        var user = await dbContext.Users.AsNoTracking()
+            .Include(u => u.Employee)
+                .ThenInclude(e => e.Department)
+            .Include(u => u.Employee)
+                .ThenInclude(e => e.Position)
+            .Include(u => u.Role)
+            .SingleOrDefaultAsync(u => u.Id == userId, cancellationToken)
+            ?? throw new DomainException("AUTH_USER_NOT_FOUND", "Không tìm thấy tài khoản.");
+
+        var emp = user.Employee;
+        return new EmployeeProfileDto(
+            EmployeeId: emp.Id,
+            EmployeeCode: emp.Code,
+            FullName: emp.FullName,
+            UserName: user.UserName,
+            RoleName: user.Role.Name,
+            DepartmentName: emp.Department.Name,
+            DepartmentCode: emp.Department.Code,
+            PositionName: emp.Position?.Name ?? emp.Position?.Title,
+            DateOfBirth: emp.DateOfBirth,
+            Gender: emp.Gender,
+            Phone: emp.Phone,
+            Email: emp.Email,
+            Address: emp.Address,
+            EducationLevel: emp.EducationLevel,
+            BaseSalary: emp.BaseSalary,
+            JoinDate: emp.JoinDate,
+            HireDate: emp.HireDate,
+            Status: emp.Status,
+            CreatedAt: emp.CreatedAt);
+    }
+
+    public async Task<AccountStatusDto> CheckAccountStatusAsync(long userId, CancellationToken cancellationToken)
+    {
+        var now = timeProvider.GetUtcNow();
+        var user = await dbContext.Users.AsNoTracking()
+            .Include(u => u.Employee)
+            .Include(u => u.SecurityState)
+            .SingleOrDefaultAsync(u => u.Id == userId, cancellationToken);
+
+        if (user is null)
+        {
+            return new AccountStatusDto(
+                IsActive: false,
+                IsLocked: true,
+                IsResigned: false,
+                CanAccess: false,
+                Reason: "not_found",
+                Message: "Tài khoản không tồn tại trên hệ thống.");
+        }
+
+        var isResigned = user.Employee != null && string.Equals(user.Employee.Status, "RESIGNED", StringComparison.OrdinalIgnoreCase);
+        var isLocked = user.SecurityState?.LockoutEnd is not null && user.SecurityState.LockoutEnd > now;
+        var isActive = user.IsActive;
+
+        if (isResigned)
+        {
+            await RevokeActiveSessionInternalAsync(user.Id, cancellationToken);
+            return new AccountStatusDto(
+                IsActive: false,
+                IsLocked: true,
+                IsResigned: true,
+                CanAccess: false,
+                Reason: "resigned",
+                Message: "Hồ sơ nhân viên đã thôi việc. Quyền truy cập bị chấm dứt.");
+        }
+
+        if (isLocked)
+        {
+            await RevokeActiveSessionInternalAsync(user.Id, cancellationToken);
+            return new AccountStatusDto(
+                IsActive: isActive,
+                IsLocked: true,
+                IsResigned: false,
+                CanAccess: false,
+                Reason: "locked",
+                Message: "Tài khoản của bạn đã bị khóa bởi Quản trị viên.");
+        }
+
+        if (!isActive)
+        {
+            await RevokeActiveSessionInternalAsync(user.Id, cancellationToken);
+            return new AccountStatusDto(
+                IsActive: false,
+                IsLocked: false,
+                IsResigned: false,
+                CanAccess: false,
+                Reason: "inactive",
+                Message: "Tài khoản của bạn đã bị vô hiệu hóa.");
+        }
+
+        // Cập nhật hoạt động cho phiên
+        var session = await dbContext.ActiveSessions
+            .SingleOrDefaultAsync(s => s.UserId == userId, cancellationToken);
+        if (session is not null)
+        {
+            session.LastSeenAt = now;
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        return new AccountStatusDto(
+            IsActive: true,
+            IsLocked: false,
+            IsResigned: false,
+            CanAccess: true,
+            Reason: "active",
+            Message: "Tài khoản đang hoạt động bình thường.");
+    }
+
+    private async Task RevokeActiveSessionInternalAsync(long userId, CancellationToken cancellationToken)
+    {
+        var session = await dbContext.ActiveSessions.SingleOrDefaultAsync(s => s.UserId == userId, cancellationToken);
+        if (session is not null)
+        {
+            dbContext.ActiveSessions.Remove(session);
+        }
+        var now = timeProvider.GetUtcNow();
+        var tokens = await dbContext.RefreshTokens
+            .Where(t => t.UserId == userId && t.RevokedAt == null && t.ExpiresAt > now)
+            .ToArrayAsync(cancellationToken);
+        foreach (var t in tokens)
+        {
+            t.RevokedAt = now;
+        }
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task<UserSessionDto> UpdateProfileAsync(long userId, UpdateProfileRequest request, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(request.FullName))
@@ -225,6 +356,12 @@ public sealed class AuthService(
             ?? throw new DomainException("AUTH_USER_NOT_FOUND", "Không tìm thấy tài khoản.");
 
         user.Employee.FullName = request.FullName.Trim();
+        if (request.Phone is not null) user.Employee.Phone = request.Phone.Trim();
+        if (request.Email is not null) user.Employee.Email = request.Email.Trim();
+        if (request.Address is not null) user.Employee.Address = request.Address.Trim();
+        if (request.DateOfBirth is not null) user.Employee.DateOfBirth = request.DateOfBirth;
+        if (request.Gender is not null) user.Employee.Gender = request.Gender.Trim();
+
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return await CreateSessionAsync(user, cancellationToken);
