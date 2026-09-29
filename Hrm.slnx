@@ -20,32 +20,14 @@
   <Folder Name="/apps/api/Modules/Files/">
     <Project Path="apps/api/Modules/Files/Hrm.Modules.Files.csproj" />
   </Folder>
-  <Folder Name="/apps/api/Modules/Inventory/">
-    <Project Path="apps/api/Modules/Inventory/Hrm.Modules.Inventory.csproj" />
-  </Folder>
   <Folder Name="/apps/api/Modules/Leave/">
     <Project Path="apps/api/Modules/Leave/Hrm.Modules.Leave.csproj" />
   </Folder>
   <Folder Name="/apps/api/Modules/Payroll/">
     <Project Path="apps/api/Modules/Payroll/Hrm.Modules.Payroll.csproj" />
   </Folder>
-  <Folder Name="/apps/api/Modules/Procurement/">
-    <Project Path="apps/api/Modules/Procurement/Hrm.Modules.Procurement.csproj" />
-  </Folder>
-  <Folder Name="/apps/api/Modules/Products/">
-    <Project Path="apps/api/Modules/Products/Hrm.Modules.Products.csproj" />
-  </Folder>
   <Folder Name="/apps/api/Modules/Reports/">
     <Project Path="apps/api/Modules/Reports/Hrm.Modules.Reports.csproj" />
-  </Folder>
-  <Folder Name="/apps/api/Modules/Sales/">
-    <Project Path="apps/api/Modules/Sales/Hrm.Modules.Sales.csproj" />
-  </Folder>
-  <Folder Name="/apps/api/Modules/Suppliers/">
-    <Project Path="apps/api/Modules/Suppliers/Hrm.Modules.Suppliers.csproj" />
-  </Folder>
-  <Folder Name="/apps/api/Modules/Warehouses/">
-    <Project Path="apps/api/Modules/Warehouses/Hrm.Modules.Warehouses.csproj" />
   </Folder>
   <Folder Name="/apps/web/">
     <Project Path="apps/web/Hrm.Web/Hrm.Web.csproj" />

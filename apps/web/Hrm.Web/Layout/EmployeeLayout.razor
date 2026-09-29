@@ -7,8 +7,8 @@
 <div class="emp-shell">
     <aside class="emp-sidebar">
         <a class="emp-brand" href="employee/attendance">
-            <span class="emp-brand-mark">SR</span>
-            <span><strong>Saigon Retail</strong><small>EMPLOYEE PORTAL</small></span>
+            <span class="emp-brand-mark">HR</span>
+            <span><strong>HRM System</strong><small>EMPLOYEE PORTAL</small></span>
         </a>
         <p class="emp-nav-label">CỔNG NHÂN VIÊN</p>
         <nav class="emp-nav">
@@ -52,7 +52,7 @@
     <main class="emp-main">
         <header class="emp-topbar">
             <div>
-                <span class="emp-topbar-kicker">SAIGON RETAIL HRM</span>
+                <span class="emp-topbar-kicker">HRM SYSTEM</span>
                 <strong class="text-dark">Cổng thông tin &amp; Chấm công Nhân viên</strong>
             </div>
             <AuthorizeView>
@@ -149,9 +149,6 @@
 
         // Phân hệ Chuyên môn & Vận hành (khi Admin cấp quyền)
         new("Tra cứu Nhân sự", "employees", "👥", PermissionCodes.EmployeeRead, "Chuyên môn & Vận hành"),
-        new("Quản lý Kho hàng", "inventory", "📦", PermissionCodes.InventoryRead, "Chuyên môn & Vận hành"),
-        new("Bán hàng & Đơn hàng", "sales", "💳", PermissionCodes.SalesRead, "Chuyên môn & Vận hành"),
-        new("Mua hàng & Nhà cung cấp", "procurement", "🛒", PermissionCodes.ProcurementRead, "Chuyên môn & Vận hành"),
         new("Báo cáo & Thống kê", "reports", "📊", PermissionCodes.ReportRead, "Chuyên môn & Vận hành"),
         new("Nhật ký kiểm toán", "admin/audit", "📜", PermissionCodes.AuditRead, "Hệ thống")
     ];

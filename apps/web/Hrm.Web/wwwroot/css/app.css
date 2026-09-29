@@ -263,17 +263,89 @@ code {
 .security-dot { width: .48rem; height: .48rem; border-radius: 50%; background: #19ad82; box-shadow: 0 0 0 .25rem rgba(25,173,130,.11); }
 
 .admin-shell { min-height: 100vh; display: flex; background: #f4f7fb; }
-.admin-sidebar { position: sticky; top: 0; display: flex; flex-direction: column; width: 17.5rem; height: 100vh; padding: 1.5rem 1.15rem; color: #fff; background: linear-gradient(180deg, #111d3c 0%, #0b142b 100%); }
-.admin-brand { display: flex; align-items: center; gap: .8rem; padding: .25rem .5rem 1.8rem; color: #fff; text-decoration: none; }
+.admin-sidebar { 
+    position: sticky; 
+    top: 0; 
+    align-self: flex-start;
+    flex-shrink: 0;
+    display: flex; 
+    flex-direction: column; 
+    width: 17.5rem; 
+    height: 100vh; 
+    height: 100dvh;
+    max-height: 100vh;
+    max-height: 100dvh;
+    overflow: hidden;
+    box-sizing: border-box;
+    padding: 1.25rem 1rem 1rem 1.15rem; 
+    color: #fff; 
+    background: linear-gradient(180deg, #111d3c 0%, #0b142b 100%); 
+}
+.admin-brand { 
+    flex-shrink: 0;
+    display: flex; 
+    align-items: center; 
+    gap: .8rem; 
+    padding: .25rem .5rem 1.2rem; 
+    color: #fff; 
+    text-decoration: none; 
+}
 .admin-brand > span:last-child { display: flex; flex-direction: column; }
 .admin-brand small { color: #8190b2; font-size: .58rem; font-weight: 800; letter-spacing: .13em; margin-top: .15rem; }
-.admin-nav-label { color: #657495; font-size: .62rem; font-weight: 800; letter-spacing: .12em; padding: 0 .75rem; margin: .5rem 0 .7rem; }
-.admin-nav { display: flex; flex-direction: column; gap: .35rem; }
-.admin-nav-link { display: flex; align-items: center; gap: .8rem; padding: .78rem .85rem; border-radius: .75rem; color: #aebbd6; text-decoration: none; font-size: .88rem; font-weight: 650; transition: .18s ease; }
+.admin-nav-label { 
+    flex-shrink: 0;
+    color: #657495; 
+    font-size: .62rem; 
+    font-weight: 800; 
+    letter-spacing: .12em; 
+    padding: 0 .75rem; 
+    margin: .25rem 0 .5rem; 
+}
+.admin-nav { 
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex; 
+    flex-direction: column; 
+    gap: .35rem; 
+    padding-right: .35rem;
+    margin-bottom: .75rem;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.3) rgba(0, 0, 0, 0.15);
+}
+.admin-nav::-webkit-scrollbar {
+    width: 6px;
+}
+.admin-nav::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 4px;
+}
+.admin-nav::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+}
+.admin-nav::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.6);
+}
+.admin-nav-link { display: flex; align-items: center; gap: .8rem; padding: .75rem .85rem; border-radius: .75rem; color: #aebbd6; text-decoration: none; font-size: .88rem; font-weight: 650; transition: .18s ease; }
 .admin-nav-link > span { display: grid; place-items: center; width: 1.45rem; font-size: 1.05rem; }
 .admin-nav-link:hover { color: #fff; background: rgba(255,255,255,.06); }
 .admin-nav-link.active { color: #fff; background: linear-gradient(135deg, #2d5fd8, #356fe8); box-shadow: 0 10px 24px rgba(30,76,187,.28); }
-.admin-logout { display: flex; align-items: center; justify-content: center; gap: .65rem; margin-top: auto; padding: .78rem; border: 1px solid rgba(255,255,255,.12); border-radius: .75rem; color: #bac5dd; background: rgba(255,255,255,.035); }
+.admin-logout { 
+    flex-shrink: 0;
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    gap: .65rem; 
+    margin-top: auto; 
+    padding: .75rem; 
+    border: 1px solid rgba(255,255,255,.12); 
+    border-radius: .75rem; 
+    color: #bac5dd; 
+    background: rgba(255,255,255,.035); 
+}
 .admin-logout:hover { color: #fff; background: rgba(255,255,255,.08); }
 .admin-main { flex: 1; min-width: 0; }
 .admin-topbar { height: 5rem; display: flex; align-items: center; justify-content: space-between; padding: 0 clamp(1.25rem, 3vw, 2.5rem); border-bottom: 1px solid var(--sr-border); background: rgba(255,255,255,.92); backdrop-filter: blur(10px); }
@@ -313,11 +385,18 @@ code {
 .emp-sidebar {
     position: sticky;
     top: 0;
+    align-self: flex-start;
+    flex-shrink: 0;
     display: flex;
     flex-direction: column;
     width: 17.5rem;
     height: 100vh;
-    padding: 1.5rem 1.15rem;
+    height: 100dvh;
+    max-height: 100vh;
+    max-height: 100dvh;
+    overflow: hidden;
+    box-sizing: border-box;
+    padding: 1.25rem 1rem 1rem 1.15rem;
     color: #fff;
     background: linear-gradient(180deg, #062b20 0%, #041d16 55%, #02120d 100%);
     border-right: 1px solid rgba(16, 185, 129, 0.18);
@@ -326,10 +405,11 @@ code {
 }
 
 .emp-brand {
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     gap: .8rem;
-    padding: .25rem .5rem 1.8rem;
+    padding: .25rem .5rem 1.2rem;
     color: #fff;
     text-decoration: none;
 }
@@ -361,13 +441,14 @@ code {
 }
 
 .emp-nav-label {
+    flex-shrink: 0;
     color: #6ee7b7;
     opacity: 0.85;
     font-size: .62rem;
     font-weight: 850;
     letter-spacing: .14em;
     padding: 0 .75rem;
-    margin: .5rem 0 .7rem;
+    margin: .25rem 0 .5rem;
 }
 
 .emp-nav-section-title {
@@ -382,17 +463,44 @@ code {
 }
 
 .emp-nav {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
     display: flex;
     flex-direction: column;
-    gap: .4rem;
+    gap: .35rem;
+    padding-right: .35rem;
+    margin-bottom: .75rem;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(52, 211, 153, 0.5) rgba(0, 0, 0, 0.15);
+}
+
+.emp-nav::-webkit-scrollbar {
+    width: 6px;
+}
+
+.emp-nav::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 4px;
+}
+
+.emp-nav::-webkit-scrollbar-thumb {
+    background: rgba(52, 211, 153, 0.45);
+    border-radius: 4px;
+}
+
+.emp-nav::-webkit-scrollbar-thumb:hover {
+    background: rgba(52, 211, 153, 0.85);
 }
 
 .emp-nav-link {
     display: flex;
     align-items: center;
     gap: .85rem;
-    padding: .8rem .95rem;
-    border-radius: .85rem;
+    padding: .72rem .88rem;
+    border-radius: .8rem;
     color: #a7f3d0;
     text-decoration: none;
     font-size: .88rem;
@@ -424,12 +532,13 @@ code {
 }
 
 .emp-logout {
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: .65rem;
     margin-top: auto;
-    padding: .78rem;
+    padding: .75rem;
     border: 1px solid rgba(16, 185, 129, 0.25);
     border-radius: .85rem;
     color: #a7f3d0;
