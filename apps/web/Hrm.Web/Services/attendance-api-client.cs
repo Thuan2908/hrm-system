@@ -10,10 +10,17 @@ public interface IAttendanceApiClient
     Task<CheckInResultDto?> CheckInAsync(string? notes = null, CancellationToken cancellationToken = default);
     Task<CheckOutResultDto?> CheckOutAsync(string? notes = null, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<AttendanceRecordDto>> GetHistoryAsync(int days = 14, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<TeamAttendanceItemDto>> GetTeamSummaryAsync(CancellationToken cancellationToken = default);
 }
 
 public sealed class AttendanceApiClient(HttpClient httpClient, IAuthApiClient authApiClient) : IAttendanceApiClient
 {
+    public async Task<IReadOnlyList<TeamAttendanceItemDto>> GetTeamSummaryAsync(CancellationToken cancellationToken = default)
+    {
+        var response = await SendAsync<IReadOnlyList<TeamAttendanceItemDto>>(
+            HttpMethod.Get, "api/v1/attendance/team-summary", null, cancellationToken);
+        return response?.Data ?? [];
+    }
     public async Task<AttendanceTodayResponse?> GetTodayStatusAsync(CancellationToken cancellationToken = default)
     {
         var response = await SendAsync<AttendanceTodayResponse>(

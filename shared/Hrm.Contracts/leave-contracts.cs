@@ -43,3 +43,21 @@ public sealed record LeaveBalanceSummaryDto(
     decimal RemainingAnnualDays,
     int PendingRequestsCount
 );
+
+public sealed record PendingLeaveApprovalDto(
+    Guid Id,
+    long EmployeeId,
+    string EmployeeCode,
+    string EmployeeName,
+    string DepartmentName,
+    DateOnly StartDate,
+    DateOnly EndDate,
+    decimal DaysCount,
+    string Reason,
+    string Status,
+    string StatusName,
+    DateTimeOffset CreatedAt
+);
+
+public sealed record RejectLeaveRequestInput(string? Reason = null);
+

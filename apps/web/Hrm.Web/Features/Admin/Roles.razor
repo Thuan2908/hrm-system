@@ -38,16 +38,29 @@
                 </div>
             </div>
             <hr />
-            <div class="fw-semibold mb-2">Quyền ban đầu</div>
+            <div class="fw-semibold mb-2">Quyền ban đầu theo phân hệ</div>
             <div class="row g-2">
-                @foreach (var permission in PermissionCodes.All)
+                @foreach (var cat in PermissionCodes.Catalog.GroupBy(d => d.Category))
                 {
-                    <div class="col-md-4 col-xl-3">
-                        <label class="form-check">
-                            <input class="form-check-input" type="checkbox" checked="@newRolePermissions.Contains(permission)" @onchange="args => ToggleNewRolePermission(permission, args)" />
-                            <span class="form-check-label small">@permission</span>
-                        </label>
+                    <div class="col-12 mt-2 mb-1">
+                        <span class="badge bg-secondary-subtle text-dark border px-2 py-1">@cat.Key</span>
                     </div>
+                    @foreach (var def in cat)
+                    {
+                        <div class="col-md-6 col-xl-4">
+                            <div class="p-2 border rounded bg-white h-100">
+                                <label class="form-check d-flex align-items-start gap-2 mb-0">
+                                    <input class="form-check-input mt-1" type="checkbox"
+                                           checked="@newRolePermissions.Contains(def.Code)"
+                                           @onchange="args => ToggleNewRolePermission(def.Code, args)" />
+                                    <div>
+                                        <div class="fw-semibold small text-dark">@def.Name</div>
+                                        <div class="text-muted" style="font-size: 0.75rem;">@def.Description</div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    }
                 }
             </div>
             <div class="mt-3">
@@ -86,24 +99,41 @@ else
                                 }
                             </div>
                         </div>
-                        <div class="d-flex flex-wrap gap-1">
+                        <div class="d-flex flex-wrap gap-1 mt-2">
                             @foreach (var permission in role.Permissions)
                             {
-                                <span class="badge text-bg-light border">@permission</span>
+                                <span class="badge bg-light text-dark border py-1 px-2" title="Mã kỹ thuật: @permission">
+                                    <span class="text-success me-1">✓</span>@PermissionCodes.GetDisplayName(permission)
+                                    <small class="text-muted ms-1">(@permission)</small>
+                                </span>
                             }
                         </div>
                         @if (editingRoleId == role.Id)
                         {
                             <hr />
+                            <div class="fw-semibold mb-2">Chỉnh sửa phân quyền vai trò</div>
                             <div class="row g-2">
-                                @foreach (var permission in PermissionCodes.All)
+                                @foreach (var cat in PermissionCodes.Catalog.GroupBy(d => d.Category))
                                 {
-                                    <div class="col-md-4 col-xl-3">
-                                        <label class="form-check">
-                                            <input class="form-check-input" type="checkbox" checked="@selectedPermissions.Contains(permission)" @onchange="args => TogglePermission(permission, args)" />
-                                            <span class="form-check-label small">@permission</span>
-                                        </label>
+                                    <div class="col-12 mt-2 mb-1">
+                                        <span class="badge bg-secondary-subtle text-dark border px-2 py-1">@cat.Key</span>
                                     </div>
+                                    @foreach (var def in cat)
+                                    {
+                                        <div class="col-md-6 col-xl-4">
+                                            <div class="p-2 border rounded bg-white h-100">
+                                                <label class="form-check d-flex align-items-start gap-2 mb-0">
+                                                    <input class="form-check-input mt-1" type="checkbox"
+                                                           checked="@selectedPermissions.Contains(def.Code)"
+                                                           @onchange="args => TogglePermission(def.Code, args)" />
+                                                    <div>
+                                                        <div class="fw-semibold small text-dark">@def.Name</div>
+                                                        <div class="text-muted" style="font-size: 0.75rem;">@def.Description</div>
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    }
                                 }
                             </div>
                             <div class="mt-3"><button class="btn btn-primary me-2" @onclick="SaveAsync">Lưu quyền</button><button class="btn btn-outline-secondary" @onclick="CancelEdit">Hủy</button></div>
@@ -141,7 +171,10 @@ else
     {
         editingRoleId = role.Id;
         selectedPermissions.Clear();
-        selectedPermissions.UnionWith(role.Permissions);
+        foreach (var p in role.Permissions)
+        {
+            selectedPermissions.Add(PermissionCodes.Canonicalize(p));
+        }
         message = null;
     }
 

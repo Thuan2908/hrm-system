@@ -66,8 +66,9 @@ builder.Services.AddAuthorization(options =>
 {
     foreach (var permission in PermissionCodes.All)
     {
+        var expanded = PermissionCodes.ExpandWithAliases([permission]);
         options.AddPolicy(permission, policy => policy.RequireAssertion(context =>
-            context.User.IsInRole("ADMIN") || context.User.HasClaim("permission", permission)));
+            context.User.IsInRole("ADMIN") || expanded.Any(p => context.User.HasClaim("permission", p))));
     }
 });
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();

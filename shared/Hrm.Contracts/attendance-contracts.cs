@@ -39,3 +39,15 @@ public sealed record CheckOutResultDto(
     string Status,
     string Message
 );
+
+public sealed record TeamAttendanceItemDto(
+    long EmployeeId,
+    string EmployeeCode,
+    string FullName,
+    string DepartmentName,
+    DateOnly WorkDate,
+    DateTimeOffset? CheckInTime,
+    DateTimeOffset? CheckOutTime,
+    decimal? ActualHours,
+    string Status
+);

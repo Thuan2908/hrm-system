@@ -157,9 +157,13 @@
     {
         var isAdmin = user.IsInRole("ADMIN");
         return AvailableNavItems
-            .Where(item => string.IsNullOrEmpty(item.RequiredPermission)
-                        || isAdmin
-                        || user.HasClaim("permission", item.RequiredPermission))
+            .Where(item =>
+            {
+                if (string.IsNullOrEmpty(item.RequiredPermission)) return true;
+                if (isAdmin) return true;
+                var aliases = PermissionCodes.ExpandWithAliases([item.RequiredPermission]);
+                return aliases.Any(p => user.HasClaim("permission", p));
+            })
             .GroupBy(item => item.Category);
     }
 

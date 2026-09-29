@@ -10,6 +10,9 @@ public interface ILeaveApiClient
     Task<IReadOnlyList<LeaveRequestDto>> GetMyRequestsAsync(CancellationToken cancellationToken = default);
     Task<LeaveRequestDto?> CreateRequestAsync(CreateLeaveRequestDto request, CancellationToken cancellationToken = default);
     Task<bool> CancelRequestAsync(Guid requestId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<PendingLeaveApprovalDto>> GetPendingRequestsAsync(CancellationToken cancellationToken = default);
+    Task<bool> ApproveRequestAsync(Guid requestId, CancellationToken cancellationToken = default);
+    Task<bool> RejectRequestAsync(Guid requestId, string? reason, CancellationToken cancellationToken = default);
 }
 
 public sealed class LeaveApiClient(HttpClient httpClient, IAuthApiClient authApiClient) : ILeaveApiClient
@@ -26,6 +29,39 @@ public sealed class LeaveApiClient(HttpClient httpClient, IAuthApiClient authApi
         var response = await SendAsync<IReadOnlyList<LeaveRequestDto>>(
             HttpMethod.Get, "api/v1/leave/my-requests", null, cancellationToken);
         return response?.Data ?? [];
+    }
+
+    public async Task<IReadOnlyList<PendingLeaveApprovalDto>> GetPendingRequestsAsync(CancellationToken cancellationToken = default)
+    {
+        var response = await SendAsync<IReadOnlyList<PendingLeaveApprovalDto>>(
+            HttpMethod.Get, "api/v1/leave/pending", null, cancellationToken);
+        return response?.Data ?? [];
+    }
+
+    public async Task<bool> ApproveRequestAsync(Guid requestId, CancellationToken cancellationToken = default)
+    {
+        var response = await SendAsync<string>(
+            HttpMethod.Post, $"api/v1/leave/{requestId}/approve", null, cancellationToken);
+
+        if (response is null || !response.Success)
+        {
+            throw new InvalidOperationException(response?.Error?.Message ?? "Không thể phê duyệt đơn nghỉ phép.");
+        }
+
+        return true;
+    }
+
+    public async Task<bool> RejectRequestAsync(Guid requestId, string? reason, CancellationToken cancellationToken = default)
+    {
+        var response = await SendAsync<string>(
+            HttpMethod.Post, $"api/v1/leave/{requestId}/reject", new RejectLeaveRequestInput(reason), cancellationToken);
+
+        if (response is null || !response.Success)
+        {
+            throw new InvalidOperationException(response?.Error?.Message ?? "Không thể từ chối đơn nghỉ phép.");
+        }
+
+        return true;
     }
 
     public async Task<LeaveRequestDto?> CreateRequestAsync(

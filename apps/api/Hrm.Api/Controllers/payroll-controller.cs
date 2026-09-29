@@ -29,6 +29,38 @@ public sealed class PayrollController(IPayrollService payrollService) : Controll
         return Ok(ApiResponse.Ok(result));
     }
 
+    [HttpGet("all")]
+    public async Task<ActionResult<ApiResponse<IReadOnlyList<PayrollManagementItemDto>>>> GetAllPayslips(
+        [FromQuery] short? month,
+        [FromQuery] short? year,
+        CancellationToken cancellationToken)
+    {
+        var hasAccess = User.IsInRole("ADMIN")
+            || User.HasClaim("permission", PermissionCodes.PayrollRun)
+            || User.HasClaim("permission", PermissionCodes.PayrollFinalize)
+            || User.HasClaim("permission", "PAYROLL_MANAGE");
+
+        if (!hasAccess) return Forbid();
+
+        var result = await payrollService.GetAllPayslipsAsync(month, year, cancellationToken);
+        return Ok(ApiResponse.Ok(result));
+    }
+
+    [HttpPost("calculate")]
+    public async Task<ActionResult<ApiResponse<int>>> CalculatePayroll(
+        [FromBody] CalculatePayrollRequest request,
+        CancellationToken cancellationToken)
+    {
+        var hasAccess = User.IsInRole("ADMIN")
+            || User.HasClaim("permission", PermissionCodes.PayrollRun)
+            || User.HasClaim("permission", "PAYROLL_MANAGE");
+
+        if (!hasAccess) return Forbid();
+
+        var count = await payrollService.CalculatePeriodPayrollAsync(request.MonthPeriod, request.YearPeriod, GetUserId(), cancellationToken);
+        return Ok(ApiResponse.Ok(count));
+    }
+
     private long GetUserId() =>
         long.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)
             ? userId
