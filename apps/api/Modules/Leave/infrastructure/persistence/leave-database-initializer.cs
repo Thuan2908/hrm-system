@@ -52,6 +52,11 @@ public sealed class LeaveDatabaseInitializer(LeaveDbContext dbContext) : ILeaveD
 
             CREATE INDEX IF NOT EXISTS ix_leave_requests_emp_dates
                 ON leave_requests(emp_id, start_date, end_date);
+
+            ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS attachment_file_id uuid NULL;
+            ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS attachment_file_name text NULL;
+            ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS approved_by_user_id bigint NULL;
+            ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS approved_at timestamp with time zone NULL;
             """, cancellationToken);
 
         // Đảm bảo quyền leave.self.create tồn tại trong bảng permissions

@@ -54,6 +54,7 @@ public sealed class AuthDbContext(DbContextOptions<AuthDbContext> options) : DbC
             entity.Property(position => position.Code).HasColumnName("position_code");
             entity.Property(position => position.Name).HasColumnName("position_name");
             entity.Property(position => position.Title).HasColumnName("title");
+            entity.Property(position => position.AllowanceRate).HasColumnName("allowance_rate");
         });
 
         builder.Entity<Employee>(entity =>

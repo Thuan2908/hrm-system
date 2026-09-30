@@ -3,6 +3,7 @@
 @layout EmployeeLayout
 @attribute [Authorize]
 @inject ILeaveApiClient LeaveApiClient
+@inject IFileApiClient FileApiClient
 
 <PageTitle>Đơn xin nghỉ phép - Saigon Retail</PageTitle>
 
@@ -93,18 +94,31 @@
                 <div class="card-body p-4">
                     <EditForm Model="formModel" OnValidSubmit="HandleSubmitAsync">
                         <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label small fw-semibold text-secondary">Loại đơn <span class="text-danger">*</span></label>
+                                <select class="form-select fw-medium" @bind="formModel.LeaveType" @bind:after="RecalculateDays">
+                                    <option value="@LeaveTypes.Annual">🏖️ Nghỉ phép năm (Hưởng 100% lương, trừ vào 12 ngày phép)</option>
+                                    <option value="@LeaveTypes.Sick">🩺 Nghỉ ốm đau (Hưởng chế độ BHXH 75%, không trừ phép năm)</option>
+                                    <option value="@LeaveTypes.Maternity">👶 Nghỉ thai sản (Chế độ thai sản theo luật BHXH)</option>
+                                    <option value="@LeaveTypes.Resignation">🚪 Nghỉ việc / Đơn xin thôi việc (Thông báo thôi việc)</option>
+                                </select>
+                            </div>
 
                             <div class="col-12 col-md-6">
-                                <label class="form-label small fw-semibold text-secondary">Từ ngày <span class="text-danger">*</span></label>
+                                <label class="form-label small fw-semibold text-secondary">
+                                    @(formModel.LeaveType == LeaveTypes.Resignation ? "Ngày bắt đầu thông báo" : "Từ ngày") <span class="text-danger">*</span>
+                                </label>
                                 <input type="date" class="form-control" @bind="formModel.StartDate" @bind:after="RecalculateDays" min="@DateTime.Today.AddDays(-7).ToString("yyyy-MM-dd")" />
                             </div>
 
                             <div class="col-12 col-md-6">
-                                <label class="form-label small fw-semibold text-secondary">Đến ngày <span class="text-danger">*</span></label>
+                                <label class="form-label small fw-semibold text-secondary">
+                                    @(formModel.LeaveType == LeaveTypes.Resignation ? "Ngày làm việc cuối cùng" : "Đến ngày") <span class="text-danger">*</span>
+                                </label>
                                 <input type="date" class="form-control" @bind="formModel.EndDate" @bind:after="RecalculateDays" min="@formModel.StartDate.ToString("yyyy-MM-dd")" />
                             </div>
 
-                            @if (estimatedDays > 0)
+                            @if (estimatedDays > 0 && formModel.LeaveType != LeaveTypes.Resignation)
                             {
                                 <div class="col-12">
                                     <div class="p-3 bg-light rounded-3 d-flex align-items-center justify-content-between border" style="border-color: #d1fae5 !important;">
@@ -115,14 +129,33 @@
                             }
 
                             <div class="col-12">
-                                <label class="form-label small fw-semibold text-secondary">Lý do xin nghỉ <span class="text-danger">*</span></label>
-                                <textarea class="form-control" rows="3" placeholder="Nhập chi tiết lý do xin nghỉ phép..." @bind="formModel.Reason"></textarea>
+                                <label class="form-label small fw-semibold text-secondary">Lý do xin nghỉ / Nội dung <span class="text-danger">*</span></label>
+                                <textarea class="form-control" rows="3" placeholder="Nhập chi tiết lý do..." @bind="formModel.Reason"></textarea>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label small fw-semibold text-secondary">
+                                    📎 Tệp đính kèm / Giấy tờ minh chứng @(formModel.LeaveType == LeaveTypes.Sick || formModel.LeaveType == LeaveTypes.Maternity ? "(Giấy ra viện / Khám bệnh)" : "(Tùy chọn)")
+                                </label>
+                                <div class="input-group">
+                                    <InputFile class="form-control" OnChange="HandleFileUpload" disabled="@isUploadingFile" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" />
+                                </div>
+                                @if (isUploadingFile)
+                                {
+                                    <div class="small text-muted mt-1">
+                                        <span class="spinner-border spinner-border-sm me-1"></span> Đang tải tệp lên máy chủ...
+                                    </div>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(uploadFileMessage))
+                                {
+                                    <div class="small text-success fw-semibold mt-1">@uploadFileMessage</div>
+                                }
                             </div>
 
                             <div class="col-12 text-end">
                                 <button type="submit" class="btn text-white px-4 py-2 fw-semibold rounded-pill shadow-sm"
                                         style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none; box-shadow: 0 6px 18px rgba(16, 185, 129, 0.35) !important;"
-                                        disabled="@isSubmitting">
+                                        disabled="@(isSubmitting || isUploadingFile)">
                                     @if (isSubmitting)
                                     {
                                         <span class="spinner-border spinner-border-sm me-2"></span>
@@ -130,7 +163,7 @@
                                     }
                                     else
                                     {
-                                        <span>Gửi đơn xin nghỉ phép</span>
+                                        <span>Gửi đơn @(LeaveTypes.GetDisplayName(formModel.LeaveType))</span>
                                     }
                                 </button>
                             </div>
@@ -180,9 +213,10 @@
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light text-secondary small">
                         <tr>
-                            <th class="ps-4">KHOẢNG THỜI GIAN</th>
+                            <th class="ps-4">LOẠI ĐƠN</th>
+                            <th>KHOẢNG THỜI GIAN</th>
                             <th>SỐ NGÀY</th>
-                            <th>LÝ DO</th>
+                            <th>LÝ DO &amp; TỆP ĐÍNH KÈM</th>
                             <th>TRẠNG THÁI</th>
                             <th>NGÀY TẠO</th>
                             <th class="pe-4 text-end">THAO TÁC</th>
@@ -192,17 +226,36 @@
                         @if (requests.Count == 0 && !isLoading)
                         {
                             <tr>
-                                <td colspan="6" class="text-center py-4 text-muted">
-                                    Bạn chưa có đơn xin nghỉ phép nào.
+                                <td colspan="7" class="text-center py-5 text-muted">
+                                    <div class="fs-3 mb-2">📁</div>
+                                    <div>Bạn chưa có đơn xin nghỉ phép nào.</div>
                                 </td>
                             </tr>
                         }
                         else
                         {
-                            @foreach (var r in requests)
+                            @foreach (var r in pagedRequests)
                             {
                                 <tr>
                                     <td class="ps-4">
+                                        @if (r.LeaveType == LeaveTypes.Sick)
+                                        {
+                                            <span class="badge bg-info-subtle text-info-emphasis border border-info">🩺 @r.LeaveTypeName</span>
+                                        }
+                                        else if (r.LeaveType == LeaveTypes.Maternity)
+                                        {
+                                            <span class="badge bg-primary-subtle text-primary border border-primary">👶 @r.LeaveTypeName</span>
+                                        }
+                                        else if (r.LeaveType == LeaveTypes.Resignation)
+                                        {
+                                            <span class="badge bg-danger-subtle text-danger border border-danger">🚪 @r.LeaveTypeName</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-success-subtle text-success border border-success">🏖️ @r.LeaveTypeName</span>
+                                        }
+                                    </td>
+                                    <td>
                                         <div class="small">
                                             <strong>@r.StartDate.ToString("dd/MM/yyyy")</strong>
                                             <span class="text-muted">đến</span>
@@ -212,31 +265,41 @@
                                     <td>
                                         <span class="badge bg-secondary-subtle text-secondary font-monospace">@r.DaysCount.ToString("0.#") ngày</span>
                                     </td>
-                                    <td class="small text-muted" style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="@r.Reason">
-                                        @r.Reason
+                                    <td class="small" style="max-width: 250px;">
+                                        <div class="text-muted" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="@r.Reason">
+                                            @r.Reason
+                                        </div>
+                                        @if (r.AttachmentFileId.HasValue)
+                                        {
+                                            <a href="api/v1/files/@r.AttachmentFileId/download" target="_blank"
+                                               class="badge bg-light text-primary border text-decoration-none mt-1 d-inline-flex align-items-center gap-1"
+                                               title="Bấm để tải tệp minh chứng">
+                                                <span>📎</span> @(r.AttachmentFileName ?? "Tệp minh chứng")
+                                            </a>
+                                        }
                                     </td>
                                     <td>
                                         @if (r.Status == LeaveStatuses.Pending)
                                         {
-                                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning px-2 py-1 rounded-pill">
+                                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning px-2.5 py-1 rounded-pill">
                                                 ● Chờ duyệt
                                             </span>
                                         }
                                         else if (r.Status == LeaveStatuses.Approved)
                                         {
-                                            <span class="badge bg-success-subtle text-success border border-success px-2 py-1 rounded-pill">
+                                            <span class="badge bg-success-subtle text-success border border-success px-2.5 py-1 rounded-pill">
                                                 ✓ Đã duyệt
                                             </span>
                                         }
                                         else if (r.Status == LeaveStatuses.Rejected)
                                         {
-                                            <span class="badge bg-danger-subtle text-danger border border-danger px-2 py-1 rounded-pill" title="@r.RejectionReason">
+                                            <span class="badge bg-danger-subtle text-danger border border-danger px-2.5 py-1 rounded-pill" title="@r.RejectionReason">
                                                 ✕ Từ chối
                                             </span>
                                         }
                                         else
                                         {
-                                            <span class="badge bg-secondary-subtle text-secondary px-2 py-1 rounded-pill">
+                                            <span class="badge bg-secondary-subtle text-secondary px-2.5 py-1 rounded-pill">
                                                 Đã hủy
                                             </span>
                                         }
@@ -247,11 +310,19 @@
                                     <td class="pe-4 text-end">
                                         @if (r.Status == LeaveStatuses.Pending)
                                         {
-                                            <button class="btn btn-sm btn-outline-danger rounded-pill px-3"
-                                                    @onclick="() => CancelRequestAsync(r.Id)"
-                                                    disabled="@isCancelling">
-                                                Hủy đơn
-                                            </button>
+                                            <div class="d-inline-flex align-items-center gap-1">
+                                                <button class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-semibold shadow-sm"
+                                                        @onclick="() => OpenEditModal(r)"
+                                                        title="Chỉnh sửa thông tin đơn này">
+                                                    ✏️ Sửa
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-danger rounded-pill px-3 py-1"
+                                                        @onclick="() => CancelRequestAsync(r.Id)"
+                                                        disabled="@isCancelling"
+                                                        title="Hủy đơn xin nghỉ này">
+                                                    Hủy đơn
+                                                </button>
+                                            </div>
                                         }
                                         else
                                         {
@@ -265,6 +336,59 @@
                 </table>
             </div>
         </div>
+
+        <!-- Pagination Footer for Leave Requests Table -->
+        @if (requests.Count > 0)
+        {
+            <div class="card-footer bg-white border-top border-light py-3 px-4 d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+                <div class="small text-muted">
+                    Hiển thị <strong class="text-dark">@(((leaveCurrentPage - 1) * leavePageSize) + 1)</strong>
+                    đến <strong class="text-dark">@(Math.Min(leaveCurrentPage * leavePageSize, requests.Count))</strong>
+                    trong tổng số <strong class="text-dark">@requests.Count</strong> đơn
+                </div>
+
+                <div class="d-flex align-items-center gap-2">
+                    <span class="small text-muted me-1">Số dòng:</span>
+                    <select class="form-select form-select-sm" style="width: auto; border-radius: 8px;" value="@leavePageSize" @onchange="OnLeavePageSizeChanged">
+                        <option value="5">5 / trang</option>
+                        <option value="10">10 / trang</option>
+                        <option value="15">15 / trang</option>
+                        <option value="25">25 / trang</option>
+                    </select>
+
+                    <ul class="pagination pagination-sm mb-0 ms-2 pagination-custom">
+                        <li class="page-item @(leaveCurrentPage == 1 ? "disabled" : "")">
+                            <button class="page-link" @onclick="() => SetLeavePage(1)" title="Trang đầu">«</button>
+                        </li>
+                        <li class="page-item @(leaveCurrentPage == 1 ? "disabled" : "")">
+                            <button class="page-link" @onclick="() => SetLeavePage(leaveCurrentPage - 1)" title="Trang trước">‹</button>
+                        </li>
+
+                        @for (int i = 1; i <= leaveTotalPages; i++)
+                        {
+                            var pageNum = i;
+                            if (pageNum == 1 || pageNum == leaveTotalPages || (pageNum >= leaveCurrentPage - 1 && pageNum <= leaveCurrentPage + 1))
+                            {
+                                <li class="page-item @(leaveCurrentPage == pageNum ? "active" : "")">
+                                    <button class="page-link" @onclick="() => SetLeavePage(pageNum)">@pageNum</button>
+                                </li>
+                            }
+                            else if (pageNum == leaveCurrentPage - 2 || pageNum == leaveCurrentPage + 2)
+                            {
+                                <li class="page-item disabled"><span class="page-link">...</span></li>
+                            }
+                        }
+
+                        <li class="page-item @(leaveCurrentPage >= leaveTotalPages ? "disabled" : "")">
+                            <button class="page-link" @onclick="() => SetLeavePage(leaveCurrentPage + 1)" title="Trang kế">›</button>
+                        </li>
+                        <li class="page-item @(leaveCurrentPage >= leaveTotalPages ? "disabled" : "")">
+                            <button class="page-link" @onclick="() => SetLeavePage(leaveTotalPages)" title="Trang cuối">»</button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        }
     </div>
 
     <!-- Approvals Card for Managers and HR Staff -->
@@ -289,9 +413,10 @@
                                     <tr>
                                         <th class="ps-4">NHÂN VIÊN</th>
                                         <th>PHÒNG BAN</th>
+                                        <th>LOẠI ĐƠN</th>
                                         <th>KHOẢNG THỜI GIAN</th>
                                         <th>SỐ NGÀY</th>
-                                        <th>LÝ DO</th>
+                                        <th>LÝ DO &amp; TỆP MINH CHỨNG</th>
                                         <th>NGÀY GỬI</th>
                                         <th class="pe-4 text-end">HÀNH ĐỘNG</th>
                                     </tr>
@@ -300,14 +425,14 @@
                                     @if (pendingApprovals.Count == 0 && !isLoadingApprovals)
                                     {
                                         <tr>
-                                            <td colspan="7" class="text-center py-4 text-muted">
+                                            <td colspan="8" class="text-center py-4 text-muted">
                                                 Hiện tại không có đơn xin nghỉ phép nào đang chờ duyệt.
                                             </td>
                                         </tr>
                                     }
                                     else
                                     {
-                                        @foreach (var p in pendingApprovals)
+                                        @foreach (var p in pagedApprovals)
                                         {
                                             <tr>
                                                 <td class="ps-4">
@@ -316,6 +441,24 @@
                                                 </td>
                                                 <td><span class="badge bg-light text-dark border">@p.DepartmentName</span></td>
                                                 <td>
+                                                    @if (p.LeaveType == LeaveTypes.Sick)
+                                                    {
+                                                        <span class="badge bg-info-subtle text-info-emphasis border border-info">🩺 @p.LeaveTypeName</span>
+                                                    }
+                                                    else if (p.LeaveType == LeaveTypes.Maternity)
+                                                    {
+                                                        <span class="badge bg-primary-subtle text-primary border border-primary">👶 @p.LeaveTypeName</span>
+                                                    }
+                                                    else if (p.LeaveType == LeaveTypes.Resignation)
+                                                    {
+                                                        <span class="badge bg-danger-subtle text-danger border border-danger">🚪 @p.LeaveTypeName</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-success-subtle text-success border border-success">🏖️ @p.LeaveTypeName</span>
+                                                    }
+                                                </td>
+                                                <td>
                                                     <div class="small font-monospace">
                                                         @p.StartDate.ToString("dd/MM/yyyy") - @p.EndDate.ToString("dd/MM/yyyy")
                                                     </div>
@@ -323,8 +466,18 @@
                                                 <td>
                                                     <span class="badge bg-success-subtle text-success">@p.DaysCount.ToString("0.#") ngày</span>
                                                 </td>
-                                                <td class="small text-muted" style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="@p.Reason">
-                                                    @p.Reason
+                                                <td class="small" style="max-width: 250px;">
+                                                    <div class="text-muted" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="@p.Reason">
+                                                        @p.Reason
+                                                    </div>
+                                                    @if (p.AttachmentFileId.HasValue)
+                                                    {
+                                                        <a href="api/v1/files/@p.AttachmentFileId/download" target="_blank"
+                                                           class="badge bg-light text-primary border text-decoration-none mt-1 d-inline-flex align-items-center gap-1"
+                                                           title="Bấm để tải tệp minh chứng về kiểm tra">
+                                                            <span>📎</span> @(p.AttachmentFileName ?? "Xem file minh chứng")
+                                                        </a>
+                                                    }
                                                 </td>
                                                 <td class="small text-muted">
                                                     @p.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
@@ -348,11 +501,167 @@
                             </table>
                         </div>
                     </div>
+
+                    <!-- Pending Approvals Pagination Footer -->
+                    @if (pendingApprovals.Count > 0)
+                    {
+                        <div class="card-footer bg-white border-top border-light py-3 px-4 d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+                            <div class="small text-muted">
+                                Hiển thị <strong class="text-dark">@(((approvalCurrentPage - 1) * approvalPageSize) + 1)</strong>
+                                đến <strong class="text-dark">@(Math.Min(approvalCurrentPage * approvalPageSize, pendingApprovals.Count))</strong>
+                                trong tổng số <strong class="text-dark">@pendingApprovals.Count</strong> đơn chờ duyệt
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="small text-muted me-1">Số dòng:</span>
+                                <select class="form-select form-select-sm" style="width: auto; border-radius: 8px;" value="@approvalPageSize" @onchange="OnApprovalPageSizeChanged">
+                                    <option value="5">5 / trang</option>
+                                    <option value="10">10 / trang</option>
+                                    <option value="20">20 / trang</option>
+                                </select>
+
+                                <ul class="pagination pagination-sm mb-0 ms-2 pagination-custom">
+                                    <li class="page-item @(approvalCurrentPage == 1 ? "disabled" : "")">
+                                        <button class="page-link" @onclick="() => SetApprovalPage(1)" title="Trang đầu">«</button>
+                                    </li>
+                                    <li class="page-item @(approvalCurrentPage == 1 ? "disabled" : "")">
+                                        <button class="page-link" @onclick="() => SetApprovalPage(approvalCurrentPage - 1)" title="Trang trước">‹</button>
+                                    </li>
+                                    @for (int p = 1; p <= approvalTotalPages; p++)
+                                    {
+                                        var pageNum = p;
+                                        if (pageNum == 1 || pageNum == approvalTotalPages || (pageNum >= approvalCurrentPage - 1 && pageNum <= approvalCurrentPage + 1))
+                                        {
+                                            <li class="page-item @(approvalCurrentPage == pageNum ? "active" : "")">
+                                                <button class="page-link" @onclick="() => SetApprovalPage(pageNum)">@pageNum</button>
+                                            </li>
+                                        }
+                                        else if (pageNum == approvalCurrentPage - 2 || pageNum == approvalCurrentPage + 2)
+                                        {
+                                            <li class="page-item disabled"><span class="page-link">...</span></li>
+                                        }
+                                    }
+                                    <li class="page-item @(approvalCurrentPage >= approvalTotalPages ? "disabled" : "")">
+                                        <button class="page-link" @onclick="() => SetApprovalPage(approvalCurrentPage + 1)" title="Trang kế">›</button>
+                                    </li>
+                                    <li class="page-item @(approvalCurrentPage >= approvalTotalPages ? "disabled" : "")">
+                                        <button class="page-link" @onclick="() => SetApprovalPage(approvalTotalPages)" title="Trang cuối">»</button>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    }
                 </div>
             }
         </Authorized>
     </AuthorizeView>
+
+    <!-- Modal Chỉnh sửa đơn nghỉ phép (Chỉ áp dụng khi Chờ duyệt) -->
+    @if (editingRequest != null)
+    {
+        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px); z-index: 1050;">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+                    <div class="modal-header border-bottom py-3 px-4" style="background-color: #f8fafc; border-top-left-radius: 20px; border-top-right-radius: 20px;">
+                        <div>
+                            <h5 class="modal-title fw-bold text-dark mb-0">✏️ Chỉnh sửa đơn nghỉ phép</h5>
+                            <small class="text-muted">Đơn nộp lúc @editingRequest.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm") · Trạng thái: Chờ duyệt</small>
+                        </div>
+                        <button type="button" class="btn-close" @onclick="CloseEditModal" disabled="@isSavingEdit"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        @if (!string.IsNullOrWhiteSpace(editErrorMessage))
+                        {
+                            <div class="alert alert-danger py-2 small mb-3">@editErrorMessage</div>
+                        }
+
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label small fw-semibold text-secondary">Loại đơn <span class="text-danger">*</span></label>
+                                <select class="form-select fw-medium" @bind="editModel.LeaveType" @bind:after="RecalculateEditDays">
+                                    <option value="@LeaveTypes.Annual">🏖️ Nghỉ phép năm (Hưởng 100% lương, trừ vào 12 ngày phép)</option>
+                                    <option value="@LeaveTypes.Sick">🩺 Nghỉ ốm đau (Không trừ phép năm, BHXH chi trả theo chế độ)</option>
+                                    <option value="@LeaveTypes.Maternity">👶 Nghỉ thai sản (Chế độ thai sản dài hạn)</option>
+                                    <option value="@LeaveTypes.Resignation">🚪 Nghỉ việc / Thôi việc (Báo trước ngày làm việc cuối cùng)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold text-secondary">
+                                    @(editModel.LeaveType == LeaveTypes.Resignation ? "Ngày làm việc cuối cùng *" : "Từ ngày *")
+                                </label>
+                                <input type="date" class="form-control" @bind="editModel.StartDate" @bind:after="RecalculateEditDays" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold text-secondary">Đến ngày *</label>
+                                <input type="date" class="form-control" @bind="editModel.EndDate" @bind:after="RecalculateEditDays" disabled="@(editModel.LeaveType == LeaveTypes.Resignation)" />
+                            </div>
+                            <div class="col-12">
+                                <div class="p-2.5 rounded-3 d-flex justify-content-between align-items-center" style="background-color: #f0fdf4; border: 1px solid #bbf7d0;">
+                                    <span class="small text-secondary">Số ngày nghỉ dự tính (không tính Chủ Nhật):</span>
+                                    <span class="badge bg-success fs-6 px-3 py-1">@editDaysCount.ToString("0.#") ngày</span>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small fw-semibold text-secondary">Lý do xin nghỉ / Nội dung <span class="text-danger">*</span></label>
+                                <textarea class="form-control" rows="3" @bind="editModel.Reason" placeholder="Nhập lý do chi tiết..."></textarea>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small fw-semibold text-secondary d-flex align-items-center gap-1">
+                                    <span>📎</span> Tệp đính kèm / Giấy tờ minh chứng (Tùy chọn)
+                                </label>
+                                @if (!string.IsNullOrEmpty(editModel.AttachmentFileName))
+                                {
+                                    <div class="d-flex align-items-center justify-content-between p-2 rounded border mb-2 bg-light">
+                                        <div class="small text-dark fw-medium text-truncate me-2">
+                                            📄 @editModel.AttachmentFileName
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" @onclick="RemoveEditFile" title="Gỡ tệp">
+                                            ✕ Gỡ tệp
+                                        </button>
+                                    </div>
+                                }
+                                <InputFile class="form-control form-control-sm" OnChange="HandleEditFileUpload" accept=".png,.jpg,.jpeg,.pdf" />
+                                @if (isUploadingEditFile)
+                                {
+                                    <div class="small text-muted mt-1">Đang tải tệp lên...</div>
+                                }
+                                else if (!string.IsNullOrEmpty(editFileUploadMessage))
+                                {
+                                    <div class="small text-success mt-1">@editFileUploadMessage</div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-top py-2 px-4 bg-light" style="border-bottom-left-radius: 20px; border-bottom-right-radius: 20px;">
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-4" @onclick="CloseEditModal" disabled="@isSavingEdit">
+                            Hủy bỏ
+                        </button>
+                        <button type="button" class="btn btn-sm btn-success rounded-pill px-4" @onclick="SaveEditRequestAsync" disabled="@(isSavingEdit || isUploadingEditFile)">
+                            @(isSavingEdit ? "Đang lưu..." : "💾 Lưu thay đổi")
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
 </div>
+
+<style>
+    .pagination-custom .page-link {
+        border-radius: 8px;
+        margin: 0 2px;
+        border: 1px solid #e2e8f0;
+        color: #334155;
+        font-size: 0.85rem;
+        padding: 5px 12px;
+    }
+    .pagination-custom .page-item.active .page-link {
+        background-color: #059669;
+        border-color: #059669;
+        color: white;
+        font-weight: 600;
+        box-shadow: 0 2px 6px rgba(5, 150, 105, 0.35);
+    }
+</style>
 
 @code {
     private LeaveBalanceSummaryDto? balance;
@@ -363,9 +672,63 @@
     private bool isProcessingApproval = false;
     private bool isSubmitting = false;
     private bool isCancelling = false;
+    private bool isUploadingFile = false;
+    private string? uploadFileMessage;
     private string? successMessage;
     private string? errorMessage;
     private decimal estimatedDays = 1;
+
+    private int leaveCurrentPage = 1;
+    private int leavePageSize = 5;
+    private int leaveTotalPages => Math.Max(1, (int)Math.Ceiling((double)requests.Count / leavePageSize));
+    private IEnumerable<LeaveRequestDto> pagedRequests => requests.Skip((leaveCurrentPage - 1) * leavePageSize).Take(leavePageSize);
+
+    private int approvalCurrentPage = 1;
+    private int approvalPageSize = 5;
+    private int approvalTotalPages => Math.Max(1, (int)Math.Ceiling((double)pendingApprovals.Count / approvalPageSize));
+    private IEnumerable<PendingLeaveApprovalDto> pagedApprovals => pendingApprovals.Skip((approvalCurrentPage - 1) * approvalPageSize).Take(approvalPageSize);
+
+    private void SetLeavePage(int page)
+    {
+        if (page >= 1 && page <= leaveTotalPages)
+        {
+            leaveCurrentPage = page;
+        }
+    }
+
+    private void OnLeavePageSizeChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var size) && size > 0)
+        {
+            leavePageSize = size;
+            leaveCurrentPage = 1;
+        }
+    }
+
+    private void SetApprovalPage(int page)
+    {
+        if (page >= 1 && page <= approvalTotalPages)
+        {
+            approvalCurrentPage = page;
+        }
+    }
+
+    private void OnApprovalPageSizeChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var size) && size > 0)
+        {
+            approvalPageSize = size;
+            approvalCurrentPage = 1;
+        }
+    }
+
+    private LeaveRequestDto? editingRequest;
+    private FormModel editModel = new();
+    private decimal editDaysCount = 1m;
+    private bool isSavingEdit = false;
+    private bool isUploadingEditFile = false;
+    private string? editErrorMessage;
+    private string? editFileUploadMessage;
 
     private FormModel formModel = new();
 
@@ -378,12 +741,50 @@
         _ = LoadPendingApprovalsAsync();
     }
 
+    private async Task HandleFileUpload(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file is null) return;
+        if (file.Size > 15 * 1024 * 1024)
+        {
+            errorMessage = "Dung lượng tệp không được vượt quá 15MB.";
+            return;
+        }
+
+        isUploadingFile = true;
+        errorMessage = null;
+        uploadFileMessage = null;
+
+        try
+        {
+            var result = await FileApiClient.UploadFileAsync(file, "Leave");
+            if (result is not null)
+            {
+                formModel.AttachmentFileId = result.Id;
+                formModel.AttachmentFileName = result.FileName;
+                uploadFileMessage = $"✓ Đã tải lên: {result.FileName}";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Lỗi khi tải tệp: " + ex.Message;
+        }
+        finally
+        {
+            isUploadingFile = false;
+        }
+    }
+
     private async Task LoadPendingApprovalsAsync()
     {
         isLoadingApprovals = true;
         try
         {
             pendingApprovals = await LeaveApiClient.GetPendingRequestsAsync();
+            if (approvalCurrentPage > approvalTotalPages)
+            {
+                approvalCurrentPage = 1;
+            }
         }
         catch
         {
@@ -402,7 +803,7 @@
         try
         {
             await LeaveApiClient.ApproveRequestAsync(id);
-            successMessage = "Đã phê duyệt đơn xin nghỉ phép thành công!";
+            successMessage = "Đã phê duyệt đơn thành công!";
             await LoadPendingApprovalsAsync();
             await LoadDataAsync();
         }
@@ -423,7 +824,7 @@
         try
         {
             await LeaveApiClient.RejectRequestAsync(id, "Cán bộ quản lý/HR từ chối đơn");
-            successMessage = "Đã từ chối đơn xin nghỉ phép.";
+            successMessage = "Đã từ chối đơn.";
             await LoadPendingApprovalsAsync();
             await LoadDataAsync();
         }
@@ -445,6 +846,10 @@
         {
             balance = await LeaveApiClient.GetBalanceAsync();
             requests = await LeaveApiClient.GetMyRequestsAsync();
+            if (leaveCurrentPage > leaveTotalPages)
+            {
+                leaveCurrentPage = 1;
+            }
         }
         catch (Exception ex)
         {
@@ -463,6 +868,12 @@
             formModel.EndDate = formModel.StartDate;
         }
 
+        if (formModel.LeaveType == LeaveTypes.Resignation)
+        {
+            estimatedDays = 1;
+            return;
+        }
+
         decimal count = 0;
         for (var d = formModel.StartDate; d <= formModel.EndDate; d = d.AddDays(1))
         {
@@ -478,7 +889,7 @@
     {
         if (string.IsNullOrWhiteSpace(formModel.Reason))
         {
-            errorMessage = "Vui lòng nhập lý do xin nghỉ phép.";
+            errorMessage = "Vui lòng nhập lý do xin nghỉ / nội dung.";
             return;
         }
 
@@ -489,16 +900,22 @@
         try
         {
             var dto = new CreateLeaveRequestDto(
-                formModel.StartDate,
-                formModel.EndDate,
-                formModel.Reason.Trim()
+                LeaveType: formModel.LeaveType,
+                StartDate: formModel.StartDate,
+                EndDate: formModel.EndDate,
+                Reason: formModel.Reason.Trim(),
+                AttachmentFileId: formModel.AttachmentFileId,
+                AttachmentFileName: formModel.AttachmentFileName
             );
 
             await LeaveApiClient.CreateRequestAsync(dto);
-            successMessage = "Gửi đơn xin nghỉ phép thành công! Đơn của bạn đang chờ phê duyệt.";
+            successMessage = $"Gửi đơn {LeaveTypes.GetDisplayName(formModel.LeaveType)} thành công! Đơn của bạn đang chờ phê duyệt.";
 
             // Reset form
             formModel.Reason = string.Empty;
+            formModel.AttachmentFileId = null;
+            formModel.AttachmentFileName = null;
+            uploadFileMessage = null;
             await LoadDataAsync();
         }
         catch (Exception ex)
@@ -519,7 +936,7 @@
         try
         {
             await LeaveApiClient.CancelRequestAsync(id);
-            successMessage = "Đã hủy đơn xin nghỉ phép thành công.";
+            successMessage = "Đã hủy đơn thành công.";
             await LoadDataAsync();
         }
         catch (Exception ex)
@@ -532,10 +949,148 @@
         }
     }
 
+    private void OpenEditModal(LeaveRequestDto item)
+    {
+        editingRequest = item;
+        editModel = new FormModel
+        {
+            LeaveType = item.LeaveType,
+            StartDate = item.StartDate,
+            EndDate = item.EndDate,
+            Reason = item.Reason,
+            AttachmentFileId = item.AttachmentFileId,
+            AttachmentFileName = item.AttachmentFileName
+        };
+        editErrorMessage = null;
+        editFileUploadMessage = null;
+        RecalculateEditDays();
+    }
+
+    private void CloseEditModal()
+    {
+        editingRequest = null;
+        editErrorMessage = null;
+    }
+
+    private void RecalculateEditDays()
+    {
+        if (editModel.LeaveType == LeaveTypes.Resignation)
+        {
+            editModel.EndDate = editModel.StartDate;
+            editDaysCount = 0m;
+            return;
+        }
+
+        if (editModel.EndDate < editModel.StartDate)
+        {
+            editDaysCount = 0m;
+            return;
+        }
+
+        decimal count = 0m;
+        var cur = editModel.StartDate;
+        while (cur <= editModel.EndDate)
+        {
+            if (cur.DayOfWeek != DayOfWeek.Sunday) count += 1m;
+            cur = cur.AddDays(1);
+        }
+        editDaysCount = count;
+    }
+
+    private void RemoveEditFile()
+    {
+        editModel.AttachmentFileId = null;
+        editModel.AttachmentFileName = null;
+        editFileUploadMessage = null;
+    }
+
+    private async Task HandleEditFileUpload(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file is null) return;
+
+        if (file.Size > 15 * 1024 * 1024)
+        {
+            editErrorMessage = "Dung lượng tệp không được vượt quá 15MB.";
+            return;
+        }
+
+        isUploadingEditFile = true;
+        editErrorMessage = null;
+        editFileUploadMessage = null;
+
+        try
+        {
+            var result = await FileApiClient.UploadFileAsync(file, "Leave");
+            if (result is not null)
+            {
+                editModel.AttachmentFileId = result.Id;
+                editModel.AttachmentFileName = result.FileName;
+                editFileUploadMessage = $"✓ Đã tải lên: {result.FileName}";
+            }
+        }
+        catch (Exception ex)
+        {
+            editErrorMessage = "Lỗi khi tải tệp: " + ex.Message;
+        }
+        finally
+        {
+            isUploadingEditFile = false;
+        }
+    }
+
+    private async Task SaveEditRequestAsync()
+    {
+        if (editingRequest is null) return;
+
+        if (editModel.EndDate < editModel.StartDate)
+        {
+            editErrorMessage = "Ngày kết thúc không được trước ngày bắt đầu nghỉ.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(editModel.Reason))
+        {
+            editErrorMessage = "Vui lòng nhập lý do xin nghỉ.";
+            return;
+        }
+
+        isSavingEdit = true;
+        editErrorMessage = null;
+
+        try
+        {
+            var dto = new UpdateLeaveRequestDto(
+                LeaveType: editModel.LeaveType,
+                StartDate: editModel.StartDate,
+                EndDate: editModel.EndDate,
+                Reason: editModel.Reason.Trim(),
+                AttachmentFileId: editModel.AttachmentFileId,
+                AttachmentFileName: editModel.AttachmentFileName
+            );
+
+            await LeaveApiClient.UpdateRequestAsync(editingRequest.Id, dto);
+            successMessage = "Đã cập nhật đơn xin nghỉ phép thành công!";
+            CloseEditModal();
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            editErrorMessage = ex.Message;
+        }
+        finally
+        {
+            isSavingEdit = false;
+        }
+    }
+
     private sealed class FormModel
     {
+        public string LeaveType { get; set; } = LeaveTypes.Annual;
         public DateOnly StartDate { get; set; }
         public DateOnly EndDate { get; set; }
         public string Reason { get; set; } = string.Empty;
+        public Guid? AttachmentFileId { get; set; }
+        public string? AttachmentFileName { get; set; }
     }
 }

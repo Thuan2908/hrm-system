@@ -35,6 +35,17 @@ public sealed class LeaveController(ILeaveService leaveService) : ControllerBase
         return Ok(ApiResponse.Ok(result));
     }
 
+    [HttpPut("requests/{id:guid}")]
+    [Authorize(Policy = PermissionCodes.LeaveSelfCreate)]
+    public async Task<ActionResult<ApiResponse<LeaveRequestDto>>> UpdateRequest(
+        Guid id,
+        [FromBody] UpdateLeaveRequestDto request,
+        CancellationToken cancellationToken)
+    {
+        var result = await leaveService.UpdateLeaveRequestAsync(GetUserId(), id, request, cancellationToken);
+        return Ok(ApiResponse.Ok(result));
+    }
+
     [HttpPost("cancel/{id:guid}")]
     public async Task<ActionResult<ApiResponse<string>>> CancelRequest(
         Guid id,
