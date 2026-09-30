@@ -53,7 +53,6 @@ public sealed class AttendanceController(IAttendanceService attendanceService) :
     public async Task<ActionResult<ApiResponse<IReadOnlyList<TeamAttendanceItemDto>>>> GetTeamSummary(CancellationToken cancellationToken)
     {
         var hasAccess = User.IsInRole("ADMIN")
-            || User.HasClaim("permission", PermissionCodes.AttendanceTeamApprove)
             || User.HasClaim("permission", "ATT_APPROVE");
 
         if (!hasAccess) return Forbid();

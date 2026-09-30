@@ -48,10 +48,8 @@ public sealed class LeaveController(ILeaveService leaveService) : ControllerBase
     public async Task<ActionResult<ApiResponse<IReadOnlyList<PendingLeaveApprovalDto>>>> GetPending(CancellationToken cancellationToken)
     {
         var hasAccess = User.IsInRole("ADMIN")
-            || User.HasClaim("permission", PermissionCodes.LeaveTeamApprove)
-            || User.HasClaim("permission", PermissionCodes.LeaveHrApprove)
-            || User.HasClaim("permission", "LEAVE_APPROVE")
-            || User.HasClaim("permission", "LEAVE_HR_APPROVE");
+            || User.HasClaim("permission", PermissionCodes.LeaveApprove)
+            || User.HasClaim("permission", "LEAVE_APPROVE");
 
         if (!hasAccess) return Forbid();
 
@@ -65,10 +63,8 @@ public sealed class LeaveController(ILeaveService leaveService) : ControllerBase
         CancellationToken cancellationToken)
     {
         var hasAccess = User.IsInRole("ADMIN")
-            || User.HasClaim("permission", PermissionCodes.LeaveTeamApprove)
-            || User.HasClaim("permission", PermissionCodes.LeaveHrApprove)
-            || User.HasClaim("permission", "LEAVE_APPROVE")
-            || User.HasClaim("permission", "LEAVE_HR_APPROVE");
+            || User.HasClaim("permission", PermissionCodes.LeaveApprove)
+            || User.HasClaim("permission", "LEAVE_APPROVE");
 
         if (!hasAccess) return Forbid();
 
@@ -83,10 +79,8 @@ public sealed class LeaveController(ILeaveService leaveService) : ControllerBase
         CancellationToken cancellationToken)
     {
         var hasAccess = User.IsInRole("ADMIN")
-            || User.HasClaim("permission", PermissionCodes.LeaveTeamApprove)
-            || User.HasClaim("permission", PermissionCodes.LeaveHrApprove)
-            || User.HasClaim("permission", "LEAVE_APPROVE")
-            || User.HasClaim("permission", "LEAVE_HR_APPROVE");
+            || User.HasClaim("permission", PermissionCodes.LeaveApprove)
+            || User.HasClaim("permission", "LEAVE_APPROVE");
 
         if (!hasAccess) return Forbid();
 

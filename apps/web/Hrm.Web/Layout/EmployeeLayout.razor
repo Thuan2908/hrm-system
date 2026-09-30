@@ -137,20 +137,18 @@
     [
         // Phân hệ Cá nhân (Self-Service)
         new("Chấm công", "employee/attendance", "⏱", PermissionCodes.AttendanceSelfWrite, "Nghiệp vụ cá nhân", NavLinkMatch.All),
-        new("Đơn xin nghỉ phép", "employee/leave", "📝", PermissionCodes.LeaveSelfCreate, "Nghiệp vụ cá nhân"),
+        new("Đơn xin nghỉ phép", "employee/leave", "📝", PermissionCodes.LeaveSelfCreate, "Nghiệp vụ cá nhân", NavLinkMatch.All),
         new("Phiếu lương của tôi", "employee/payslips", "💰", PermissionCodes.PayrollSelfRead, "Nghiệp vụ cá nhân"),
         new("Hồ sơ của tôi", "employee/profile", "👤", null, "Nghiệp vụ cá nhân"),
 
         // Quản lý & Phê duyệt (Management)
-        new("Duyệt chấm công nhóm", "employee/attendance", "📋", PermissionCodes.AttendanceTeamApprove, "Quản lý & Duyệt"),
-        new("Duyệt đơn nghỉ phép", "employee/leave", "✍️", PermissionCodes.LeaveTeamApprove, "Quản lý & Duyệt"),
-        new("Duyệt phép cấp HR", "employee/leave", "📑", PermissionCodes.LeaveHrApprove, "Quản lý & Duyệt"),
+        new("Duyệt đơn nghỉ phép", "employee/leave/approvals", "✍️", PermissionCodes.LeaveApprove, "Quản lý & Duyệt"),
         new("Tính & Chốt bảng lương", "employee/payslips", "💵", PermissionCodes.PayrollRun, "Quản lý & Duyệt"),
 
         // Phân hệ Chuyên môn & Vận hành (khi Admin cấp quyền)
         new("Tra cứu Nhân sự", "employees", "👥", PermissionCodes.EmployeeRead, "Chuyên môn & Vận hành"),
         new("Báo cáo & Thống kê", "reports", "📊", PermissionCodes.ReportRead, "Chuyên môn & Vận hành"),
-        new("Nhật ký kiểm toán", "admin/audit", "📜", PermissionCodes.AuditRead, "Hệ thống")
+        new("Nhật ký kiểm toán", "employee/audit", "📜", PermissionCodes.AuditRead, "Hệ thống")
     ];
 
     private static IEnumerable<IGrouping<string, EmployeeNavItem>> GetVisibleNavGroups(System.Security.Claims.ClaimsPrincipal user)
