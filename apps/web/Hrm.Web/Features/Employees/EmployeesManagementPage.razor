@@ -217,7 +217,7 @@
                                 <label class="form-label small fw-semibold">Phòng ban công tác <span class="text-danger">*</span></label>
                                 @if (!isEditMode || canTransfer)
                                 {
-                                    <select class="form-select" @bind="formDepartmentId">
+                                    <select class="form-select" value="@formDepartmentId" @onchange="OnFormDepartmentChanged">
                                         <option value="0">-- Chọn phòng ban --</option>
                                         @foreach (var d in departments)
                                         {
@@ -245,9 +245,15 @@
 
                             <div class="col-md-6">
                                 <label class="form-label small fw-semibold">Chức danh / Vị trí</label>
+                                @{
+                                    var currentDept = departments.FirstOrDefault(d => d.Id == formDepartmentId);
+                                    var formPositions = formDepartmentId > 0
+                                        ? positions.Where(p => DepartmentPositionPolicy.IsCompatible(currentDept?.Code, currentDept?.Name, p.Name, p.Code)).ToList()
+                                        : positions;
+                                }
                                 <select class="form-select" @bind="formPositionId">
                                     <option value="0">-- Chưa chọn chức vụ --</option>
-                                    @foreach (var p in positions)
+                                    @foreach (var p in formPositions)
                                     {
                                         <option value="@p.Id">@p.Name (Hệ số PC: @p.AllowanceRate)</option>
                                     }
@@ -382,7 +388,7 @@
                         <div class="row g-3">
                             <div class="col-12">
                                 <label class="form-label small fw-semibold">Phòng ban tiếp nhận mới <span class="text-danger">*</span></label>
-                                <select class="form-select" @bind="transferTargetDepartmentId">
+                                <select class="form-select" value="@transferTargetDepartmentId" @onchange="OnTransferTargetDepartmentChanged">
                                     <option value="0">-- Chọn phòng ban tiếp nhận --</option>
                                     @foreach (var d in departments)
                                     {
@@ -395,14 +401,35 @@
                             </div>
 
                             <div class="col-12">
-                                <label class="form-label small fw-semibold">Chức danh / Vị trí mới (tùy chọn)</label>
-                                <select class="form-select" @bind="transferTargetPositionId">
-                                    <option value="0">-- Giữ nguyên hoặc chọn chức vụ mới --</option>
-                                    @foreach (var p in positions)
+                                <label class="form-label small fw-semibold">Chức danh / Vị trí mới tại phòng ban đích <span class="text-danger">*</span></label>
+                                @if (transferTargetDepartmentId <= 0)
+                                {
+                                    <select class="form-select bg-light text-muted" disabled>
+                                        <option value="0">-- Vui lòng chọn phòng ban tiếp nhận trước --</option>
+                                    </select>
+                                    <div class="form-text small text-muted">Chức danh chuyên môn sẽ được lọc tự động theo phòng ban tiếp nhận.</div>
+                                }
+                                else
+                                {
+                                    var targetDept = departments.FirstOrDefault(d => d.Id == transferTargetDepartmentId);
+                                    var filteredPositions = positions.Where(p => DepartmentPositionPolicy.IsCompatible(targetDept?.Code, targetDept?.Name, p.Name, p.Code)).ToList();
+
+                                    <select class="form-select" @bind="transferTargetPositionId">
+                                        <option value="0">-- Chọn chức vụ phù hợp tại phòng ban mới (*) --</option>
+                                        @foreach (var p in filteredPositions)
+                                        {
+                                            <option value="@p.Id">@p.Name (Hệ số PC: @p.AllowanceRate)</option>
+                                        }
+                                    </select>
+                                    @if (filteredPositions.Count == 0)
                                     {
-                                        <option value="@p.Id">@p.Name (Hệ số PC: @p.AllowanceRate)</option>
+                                        <div class="form-text small text-warning">⚠️ Chưa có chức danh tương thích riêng cho phòng ban này trong hệ thống.</div>
                                     }
-                                </select>
+                                    else
+                                    {
+                                        <div class="form-text small text-success">✓ Hệ thống tự động lọc danh mục chức vụ phù hợp với @targetDept?.Name.</div>
+                                    }
+                                }
                             </div>
 
                             <div class="col-12">
@@ -981,11 +1008,39 @@
         }
     }
 
+    private void OnFormDepartmentChanged(ChangeEventArgs e)
+    {
+        if (long.TryParse(e.Value?.ToString(), out var deptId))
+        {
+            formDepartmentId = deptId;
+            var dept = departments.FirstOrDefault(d => d.Id == deptId);
+            var validPositions = positions.Where(p => DepartmentPositionPolicy.IsCompatible(dept?.Code, dept?.Name, p.Name, p.Code)).ToList();
+            if (!validPositions.Any(p => p.Id == formPositionId))
+            {
+                formPositionId = validPositions.FirstOrDefault()?.Id ?? 0;
+            }
+        }
+    }
+
+    private void OnTransferTargetDepartmentChanged(ChangeEventArgs e)
+    {
+        if (long.TryParse(e.Value?.ToString(), out var deptId))
+        {
+            transferTargetDepartmentId = deptId;
+            transferTargetPositionId = 0; // RESET BẮT BUỘC KHI ĐỔI PHÒNG BAN!
+        }
+        else
+        {
+            transferTargetDepartmentId = 0;
+            transferTargetPositionId = 0;
+        }
+    }
+
     private void OpenTransferModal(EmployeeDto emp)
     {
         transferringEmployee = emp;
         transferTargetDepartmentId = 0;
-        transferTargetPositionId = emp.PositionId ?? 0;
+        transferTargetPositionId = 0; // Không giữ nguyên chức vụ cũ của phòng cũ!
         transferEffectiveDate = DateOnly.FromDateTime(DateTime.Today);
         transferReason = string.Empty;
         showTransferModal = true;
@@ -1010,6 +1065,12 @@
         if (transferTargetDepartmentId == transferringEmployee.DepartmentId)
         {
             errorMessage = "Phòng ban tiếp nhận mới phải khác phòng ban hiện tại.";
+            return;
+        }
+
+        if (transferTargetPositionId <= 0)
+        {
+            errorMessage = "Vui lòng chọn chức danh / vị trí phù hợp tại phòng ban mới.";
             return;
         }
 

@@ -126,10 +126,17 @@ public sealed class EmployeeService(
             throw new DomainException("DEPARTMENT_NOT_FOUND", "Vui lòng chọn phòng ban hợp lệ.");
         }
 
-        if (request.PositionId.HasValue && request.PositionId.Value > 0 &&
-            !await dbContext.Positions.AnyAsync(p => p.Id == request.PositionId.Value, cancellationToken))
+        if (request.PositionId.HasValue && request.PositionId.Value > 0)
         {
-            throw new DomainException("POSITION_NOT_FOUND", "Chức danh/vị trí công việc không tồn tại.");
+            var pos = await dbContext.Positions.FirstOrDefaultAsync(p => p.Id == request.PositionId.Value, cancellationToken)
+                ?? throw new DomainException("POSITION_NOT_FOUND", "Chức danh/vị trí công việc không tồn tại.");
+
+            var dept = await dbContext.Departments.FirstOrDefaultAsync(d => d.Id == request.DepartmentId, cancellationToken);
+            if (dept != null && !DepartmentPositionPolicy.IsCompatible(dept.Code, dept.Name, pos.Name, pos.Code))
+            {
+                throw new DomainException("INVALID_POSITION_FOR_DEPARTMENT",
+                    $"Chức danh '{pos.Name}' không phù hợp với '{dept.Name}'. Vui lòng chọn chức vụ thuộc chuyên môn của phòng ban.");
+            }
         }
 
         if (request.BaseSalary < 0)
@@ -294,10 +301,17 @@ public sealed class EmployeeService(
             throw new DomainException("PERMISSION_DENIED", "Bạn không có quyền 'Điều chuyển phòng ban' (employee.transfer) để thay đổi phòng ban của nhân sự.");
         }
 
-        if (request.PositionId.HasValue && request.PositionId.Value > 0 &&
-            !await dbContext.Positions.AnyAsync(p => p.Id == request.PositionId.Value, cancellationToken))
+        if (request.PositionId.HasValue && request.PositionId.Value > 0)
         {
-            throw new DomainException("POSITION_NOT_FOUND", "Chức danh/vị trí công việc không tồn tại.");
+            var pos = await dbContext.Positions.FirstOrDefaultAsync(p => p.Id == request.PositionId.Value, cancellationToken)
+                ?? throw new DomainException("POSITION_NOT_FOUND", "Chức danh/vị trí công việc không tồn tại.");
+
+            var dept = await dbContext.Departments.FirstOrDefaultAsync(d => d.Id == request.DepartmentId, cancellationToken);
+            if (dept != null && !DepartmentPositionPolicy.IsCompatible(dept.Code, dept.Name, pos.Name, pos.Code))
+            {
+                throw new DomainException("INVALID_POSITION_FOR_DEPARTMENT",
+                    $"Chức danh '{pos.Name}' không phù hợp với '{dept.Name}'. Vui lòng chọn chức vụ thuộc chuyên môn của phòng ban.");
+            }
         }
 
         if (request.BaseSalary < 0)
@@ -393,10 +407,16 @@ public sealed class EmployeeService(
             .FirstOrDefaultAsync(d => d.Id == request.TargetDepartmentId, cancellationToken)
             ?? throw new DomainException("DEPARTMENT_NOT_FOUND", "Phòng ban tiếp nhận không tồn tại.");
 
-        if (request.TargetPositionId.HasValue && request.TargetPositionId.Value > 0 &&
-            !await dbContext.Positions.AnyAsync(p => p.Id == request.TargetPositionId.Value, cancellationToken))
+        if (request.TargetPositionId.HasValue && request.TargetPositionId.Value > 0)
         {
-            throw new DomainException("POSITION_NOT_FOUND", "Chức danh/vị trí công việc mới không tồn tại.");
+            var targetPos = await dbContext.Positions.FirstOrDefaultAsync(p => p.Id == request.TargetPositionId.Value, cancellationToken)
+                ?? throw new DomainException("POSITION_NOT_FOUND", "Chức danh/vị trí công việc mới không tồn tại.");
+
+            if (!DepartmentPositionPolicy.IsCompatible(targetDepartment.Code, targetDepartment.Name, targetPos.Name, targetPos.Code))
+            {
+                throw new DomainException("INVALID_POSITION_FOR_DEPARTMENT",
+                    $"Chức danh '{targetPos.Name}' không phù hợp với '{targetDepartment.Name}'. Vui lòng chọn chức vụ thuộc chuyên môn của phòng ban tiếp nhận.");
+            }
         }
 
         var oldDepartmentName = employee.Department?.Name ?? "Chưa phân bổ";
