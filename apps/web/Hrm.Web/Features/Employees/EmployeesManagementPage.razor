@@ -528,8 +528,7 @@
             || user.HasClaim("permission", "EMP_EDIT");
         canOffboard = isAdmin
             || user.HasClaim("permission", PermissionCodes.EmployeeOffboard)
-            || user.HasClaim("permission", "EMP_OFFBOARD")
-            || canWrite;
+            || user.HasClaim("permission", "EMP_OFFBOARD");
 
         await LoadDataAsync();
     }
