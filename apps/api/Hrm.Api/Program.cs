@@ -68,7 +68,19 @@ builder.Services.AddAuthorization(options =>
     {
         var expanded = PermissionCodes.ExpandWithAliases([permission]);
         options.AddPolicy(permission, policy => policy.RequireAssertion(context =>
-            context.User.IsInRole("ADMIN") || expanded.Any(p => context.User.HasClaim("permission", p))));
+        {
+            if (context.User.IsInRole("ADMIN")) return true;
+            if (expanded.Any(p => context.User.HasClaim("permission", p))) return true;
+
+            // Quyền Quản lý & Thêm mới (Write) mặc nhiên bao gồm quyền Đọc danh bạ (Read)
+            if (permission == PermissionCodes.EmployeeRead &&
+                (context.User.HasClaim("permission", PermissionCodes.EmployeeWrite) || context.User.HasClaim("permission", "EMP_EDIT")))
+            {
+                return true;
+            }
+
+            return false;
+        }));
     }
 });
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();

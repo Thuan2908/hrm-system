@@ -156,15 +156,39 @@
     private static IEnumerable<IGrouping<string, EmployeeNavItem>> GetVisibleNavGroups(System.Security.Claims.ClaimsPrincipal user)
     {
         var isAdmin = user.IsInRole("ADMIN");
-        return AvailableNavItems
-            .Where(item =>
+        var hasWrite = isAdmin || HasPermission(user, PermissionCodes.EmployeeWrite);
+        var hasRead = isAdmin || hasWrite || HasPermission(user, PermissionCodes.EmployeeRead);
+
+        var list = new List<EmployeeNavItem>();
+
+        foreach (var item in AvailableNavItems)
+        {
+            if (item.Href == "employees")
             {
-                if (string.IsNullOrEmpty(item.RequiredPermission)) return true;
-                if (isAdmin) return true;
-                var aliases = PermissionCodes.ExpandWithAliases([item.RequiredPermission]);
-                return aliases.Any(p => user.HasClaim("permission", p));
-            })
-            .GroupBy(item => item.Category);
+                if (hasWrite)
+                {
+                    list.Add(new("Quản lý & Thêm Nhân sự", "employees", "👥", null, "Chuyên môn & Vận hành"));
+                }
+                else if (hasRead)
+                {
+                    list.Add(new("Tra cứu Danh bạ", "employees", "📖", null, "Chuyên môn & Vận hành"));
+                }
+                continue;
+            }
+
+            if (string.IsNullOrEmpty(item.RequiredPermission) || isAdmin || HasPermission(user, item.RequiredPermission))
+            {
+                list.Add(item);
+            }
+        }
+
+        return list.GroupBy(item => item.Category);
+    }
+
+    private static bool HasPermission(System.Security.Claims.ClaimsPrincipal user, string permission)
+    {
+        var aliases = PermissionCodes.ExpandWithAliases([permission]);
+        return aliases.Any(p => user.HasClaim("permission", p));
     }
 
     public void Dispose()

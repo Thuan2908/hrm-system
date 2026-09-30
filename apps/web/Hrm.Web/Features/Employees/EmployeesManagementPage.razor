@@ -5,8 +5,9 @@
 @attribute [Authorize]
 @inject IEmployeeApiClient EmployeeApiClient
 @inject IJSRuntime JsRuntime
+@inject AuthenticationStateProvider AuthStateProvider
 
-<PageTitle>Quản lý Hồ sơ &amp; Nhân sự - HRM System</PageTitle>
+<PageTitle>@(canWrite ? "Quản lý & Hồ sơ Nhân sự" : "Tra cứu Danh bạ Nhân sự") - HRM System</PageTitle>
 
 <div class="container-fluid px-0">
     <!-- Header Hero Banner -->
@@ -14,16 +15,19 @@
         <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
             <div>
                 <span class="badge text-white mb-2 px-3 py-1" style="background-color: #10b981; font-size: 0.85rem; border-radius: 20px; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);">
-                    👥 PHÂN HỆ QUẢN LÝ NHÂN SỰ TOÀN DIỆN
+                    @(canWrite ? "👥 PHÂN HỆ QUẢN LÝ NHÂN SỰ TOÀN DIỆN" : "📖 DANH BẠ NHÂN SỰ NỘI BỘ")
                 </span>
-                <h1 class="h3 fw-bold mb-1 text-white">Quản trị &amp; Hồ sơ Nhân sự Nội bộ</h1>
-                <p class="mb-0 text-white-50">Tiếp nhận nhân sự mới (Onboarding), quản lý hồ sơ phòng ban, chức vụ và quy trình thôi việc (Offboarding).</p>
+                <h1 class="h3 fw-bold mb-1 text-white">@(canWrite ? "Quản trị & Tiếp nhận Nhân sự" : "Tra cứu Danh bạ Nhân viên")</h1>
+                <p class="mb-0 text-white-50">@(canWrite ? "Tiếp nhận nhân sự mới (Onboarding), quản lý hồ sơ phòng ban, chức vụ và quy trình thôi việc (Offboarding)." : "Tra cứu danh sách nhân sự, thông tin liên hệ và phòng ban công tác trong toàn công ty.")</p>
             </div>
-            <div class="d-flex align-items-center gap-2">
-                <button class="btn btn-light rounded-pill px-4 py-2 fw-semibold text-success shadow-sm" @onclick="OpenCreateModal">
-                    ➕ Thêm nhân sự mới
-                </button>
-            </div>
+            @if (canWrite)
+            {
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-light rounded-pill px-4 py-2 fw-semibold text-success shadow-sm" @onclick="OpenCreateModal">
+                        ➕ Thêm nhân sự mới
+                    </button>
+                </div>
+            }
         </div>
     </div>
 
@@ -339,7 +343,10 @@
                                 <th>Thông tin liên hệ</th>
                                 <th>Trạng thái</th>
                                 <th>Tài khoản</th>
-                                <th class="pe-4 text-end">Thao tác</th>
+                                @if (canWrite || canOffboard)
+                                {
+                                    <th class="pe-4 text-end">Thao tác</th>
+                                }
                             </tr>
                         </thead>
                         <tbody>
@@ -394,24 +401,30 @@
                                             </span>
                                         }
                                     </td>
-                                    <td class="pe-4 text-end">
-                                        <div class="d-inline-flex gap-1">
-                                            <button class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1"
-                                                    title="Xem và chỉnh sửa hồ sơ"
-                                                    @onclick="() => OpenEditModal(emp)">
-                                                ✏ Sửa
-                                            </button>
+                                    @if (canWrite || canOffboard)
+                                    {
+                                        <td class="pe-4 text-end">
+                                            <div class="d-inline-flex gap-1">
+                                                @if (canWrite)
+                                                {
+                                                    <button class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1"
+                                                            title="Xem và chỉnh sửa hồ sơ"
+                                                            @onclick="() => OpenEditModal(emp)">
+                                                        ✏ Sửa
+                                                    </button>
+                                                }
 
-                                            @if (string.Equals(emp.Status, "ACTIVE", StringComparison.OrdinalIgnoreCase))
-                                            {
-                                                <button class="btn btn-sm btn-outline-danger rounded-pill px-3 py-1"
-                                                        title="Thực hiện thôi việc và thu hồi mọi quyền truy cập"
-                                                        @onclick="() => ConfirmOffboardAsync(emp)">
-                                                    Thôi việc
-                                                </button>
-                                            }
-                                        </div>
-                                    </td>
+                                                @if (canOffboard && string.Equals(emp.Status, "ACTIVE", StringComparison.OrdinalIgnoreCase))
+                                                {
+                                                    <button class="btn btn-sm btn-outline-danger rounded-pill px-3 py-1"
+                                                            title="Thực hiện thôi việc và thu hồi mọi quyền truy cập"
+                                                            @onclick="() => ConfirmOffboardAsync(emp)">
+                                                        Thôi việc
+                                                    </button>
+                                                }
+                                            </div>
+                                        </td>
+                                    }
                                 </tr>
                             }
                         </tbody>
@@ -502,8 +515,22 @@
     private string formPassword = string.Empty;
     private string formRole = "EMPLOYEE";
 
+    private bool canWrite = false;
+    private bool canOffboard = false;
+
     protected override async Task OnInitializedAsync()
     {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var isAdmin = user.IsInRole("ADMIN");
+        canWrite = isAdmin
+            || user.HasClaim("permission", PermissionCodes.EmployeeWrite)
+            || user.HasClaim("permission", "EMP_EDIT");
+        canOffboard = isAdmin
+            || user.HasClaim("permission", PermissionCodes.EmployeeOffboard)
+            || user.HasClaim("permission", "EMP_OFFBOARD")
+            || canWrite;
+
         await LoadDataAsync();
     }
 
