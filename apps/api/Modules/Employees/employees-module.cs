@@ -22,6 +22,7 @@ public static class EmployeesModule
             .UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure(3))
             .UseSnakeCaseNamingConvention());
         services.AddScoped<IEmployeeOffboardingService, EmployeeOffboardingService>();
+        services.AddScoped<IEmployeeService, EmployeeService>();
         return services;
     }
 }

@@ -1,0 +1,746 @@
+@page "/employees"
+@page "/employee/directory"
+@page "/admin/employees"
+@layout EmployeeLayout
+@attribute [Authorize]
+@inject IEmployeeApiClient EmployeeApiClient
+@inject IJSRuntime JsRuntime
+
+<PageTitle>Quản lý Hồ sơ &amp; Nhân sự - HRM System</PageTitle>
+
+<div class="container-fluid px-0">
+    <!-- Header Hero Banner -->
+    <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #052e22 0%, #065f46 50%, #047857 100%); color: white; border-radius: 18px; box-shadow: 0 12px 30px rgba(5, 46, 34, 0.25) !important;">
+        <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <div>
+                <span class="badge text-white mb-2 px-3 py-1" style="background-color: #10b981; font-size: 0.85rem; border-radius: 20px; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);">
+                    👥 PHÂN HỆ QUẢN LÝ NHÂN SỰ TOÀN DIỆN
+                </span>
+                <h1 class="h3 fw-bold mb-1 text-white">Quản trị &amp; Hồ sơ Nhân sự Nội bộ</h1>
+                <p class="mb-0 text-white-50">Tiếp nhận nhân sự mới (Onboarding), quản lý hồ sơ phòng ban, chức vụ và quy trình thôi việc (Offboarding).</p>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-light rounded-pill px-4 py-2 fw-semibold text-success shadow-sm" @onclick="OpenCreateModal">
+                    ➕ Thêm nhân sự mới
+                </button>
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm d-flex align-items-center gap-2 mb-4" role="alert" style="border-radius: 14px; background-color: #ecfdf5; color: #065f46;">
+            <span style="font-size: 1.25rem;">✓</span>
+            <div>@successMessage</div>
+            <button type="button" class="btn-close ms-auto" @onclick="() => successMessage = null"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm d-flex align-items-center gap-2 mb-4" role="alert" style="border-radius: 14px;">
+            <span style="font-size: 1.25rem;">⚠</span>
+            <div>@errorMessage</div>
+            <button type="button" class="btn-close ms-auto" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    <!-- KPI Metric Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm p-3 h-100" style="border-radius: 16px; border-left: 4px solid #3b82f6 !important;">
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                    <span class="text-muted small fw-semibold text-uppercase">Tổng số nhân sự</span>
+                    <span class="badge bg-primary-subtle text-primary rounded-pill">Toàn công ty</span>
+                </div>
+                <div class="fs-3 fw-bold text-dark font-monospace mt-1">@employees.Count</div>
+                <div class="small text-muted mt-1">Hồ sơ đã ghi nhận trong hệ thống</div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm p-3 h-100" style="border-radius: 16px; border-left: 4px solid #10b981 !important;">
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                    <span class="text-muted small fw-semibold text-uppercase">Đang làm việc (Active)</span>
+                    <span class="badge bg-success-subtle text-success rounded-pill">Vận hành</span>
+                </div>
+                <div class="fs-3 fw-bold text-success font-monospace mt-1">@employees.Count(e => string.Equals(e.Status, "ACTIVE", StringComparison.OrdinalIgnoreCase))</div>
+                <div class="small text-muted mt-1">Nhân sự đang công tác thực tế</div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm p-3 h-100" style="border-radius: 16px; border-left: 4px solid #ef4444 !important;">
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                    <span class="text-muted small fw-semibold text-uppercase">Đã thôi việc (Resigned)</span>
+                    <span class="badge bg-danger-subtle text-danger rounded-pill">Offboard</span>
+                </div>
+                <div class="fs-3 fw-bold text-danger font-monospace mt-1">@employees.Count(e => string.Equals(e.Status, "RESIGNED", StringComparison.OrdinalIgnoreCase))</div>
+                <div class="small text-muted mt-1">Đã khóa tài khoản &amp; thu hồi truy cập</div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm p-3 h-100" style="border-radius: 16px; border-left: 4px solid #8b5cf6 !important;">
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                    <span class="text-muted small fw-semibold text-uppercase">Đã cấp tài khoản</span>
+                    <span class="badge bg-purple-subtle text-purple rounded-pill" style="background-color: #f3e8ff; color: #7c3aed;">Đăng nhập</span>
+                </div>
+                <div class="fs-3 fw-bold text-dark font-monospace mt-1">@employees.Count(e => e.HasAccount)</div>
+                <div class="small text-muted mt-1">Có tài khoản User trên hệ thống</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toolbar: Search & Filters -->
+    <div class="card border-0 shadow-sm mb-4" style="border-radius: 18px;">
+        <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <div class="d-flex flex-wrap align-items-center gap-3 flex-grow-1">
+                <div style="min-width: 260px;" class="flex-grow-1">
+                    <input type="text" class="form-control rounded-pill px-3 shadow-none border"
+                           placeholder="🔍 Tìm tên, mã NV, email hoặc SĐT..."
+                           @bind="searchKeyword" @bind:event="oninput" />
+                </div>
+
+                <div class="d-flex align-items-center gap-2">
+                    <select class="form-select form-select-sm rounded-pill fw-medium" @bind="selectedDepartmentId" style="width: auto;">
+                        <option value="0">Tất cả phòng ban</option>
+                        @foreach (var dept in departments)
+                        {
+                            <option value="@dept.Id">@dept.Name</option>
+                        }
+                    </select>
+
+                    <select class="form-select form-select-sm rounded-pill fw-medium" @bind="selectedStatus" style="width: auto;">
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="ACTIVE">Đang làm việc (ACTIVE)</option>
+                        <option value="RESIGNED">Đã thôi việc (RESIGNED)</option>
+                    </select>
+
+                    <button class="btn btn-sm btn-outline-success rounded-pill px-3" @onclick="LoadDataAsync" disabled="@isLoading">
+                        ↻ Làm mới
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Onboarding / Create / Edit Modal -->
+    @if (showFormModal)
+    {
+        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5); backdrop-filter: blur(3px);">
+            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+                    <div class="modal-header border-bottom py-3 px-4" style="background: linear-gradient(135deg, #065f46 0%, #047857 100%); color: white; border-top-left-radius: 20px; border-top-right-radius: 20px;">
+                        <h5 class="modal-title fw-bold">
+                            @(isEditMode ? "✏️ Chỉnh sửa hồ sơ nhân sự" : "➕ Tiếp nhận nhân sự mới (Onboarding)")
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" @onclick="CloseFormModal"></button>
+                    </div>
+
+                    <div class="modal-body p-4">
+                        <div class="row g-3">
+                            <div class="col-12"><h6 class="fw-bold text-success border-bottom pb-2">1. Thông tin cá nhân</h6></div>
+
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Họ và tên <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" placeholder="Ví dụ: Nguyễn Văn A" @bind="formFullName" />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Mã nhân viên (bỏ trống để tự sinh)</label>
+                                <input type="text" class="form-control font-monospace" placeholder="Tự sinh: NV0001..." @bind="formCode" disabled="@isEditMode" />
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label small fw-semibold">Giới tính</label>
+                                <select class="form-select" @bind="formGender">
+                                    <option value="Nam">Nam</option>
+                                    <option value="Nữ">Nữ</option>
+                                    <option value="Khác">Khác</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label small fw-semibold">Ngày sinh</label>
+                                <input type="date" class="form-control" @bind="formDateOfBirth" />
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label small fw-semibold">Số điện thoại</label>
+                                <input type="tel" class="form-control" placeholder="090..." @bind="formPhone" />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Email liên hệ</label>
+                                <input type="email" class="form-control" placeholder="email@company.vn" @bind="formEmail" />
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Trình độ học vấn</label>
+                                <select class="form-select" @bind="formEducationLevel">
+                                    <option value="Đại học">Đại học</option>
+                                    <option value="Cao đẳng">Cao đẳng</option>
+                                    <option value="Thạc sĩ">Thạc sĩ</option>
+                                    <option value="Trung cấp">Trung cấp</option>
+                                    <option value="Khác">Khác</option>
+                                </select>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label small fw-semibold">Địa chỉ thường trú / tạm trú</label>
+                                <input type="text" class="form-control" placeholder="Số nhà, đường, phường, quận/huyện, tỉnh/thành phố..." @bind="formAddress" />
+                            </div>
+
+                            <div class="col-12 mt-4"><h6 class="fw-bold text-success border-bottom pb-2">2. Vị trí công tác &amp; Chế độ đãi ngộ</h6></div>
+
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Phòng ban công tác <span class="text-danger">*</span></label>
+                                <select class="form-select" @bind="formDepartmentId">
+                                    <option value="0">-- Chọn phòng ban --</option>
+                                    @foreach (var d in departments)
+                                    {
+                                        <option value="@d.Id">@d.Name (@d.Code)</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Chức danh / Vị trí</label>
+                                <select class="form-select" @bind="formPositionId">
+                                    <option value="0">-- Chưa chọn chức vụ --</option>
+                                    @foreach (var p in positions)
+                                    {
+                                        <option value="@p.Id">@p.Name (Hệ số PC: @p.AllowanceRate)</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label small fw-semibold">Lương cơ bản (Gross) <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control text-end fw-bold font-monospace" step="500000" min="0" @bind="formBaseSalary" />
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label small fw-semibold">Ngày vào làm</label>
+                                <input type="date" class="form-control" @bind="formJoinDate" />
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label small fw-semibold">Ngày ký hợp đồng</label>
+                                <input type="date" class="form-control" @bind="formHireDate" />
+                            </div>
+
+                            @if (isEditMode)
+                            {
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-semibold">Trạng thái hồ sơ</label>
+                                    <select class="form-select fw-semibold" @bind="formStatus">
+                                        <option value="ACTIVE">ACTIVE (Đang làm việc)</option>
+                                        <option value="RESIGNED">RESIGNED (Đã thôi việc - sẽ thu hồi quyền)</option>
+                                    </select>
+                                </div>
+                            }
+
+                            @if (!isEditMode)
+                            {
+                                <div class="col-12 mt-4">
+                                    <div class="card p-3 border-light bg-light" style="border-radius: 14px;">
+                                        <div class="form-check form-switch mb-2">
+                                            <input class="form-check-input" type="checkbox" id="createAccountSwitch" @bind="formCreateAccount">
+                                            <label class="form-check-label fw-bold text-dark" for="createAccountSwitch">
+                                                Cấp ngay tài khoản đăng nhập hệ thống cho nhân sự này
+                                            </label>
+                                        </div>
+
+                                        @if (formCreateAccount)
+                                        {
+                                            <div class="row g-2 mt-2">
+                                                <div class="col-md-4">
+                                                    <label class="form-label small fw-semibold">Tên đăng nhập <span class="text-danger">*</span></label>
+                                                    <input type="text" class="form-control form-control-sm" placeholder="username" @bind="formUserName" />
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label class="form-label small fw-semibold">Mật khẩu tạm <span class="text-danger">*</span></label>
+                                                    <input type="password" class="form-control form-control-sm" placeholder="Tối thiểu 6 ký tự" @bind="formPassword" />
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label class="form-label small fw-semibold">Vai trò hệ thống</label>
+                                                    <select class="form-select form-select-sm" @bind="formRole">
+                                                        <option value="EMPLOYEE">EMPLOYEE (Nhân viên)</option>
+                                                        <option value="HR_STAFF">HR_STAFF (Nhân sự)</option>
+                                                        <option value="MANAGER">MANAGER (Quản lý)</option>
+                                                        <option value="ADMIN">ADMIN (Quản trị viên)</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="modal-footer border-top px-4 py-3 bg-light" style="border-bottom-left-radius: 20px; border-bottom-right-radius: 20px;">
+                        <button type="button" class="btn btn-outline-secondary rounded-pill px-4" @onclick="CloseFormModal">
+                            Hủy bỏ
+                        </button>
+                        <button type="button" class="btn btn-success rounded-pill px-4 fw-semibold" disabled="@isSubmitting" @onclick="SaveEmployeeAsync">
+                            @if (isSubmitting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                <span>Đang lưu...</span>
+                            }
+                            else
+                            {
+                                <span>@(isEditMode ? "Cập nhật hồ sơ" : "Lưu nhân sự")</span>
+                            }
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Employee Table -->
+    <div class="card border-0 shadow-sm" style="border-radius: 18px;">
+        <div class="card-header bg-white border-bottom border-light py-3 px-4 d-flex justify-content-between align-items-center">
+            <div>
+                <strong class="text-dark fs-5">DANH SÁCH NHÂN SỰ NỘI BỘ</strong>
+                <div class="text-muted small">Hiển thị @pagedEmployees.Count / @filteredEmployees.Count nhân sự phù hợp</div>
+            </div>
+        </div>
+
+        <div class="card-body p-0">
+            @if (isLoading)
+            {
+                <div class="text-center py-5">
+                    <div class="spinner-border text-success" role="status"></div>
+                    <div class="text-muted small mt-2">Đang tải hồ sơ nhân sự...</div>
+                </div>
+            }
+            else if (filteredEmployees.Count == 0)
+            {
+                <div class="text-center py-5 text-muted">
+                    <p class="mb-0">Không tìm thấy nhân viên nào phù hợp tiêu chí lọc.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light text-secondary small text-uppercase">
+                            <tr>
+                                <th class="ps-4">Mã NV</th>
+                                <th>Họ và tên</th>
+                                <th>Phòng ban</th>
+                                <th>Chức vụ</th>
+                                <th>Lương cơ bản</th>
+                                <th>Thông tin liên hệ</th>
+                                <th>Trạng thái</th>
+                                <th>Tài khoản</th>
+                                <th class="pe-4 text-end">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var emp in pagedEmployees)
+                            {
+                                <tr>
+                                    <td class="ps-4 font-monospace fw-bold text-dark">
+                                        @emp.Code
+                                    </td>
+                                    <td>
+                                        <div class="fw-bold text-dark">@emp.FullName</div>
+                                        <div class="small text-muted">Vào làm: @(emp.JoinDate?.ToString("dd/MM/yyyy") ?? "-")</div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark border">@emp.DepartmentName</span>
+                                    </td>
+                                    <td>
+                                        <span class="small fw-semibold text-secondary">@(emp.PositionName ?? "Chưa phân chức vụ")</span>
+                                    </td>
+                                    <td>
+                                        <strong class="text-success font-monospace">@FormatVnd(emp.BaseSalary)</strong>
+                                    </td>
+                                    <td>
+                                        <div class="small text-dark">✉ @(emp.Email ?? "Chưa có")</div>
+                                        <div class="small text-muted">☎ @(emp.Phone ?? "Chưa có")</div>
+                                    </td>
+                                    <td>
+                                        @if (string.Equals(emp.Status, "ACTIVE", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1">
+                                                ● Đang làm việc
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary-subtle text-secondary border rounded-pill px-3 py-1">
+                                                ✕ Đã thôi việc
+                                            </span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (emp.HasAccount)
+                                        {
+                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill">
+                                                Đã có User
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill">
+                                                Chưa kích hoạt
+                                            </span>
+                                        }
+                                    </td>
+                                    <td class="pe-4 text-end">
+                                        <div class="d-inline-flex gap-1">
+                                            <button class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1"
+                                                    title="Xem và chỉnh sửa hồ sơ"
+                                                    @onclick="() => OpenEditModal(emp)">
+                                                ✏ Sửa
+                                            </button>
+
+                                            @if (string.Equals(emp.Status, "ACTIVE", StringComparison.OrdinalIgnoreCase))
+                                            {
+                                                <button class="btn btn-sm btn-outline-danger rounded-pill px-3 py-1"
+                                                        title="Thực hiện thôi việc và thu hồi mọi quyền truy cập"
+                                                        @onclick="() => ConfirmOffboardAsync(emp)">
+                                                    Thôi việc
+                                                </button>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination Footer -->
+                @if (totalPages > 1)
+                {
+                    <div class="card-footer bg-white border-top py-3 px-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div class="small text-muted">
+                            Trang <strong>@currentPage</strong> / <strong>@totalPages</strong> (Tổng số <strong>@filteredEmployees.Count</strong> nhân sự)
+                        </div>
+
+                        <nav aria-label="Employee list pagination">
+                            <ul class="pagination pagination-sm mb-0">
+                                <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                                    <button class="page-link" @onclick="() => GoToPage(1)">« Đầu</button>
+                                </li>
+                                <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                                    <button class="page-link" @onclick="() => GoToPage(currentPage - 1)">‹ Trước</button>
+                                </li>
+
+                                @for (int p = Math.Max(1, currentPage - 2); p <= Math.Min(totalPages, currentPage + 2); p++)
+                                {
+                                    var pageNumber = p;
+                                    <li class="page-item @(currentPage == pageNumber ? "active" : "")">
+                                        <button class="page-link" @onclick="() => GoToPage(pageNumber)">@pageNumber</button>
+                                    </li>
+                                }
+
+                                <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                                    <button class="page-link" @onclick="() => GoToPage(currentPage + 1)">Sau ›</button>
+                                </li>
+                                <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                                    <button class="page-link" @onclick="() => GoToPage(totalPages)">Cuối »</button>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private IReadOnlyList<EmployeeDto> employees = [];
+    private IReadOnlyList<DepartmentDto> departments = [];
+    private IReadOnlyList<PositionDto> positions = [];
+
+    private string searchKeyword = string.Empty;
+    private long selectedDepartmentId = 0;
+    private string selectedStatus = string.Empty;
+
+    private bool isLoading = true;
+    private bool isSubmitting = false;
+    private string? successMessage;
+    private string? errorMessage;
+
+    // Pagination
+    private int currentPage = 1;
+    private const int pageSize = 10;
+
+    // Form Modal state
+    private bool showFormModal = false;
+    private bool isEditMode = false;
+    private long editingEmployeeId = 0;
+
+    private string formFullName = string.Empty;
+    private string formCode = string.Empty;
+    private string formGender = "Nam";
+    private DateOnly? formDateOfBirth = new DateOnly(1995, 1, 1);
+    private string formPhone = string.Empty;
+    private string formEmail = string.Empty;
+    private string formAddress = string.Empty;
+    private string formEducationLevel = "Đại học";
+    private long formDepartmentId = 0;
+    private long formPositionId = 0;
+    private decimal formBaseSalary = 10000000m;
+    private DateOnly? formJoinDate = DateOnly.FromDateTime(DateTime.Today);
+    private DateOnly? formHireDate = DateOnly.FromDateTime(DateTime.Today);
+    private string formStatus = "ACTIVE";
+
+    // Account creation fields
+    private bool formCreateAccount = false;
+    private string formUserName = string.Empty;
+    private string formPassword = string.Empty;
+    private string formRole = "EMPLOYEE";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+        try
+        {
+            departments = await EmployeeApiClient.GetDepartmentsAsync();
+            positions = await EmployeeApiClient.GetPositionsAsync();
+            employees = await EmployeeApiClient.GetEmployeesAsync(
+                departmentId: selectedDepartmentId > 0 ? selectedDepartmentId : null,
+                status: !string.IsNullOrWhiteSpace(selectedStatus) ? selectedStatus : null);
+            currentPage = 1;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Lỗi khi tải danh sách nhân sự: " + ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private IReadOnlyList<EmployeeDto> filteredEmployees =>
+        employees.Where(e =>
+            (string.IsNullOrWhiteSpace(searchKeyword) ||
+             (e.FullName?.Contains(searchKeyword, StringComparison.OrdinalIgnoreCase) == true) ||
+             (e.Code?.Contains(searchKeyword, StringComparison.OrdinalIgnoreCase) == true) ||
+             (e.Email?.Contains(searchKeyword, StringComparison.OrdinalIgnoreCase) == true) ||
+             (e.Phone?.Contains(searchKeyword, StringComparison.OrdinalIgnoreCase) == true))
+            && (selectedDepartmentId <= 0 || e.DepartmentId == selectedDepartmentId)
+            && (string.IsNullOrWhiteSpace(selectedStatus) || string.Equals(e.Status, selectedStatus, StringComparison.OrdinalIgnoreCase))
+        ).ToList();
+
+    private int totalPages => Math.Max(1, (int)Math.Ceiling(filteredEmployees.Count / (double)pageSize));
+
+    private IReadOnlyList<EmployeeDto> pagedEmployees =>
+        filteredEmployees.Skip((currentPage - 1) * pageSize).Take(pageSize).ToList();
+
+    private void GoToPage(int page)
+    {
+        if (page >= 1 && page <= totalPages)
+        {
+            currentPage = page;
+        }
+    }
+
+    private void OpenCreateModal()
+    {
+        isEditMode = false;
+        editingEmployeeId = 0;
+        formFullName = string.Empty;
+        formCode = string.Empty;
+        formGender = "Nam";
+        formDateOfBirth = new DateOnly(1995, 1, 1);
+        formPhone = string.Empty;
+        formEmail = string.Empty;
+        formAddress = string.Empty;
+        formEducationLevel = "Đại học";
+        formDepartmentId = departments.FirstOrDefault()?.Id ?? 0;
+        formPositionId = positions.FirstOrDefault()?.Id ?? 0;
+        formBaseSalary = 10000000m;
+        formJoinDate = DateOnly.FromDateTime(DateTime.Today);
+        formHireDate = DateOnly.FromDateTime(DateTime.Today);
+        formStatus = "ACTIVE";
+        formCreateAccount = false;
+        formUserName = string.Empty;
+        formPassword = string.Empty;
+        formRole = "EMPLOYEE";
+        showFormModal = true;
+    }
+
+    private void OpenEditModal(EmployeeDto emp)
+    {
+        isEditMode = true;
+        editingEmployeeId = emp.Id;
+        formFullName = emp.FullName;
+        formCode = emp.Code;
+        formGender = emp.Gender ?? "Nam";
+        formDateOfBirth = emp.DateOfBirth;
+        formPhone = emp.Phone ?? string.Empty;
+        formEmail = emp.Email ?? string.Empty;
+        formAddress = emp.Address ?? string.Empty;
+        formEducationLevel = emp.EducationLevel ?? "Đại học";
+        formDepartmentId = emp.DepartmentId;
+        formPositionId = emp.PositionId ?? 0;
+        formBaseSalary = emp.BaseSalary;
+        formJoinDate = emp.JoinDate;
+        formHireDate = emp.HireDate;
+        formStatus = emp.Status;
+        formCreateAccount = false;
+        showFormModal = true;
+    }
+
+    private void CloseFormModal()
+    {
+        showFormModal = false;
+    }
+
+    private async Task SaveEmployeeAsync()
+    {
+        if (string.IsNullOrWhiteSpace(formFullName))
+        {
+            errorMessage = "Vui lòng nhập Họ và tên nhân viên.";
+            return;
+        }
+
+        if (formDepartmentId <= 0)
+        {
+            errorMessage = "Vui lòng chọn phòng ban cho nhân sự.";
+            return;
+        }
+
+        if (formBaseSalary < 0)
+        {
+            errorMessage = "Mức lương cơ bản không thể âm.";
+            return;
+        }
+
+        if (!isEditMode && formCreateAccount)
+        {
+            if (string.IsNullOrWhiteSpace(formUserName))
+            {
+                errorMessage = "Vui lòng nhập tên đăng nhập.";
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(formPassword) || formPassword.Length < 6)
+            {
+                errorMessage = "Mật khẩu tạm phải có ít nhất 6 ký tự.";
+                return;
+            }
+        }
+
+        isSubmitting = true;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            if (isEditMode)
+            {
+                var req = new UpdateEmployeeRequest(
+                    FullName: formFullName,
+                    DepartmentId: formDepartmentId,
+                    PositionId: formPositionId > 0 ? formPositionId : null,
+                    DateOfBirth: formDateOfBirth,
+                    Gender: formGender,
+                    Phone: formPhone,
+                    Email: formEmail,
+                    Address: formAddress,
+                    EducationLevel: formEducationLevel,
+                    BaseSalary: formBaseSalary,
+                    JoinDate: formJoinDate,
+                    HireDate: formHireDate,
+                    Status: formStatus);
+
+                var res = await EmployeeApiClient.UpdateEmployeeAsync(editingEmployeeId, req);
+                if (res?.Success == true)
+                {
+                    successMessage = $"Cập nhật hồ sơ nhân sự '{formFullName}' thành công!";
+                    showFormModal = false;
+                    await LoadDataAsync();
+                }
+                else
+                {
+                    errorMessage = res?.Error?.Message ?? "Không thể cập nhật hồ sơ.";
+                }
+            }
+            else
+            {
+                var req = new CreateEmployeeRequest(
+                    FullName: formFullName,
+                    Code: string.IsNullOrWhiteSpace(formCode) ? null : formCode.Trim(),
+                    DepartmentId: formDepartmentId,
+                    PositionId: formPositionId > 0 ? formPositionId : null,
+                    DateOfBirth: formDateOfBirth,
+                    Gender: formGender,
+                    Phone: formPhone,
+                    Email: formEmail,
+                    Address: formAddress,
+                    EducationLevel: formEducationLevel,
+                    BaseSalary: formBaseSalary,
+                    JoinDate: formJoinDate,
+                    HireDate: formHireDate,
+                    CreateAccount: formCreateAccount,
+                    UserName: formCreateAccount ? formUserName : null,
+                    Password: formCreateAccount ? formPassword : null,
+                    Role: formCreateAccount ? formRole : null);
+
+                var res = await EmployeeApiClient.CreateEmployeeAsync(req);
+                if (res?.Success == true)
+                {
+                    successMessage = $"Tiếp nhận nhân sự mới '{res.Data?.FullName}' (Mã: {res.Data?.Code}) thành công!";
+                    showFormModal = false;
+                    await LoadDataAsync();
+                }
+                else
+                {
+                    errorMessage = res?.Error?.Message ?? "Không thể tiếp nhận nhân sự mới.";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Đã xảy ra lỗi: " + ex.Message;
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private async Task ConfirmOffboardAsync(EmployeeDto emp)
+    {
+        var confirmed = await JsRuntime.InvokeAsync<bool>(
+            "confirm",
+            $"XÁC NHẬN THÔI VIỆC:\n\nBạn có chắc chắn muốn thực hiện quy trình thôi việc cho nhân viên '{emp.FullName}' ({emp.Code})?\n\nHành động này sẽ:\n1. Chuyển trạng thái nhân sự sang RESIGNED.\n2. Tự động KHÓA TÀI KHOẢN người dùng.\n3. THU HỒI TOÀN BỘ REFRESH TOKEN và kết thúc mọi phiên đăng nhập.\n4. Ghi nhận nhật ký kiểm toán hệ thống.");
+
+        if (!confirmed) return;
+
+        try
+        {
+            var ok = await EmployeeApiClient.OffboardEmployeeAsync(emp.Id);
+            if (ok)
+            {
+                successMessage = $"Đã hoàn tất thôi việc (Offboard) cho nhân sự '{emp.FullName}'. Tài khoản và quyền truy cập đã được thu hồi.";
+                await LoadDataAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Lỗi khi thực hiện thôi việc: " + ex.Message;
+        }
+    }
+
+    private static string FormatVnd(decimal amount) => amount.ToString("#,##0") + " ₫";
+}

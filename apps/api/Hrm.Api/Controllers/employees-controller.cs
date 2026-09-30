@@ -9,15 +9,65 @@ namespace Hrm.Api.Controllers;
 [ApiController]
 [Route("api/v1/employees")]
 [Authorize]
-public sealed class EmployeesController(IEmployeeOffboardingService offboardingService) : ControllerBase
+public sealed class EmployeesController(
+    IEmployeeService employeeService,
+    IEmployeeOffboardingService offboardingService) : ControllerBase
 {
     [HttpGet]
     [Authorize(Policy = PermissionCodes.EmployeeRead)]
-    public async Task<ActionResult<ApiResponse<IReadOnlyCollection<EmployeeAccountOptionDto>>>> GetDirectory(
+    public async Task<ActionResult<ApiResponse<IReadOnlyList<EmployeeDto>>>> GetEmployees(
+        [FromQuery] string? keyword,
+        [FromQuery] long? departmentId,
+        [FromQuery] string? status,
+        CancellationToken cancellationToken)
+    {
+        var result = await employeeService.GetEmployeesAsync(keyword, departmentId, status, cancellationToken);
+        return Ok(ApiResponse.Ok(result));
+    }
+
+    [HttpGet("options")]
+    [Authorize(Policy = PermissionCodes.EmployeeRead)]
+    public async Task<ActionResult<ApiResponse<IReadOnlyCollection<EmployeeAccountOptionDto>>>> GetOptions(
         [FromServices] Hrm.Modules.Auth.Application.IAdminService adminService,
         CancellationToken cancellationToken)
     {
         var result = await adminService.GetEmployeeOptionsAsync(cancellationToken);
+        return Ok(ApiResponse.Ok(result));
+    }
+
+    [HttpGet("{id:long}")]
+    [Authorize(Policy = PermissionCodes.EmployeeRead)]
+    public async Task<ActionResult<ApiResponse<EmployeeDto>>> GetEmployeeById(
+        long id,
+        CancellationToken cancellationToken)
+    {
+        var result = await employeeService.GetEmployeeByIdAsync(id, cancellationToken);
+        if (result is null)
+        {
+            return NotFound(ApiResponse.Fail<EmployeeDto>(new ApiError("EMPLOYEE_NOT_FOUND", "Không tìm thấy thông tin nhân viên.", [])));
+        }
+
+        return Ok(ApiResponse.Ok(result));
+    }
+
+    [HttpPost]
+    [Authorize(Policy = PermissionCodes.EmployeeWrite)]
+    public async Task<ActionResult<ApiResponse<EmployeeDto>>> CreateEmployee(
+        [FromBody] CreateEmployeeRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await employeeService.CreateEmployeeAsync(request, GetActorId(), cancellationToken);
+        return Created($"api/v1/employees/{result.Id}", ApiResponse.Ok(result));
+    }
+
+    [HttpPut("{id:long}")]
+    [Authorize(Policy = PermissionCodes.EmployeeWrite)]
+    public async Task<ActionResult<ApiResponse<EmployeeDto>>> UpdateEmployee(
+        long id,
+        [FromBody] UpdateEmployeeRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await employeeService.UpdateEmployeeAsync(id, request, GetActorId(), cancellationToken);
         return Ok(ApiResponse.Ok(result));
     }
 
@@ -29,6 +79,24 @@ public sealed class EmployeesController(IEmployeeOffboardingService offboardingS
     {
         await offboardingService.OffboardAsync(employeeId, GetActorId(), cancellationToken);
         return Ok(ApiResponse.Ok<object>(new { }));
+    }
+
+    [HttpGet("departments")]
+    [Authorize(Policy = PermissionCodes.EmployeeRead)]
+    public async Task<ActionResult<ApiResponse<IReadOnlyList<DepartmentDto>>>> GetDepartments(
+        CancellationToken cancellationToken)
+    {
+        var result = await employeeService.GetDepartmentsAsync(cancellationToken);
+        return Ok(ApiResponse.Ok(result));
+    }
+
+    [HttpGet("positions")]
+    [Authorize(Policy = PermissionCodes.EmployeeRead)]
+    public async Task<ActionResult<ApiResponse<IReadOnlyList<PositionDto>>>> GetPositions(
+        CancellationToken cancellationToken)
+    {
+        var result = await employeeService.GetPositionsAsync(cancellationToken);
+        return Ok(ApiResponse.Ok(result));
     }
 
     private long GetActorId() =>
