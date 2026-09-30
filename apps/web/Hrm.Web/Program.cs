@@ -22,6 +22,7 @@ builder.Services.AddScoped<AdminApiClient>();
 builder.Services.AddScoped<IAttendanceApiClient, AttendanceApiClient>();
 builder.Services.AddScoped<ILeaveApiClient, LeaveApiClient>();
 builder.Services.AddScoped<IPayrollApiClient, PayrollApiClient>();
+builder.Services.AddScoped<IPayrollManagementApiClient>(sp => (PayrollApiClient)sp.GetRequiredService<IPayrollApiClient>());
 builder.Services.AddScoped<IFileApiClient, FileApiClient>();
 builder.Services.AddScoped<IReportApiClient, ReportApiClient>();
 
