@@ -7,7 +7,7 @@
 @inject IJSRuntime JsRuntime
 @inject AuthenticationStateProvider AuthStateProvider
 
-<PageTitle>@(canWrite ? "Quản lý & Hồ sơ Nhân sự" : "Tra cứu Danh bạ Nhân sự") - HRM System</PageTitle>
+<PageTitle>@(canWrite ? "Quản trị & Tiếp nhận Nhân sự" : (canManageAny ? "Điều hành & Vận hành Nhân sự" : "Tra cứu Danh bạ Nhân sự")) - HRM System</PageTitle>
 
 <div class="container-fluid px-0">
     <!-- Header Hero Banner -->
@@ -15,10 +15,22 @@
         <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
             <div>
                 <span class="badge text-white mb-2 px-3 py-1" style="background-color: #10b981; font-size: 0.85rem; border-radius: 20px; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);">
-                    @(canWrite ? "👥 PHÂN HỆ QUẢN LÝ NHÂN SỰ TOÀN DIỆN" : "📖 DANH BẠ NHÂN SỰ NỘI BỘ")
+                    @(canWrite 
+                        ? "👥 PHÂN HỆ QUẢN TRỊ & TIẾP NHẬN NHÂN SỰ" 
+                        : (canManageAny ? "⚡ ĐIỀU HÀNH & VẬN HÀNH NHÂN SỰ" : "📖 DANH BẠ LIÊN LẠC NỘI BỘ"))
                 </span>
-                <h1 class="h3 fw-bold mb-1 text-white">@(canWrite ? "Quản trị & Tiếp nhận Nhân sự" : "Tra cứu Danh bạ Nhân viên")</h1>
-                <p class="mb-0 text-white-50">@(canWrite ? "Tiếp nhận nhân sự mới (Onboarding), quản lý hồ sơ phòng ban, chức vụ và quy trình thôi việc (Offboarding)." : "Tra cứu danh sách nhân sự, thông tin liên hệ và phòng ban công tác trong toàn công ty.")</p>
+                <h1 class="h3 fw-bold mb-1 text-white">
+                    @(canWrite 
+                        ? "Quản trị & Tiếp nhận Nhân sự" 
+                        : (canManageAny ? "Điều hành & Vận hành Nhân sự" : "Tra cứu Danh bạ Nhân viên"))
+                </h1>
+                <p class="mb-0 text-white-50">
+                    @(canWrite 
+                        ? "Tiếp nhận nhân sự mới (Onboarding), cập nhật hồ sơ cá nhân và quản lý thông tin nhân sự." 
+                        : (canManageAny 
+                            ? "Thực hiện điều chuyển công tác phòng ban và quy trình thôi việc (Offboarding) kèm thu hồi quyền truy cập." 
+                            : "Tra cứu danh sách nhân sự, thông tin liên hệ và phòng ban công tác trong toàn công ty."))
+                </p>
             </div>
             @if (canWrite)
             {
@@ -203,13 +215,32 @@
 
                             <div class="col-md-6">
                                 <label class="form-label small fw-semibold">Phòng ban công tác <span class="text-danger">*</span></label>
-                                <select class="form-select" @bind="formDepartmentId">
-                                    <option value="0">-- Chọn phòng ban --</option>
-                                    @foreach (var d in departments)
+                                @if (!isEditMode || canTransfer)
+                                {
+                                    <select class="form-select" @bind="formDepartmentId">
+                                        <option value="0">-- Chọn phòng ban --</option>
+                                        @foreach (var d in departments)
+                                        {
+                                            <option value="@d.Id">@d.Name (@d.Code)</option>
+                                        }
+                                    </select>
+                                    @if (isEditMode && canTransfer)
                                     {
-                                        <option value="@d.Id">@d.Name (@d.Code)</option>
+                                        <div class="form-text small text-success">✓ Bạn có quyền điều chuyển phòng ban.</div>
                                     }
-                                </select>
+                                }
+                                else
+                                {
+                                    <select class="form-select bg-light text-muted" disabled value="@formDepartmentId">
+                                        @foreach (var d in departments)
+                                        {
+                                            <option value="@d.Id">@d.Name (@d.Code)</option>
+                                        }
+                                    </select>
+                                    <div class="form-text small text-muted">
+                                        🔒 Khóa: Cần quyền <strong>"Điều chuyển phòng ban"</strong> để thay đổi đơn vị công tác.
+                                    </div>
+                                }
                             </div>
 
                             <div class="col-md-6">
@@ -242,10 +273,21 @@
                             {
                                 <div class="col-md-6">
                                     <label class="form-label small fw-semibold">Trạng thái hồ sơ</label>
-                                    <select class="form-select fw-semibold" @bind="formStatus">
-                                        <option value="ACTIVE">ACTIVE (Đang làm việc)</option>
-                                        <option value="RESIGNED">RESIGNED (Đã thôi việc - sẽ thu hồi quyền)</option>
-                                    </select>
+                                    <div class="p-2 border rounded bg-light d-flex align-items-center justify-content-between">
+                                        @if (string.Equals(formStatus, "ACTIVE", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1">
+                                                ● Đang làm việc (ACTIVE)
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary-subtle text-secondary border rounded-pill px-3 py-1">
+                                                ✕ Đã thôi việc (RESIGNED)
+                                            </span>
+                                        }
+                                        <small class="text-muted fst-italic">Muốn thôi việc, dùng nút "Thôi việc" ngoài danh sách</small>
+                                    </div>
                                 </div>
                             }
 
@@ -309,6 +351,155 @@
         </div>
     }
 
+    <!-- Modal Điều chuyển công tác / Phòng ban -->
+    @if (showTransferModal && transferringEmployee != null)
+    {
+        <div class="modal fade show d-block" tabindex="-1" style="background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 1060;">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+                    <div class="modal-header border-bottom px-4 py-3 bg-light" style="border-top-left-radius: 20px; border-top-right-radius: 20px;">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="fs-4">🔄</span>
+                            <h5 class="modal-title fw-bold text-dark mb-0">Điều chuyển công tác / Phòng ban</h5>
+                        </div>
+                        <button type="button" class="btn-close" @onclick="CloseTransferModal"></button>
+                    </div>
+
+                    <div class="modal-body p-4">
+                        <div class="card bg-light border-0 p-3 mb-3" style="border-radius: 14px;">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="rounded-circle text-white d-flex align-items-center justify-content-center fw-bold shadow-sm"
+                                     style="width: 44px; height: 44px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); font-size: 1.1rem; flex-shrink: 0;">
+                                    @GetInitial(transferringEmployee.FullName)
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold text-dark mb-0">@transferringEmployee.FullName</h6>
+                                    <div class="small text-muted font-monospace">@transferringEmployee.Code · Hiện tại: <strong>@transferringEmployee.DepartmentName</strong></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label small fw-semibold">Phòng ban tiếp nhận mới <span class="text-danger">*</span></label>
+                                <select class="form-select" @bind="transferTargetDepartmentId">
+                                    <option value="0">-- Chọn phòng ban tiếp nhận --</option>
+                                    @foreach (var d in departments)
+                                    {
+                                        if (d.Id != transferringEmployee.DepartmentId)
+                                        {
+                                            <option value="@d.Id">@d.Name (@d.Code)</option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label small fw-semibold">Chức danh / Vị trí mới (tùy chọn)</label>
+                                <select class="form-select" @bind="transferTargetPositionId">
+                                    <option value="0">-- Giữ nguyên hoặc chọn chức vụ mới --</option>
+                                    @foreach (var p in positions)
+                                    {
+                                        <option value="@p.Id">@p.Name (Hệ số PC: @p.AllowanceRate)</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label small fw-semibold">Ngày có hiệu lực</label>
+                                <input type="date" class="form-control" @bind="transferEffectiveDate" />
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label small fw-semibold">Căn cứ / Lý do điều chuyển (Số quyết định...)</label>
+                                <textarea class="form-control" rows="2" placeholder="Ví dụ: Theo Quyết định số 28/QĐ-NS điều động nhân sự dự án..." @bind="transferReason"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer border-top px-4 py-3 bg-light" style="border-bottom-left-radius: 20px; border-bottom-right-radius: 20px;">
+                        <button type="button" class="btn btn-outline-secondary rounded-pill px-4" @onclick="CloseTransferModal">
+                            Hủy bỏ
+                        </button>
+                        <button type="button" class="btn btn-primary rounded-pill px-4 fw-semibold shadow-sm" disabled="@isSubmittingTransfer" @onclick="ExecuteTransferAsync">
+                            @if (isSubmittingTransfer)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                <span>Đang xử lý...</span>
+                            }
+                            else
+                            {
+                                <span>Xác nhận điều chuyển</span>
+                            }
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Modal Xác nhận Thôi việc (Offboarding) -->
+    @if (showOffboardModal && offboardingEmployee != null)
+    {
+        <div class="modal fade show d-block" tabindex="-1" style="background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 1060;">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+                    <div class="modal-header border-bottom px-4 py-3 bg-danger-subtle text-danger" style="border-top-left-radius: 20px; border-top-right-radius: 20px;">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="fs-4">⚠️</span>
+                            <h5 class="modal-title fw-bold mb-0">Xác nhận Thôi việc & Thu hồi Quyền</h5>
+                        </div>
+                        <button type="button" class="btn-close" @onclick="CloseOffboardModal"></button>
+                    </div>
+
+                    <div class="modal-body p-4">
+                        <p class="text-secondary mb-3">
+                            Bạn đang chuẩn bị thực hiện quyết định thôi việc cho nhân sự sau:
+                        </p>
+
+                        <div class="card bg-light border-0 p-3 mb-3" style="border-radius: 14px;">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="rounded-circle text-white d-flex align-items-center justify-content-center fw-bold shadow-sm"
+                                     style="width: 44px; height: 44px; background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); font-size: 1.1rem; flex-shrink: 0;">
+                                    @GetInitial(offboardingEmployee.FullName)
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold text-dark mb-0">@offboardingEmployee.FullName</h6>
+                                    <div class="small text-muted font-monospace">@offboardingEmployee.Code · Phòng: @offboardingEmployee.DepartmentName</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-warning border-0 d-flex align-items-start gap-2 mb-0" style="border-radius: 12px; font-size: 0.9rem;">
+                            <span class="fs-5">🔒</span>
+                            <div>
+                                <strong>Cảnh báo an ninh nhân sự:</strong><br />
+                                Hành động này sẽ chuyển trạng thái của nhân sự sang <strong>RESIGNED</strong>, đồng thời <strong>lập tức vô hiệu hóa tài khoản và thu hồi toàn bộ phiên đăng nhập (Refresh Token)</strong> của nhân sự này trên toàn hệ thống.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer border-top px-4 py-3 bg-light" style="border-bottom-left-radius: 20px; border-bottom-right-radius: 20px;">
+                        <button type="button" class="btn btn-outline-secondary rounded-pill px-4" @onclick="CloseOffboardModal">
+                            Hủy bỏ
+                        </button>
+                        <button type="button" class="btn btn-danger rounded-pill px-4 fw-semibold shadow-sm" disabled="@isSubmittingOffboard" @onclick="ExecuteOffboardAsync">
+                            @if (isSubmittingOffboard)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                <span>Đang xử lý...</span>
+                            }
+                            else
+                            {
+                                <span>✕ Xác nhận thôi việc</span>
+                            }
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
     <!-- Employee Table -->
     <div class="card border-0 shadow-sm" style="border-radius: 18px;">
         <div class="card-header bg-white border-bottom border-light py-3 px-4 d-flex justify-content-between align-items-center">
@@ -351,6 +542,9 @@
                                 {
                                     <th>Lương cơ bản</th>
                                     <th>Tài khoản</th>
+                                }
+                                @if (canManageAny)
+                                {
                                     <th class="pe-4 text-end">Thao tác</th>
                                 }
                             </tr>
@@ -414,20 +608,35 @@
                                                 </span>
                                             }
                                         </td>
+                                    }
+                                    @if (canManageAny)
+                                    {
                                         <td class="pe-4 text-end">
                                             <div class="d-inline-flex gap-1">
-                                                <button class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1"
-                                                        title="Xem và chỉnh sửa hồ sơ"
-                                                        @onclick="() => OpenEditModal(emp)">
-                                                    ✏ Sửa
-                                                </button>
+                                                @if (canWrite)
+                                                {
+                                                    <button class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1"
+                                                            title="Xem và chỉnh sửa hồ sơ"
+                                                            @onclick="() => OpenEditModal(emp)">
+                                                        ✏ Sửa
+                                                    </button>
+                                                }
+
+                                                @if (canTransfer && string.Equals(emp.Status, "ACTIVE", StringComparison.OrdinalIgnoreCase))
+                                                {
+                                                    <button class="btn btn-sm btn-outline-info rounded-pill px-3 py-1"
+                                                            title="Điều chuyển công tác / Phòng ban"
+                                                            @onclick="() => OpenTransferModal(emp)">
+                                                        🔄 Chuyển phòng
+                                                    </button>
+                                                }
 
                                                 @if (canOffboard && string.Equals(emp.Status, "ACTIVE", StringComparison.OrdinalIgnoreCase))
                                                 {
                                                     <button class="btn btn-sm btn-outline-danger rounded-pill px-3 py-1"
                                                             title="Thực hiện thôi việc và thu hồi mọi quyền truy cập"
-                                                            @onclick="() => ConfirmOffboardAsync(emp)">
-                                                        Thôi việc
+                                                            @onclick="() => OpenOffboardModal(emp)">
+                                                        ✕ Thôi việc
                                                     </button>
                                                 }
                                             </div>
@@ -524,7 +733,23 @@
     private string formRole = "EMPLOYEE";
 
     private bool canWrite = false;
+    private bool canTransfer = false;
     private bool canOffboard = false;
+    private bool canManageAny => canWrite || canTransfer || canOffboard;
+
+    // Transfer Modal state
+    private bool showTransferModal = false;
+    private EmployeeDto? transferringEmployee = null;
+    private long transferTargetDepartmentId = 0;
+    private long transferTargetPositionId = 0;
+    private DateOnly? transferEffectiveDate = DateOnly.FromDateTime(DateTime.Today);
+    private string transferReason = string.Empty;
+    private bool isSubmittingTransfer = false;
+
+    // Offboard Modal state
+    private bool showOffboardModal = false;
+    private EmployeeDto? offboardingEmployee = null;
+    private bool isSubmittingOffboard = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -534,6 +759,9 @@
         canWrite = isAdmin
             || user.HasClaim("permission", PermissionCodes.EmployeeWrite)
             || user.HasClaim("permission", "EMP_EDIT");
+        canTransfer = isAdmin
+            || user.HasClaim("permission", PermissionCodes.EmployeeTransfer)
+            || user.HasClaim("permission", "EMP_TRANSFER");
         canOffboard = isAdmin
             || user.HasClaim("permission", PermissionCodes.EmployeeOffboard)
             || user.HasClaim("permission", "EMP_OFFBOARD");
@@ -753,26 +981,106 @@
         }
     }
 
-    private async Task ConfirmOffboardAsync(EmployeeDto emp)
+    private void OpenTransferModal(EmployeeDto emp)
     {
-        var confirmed = await JsRuntime.InvokeAsync<bool>(
-            "confirm",
-            $"XÁC NHẬN THÔI VIỆC:\n\nBạn có chắc chắn muốn thực hiện quy trình thôi việc cho nhân viên '{emp.FullName}' ({emp.Code})?\n\nHành động này sẽ:\n1. Chuyển trạng thái nhân sự sang RESIGNED.\n2. Tự động KHÓA TÀI KHOẢN người dùng.\n3. THU HỒI TOÀN BỘ REFRESH TOKEN và kết thúc mọi phiên đăng nhập.\n4. Ghi nhận nhật ký kiểm toán hệ thống.");
+        transferringEmployee = emp;
+        transferTargetDepartmentId = 0;
+        transferTargetPositionId = emp.PositionId ?? 0;
+        transferEffectiveDate = DateOnly.FromDateTime(DateTime.Today);
+        transferReason = string.Empty;
+        showTransferModal = true;
+    }
 
-        if (!confirmed) return;
+    private void CloseTransferModal()
+    {
+        showTransferModal = false;
+        transferringEmployee = null;
+    }
 
+    private async Task ExecuteTransferAsync()
+    {
+        if (transferringEmployee == null) return;
+
+        if (transferTargetDepartmentId <= 0)
+        {
+            errorMessage = "Vui lòng chọn phòng ban tiếp nhận mới.";
+            return;
+        }
+
+        if (transferTargetDepartmentId == transferringEmployee.DepartmentId)
+        {
+            errorMessage = "Phòng ban tiếp nhận mới phải khác phòng ban hiện tại.";
+            return;
+        }
+
+        isSubmittingTransfer = true;
+        errorMessage = null;
         try
         {
-            var ok = await EmployeeApiClient.OffboardEmployeeAsync(emp.Id);
+            var req = new TransferDepartmentRequest(
+                TargetDepartmentId: transferTargetDepartmentId,
+                TargetPositionId: transferTargetPositionId > 0 ? transferTargetPositionId : null,
+                Reason: string.IsNullOrWhiteSpace(transferReason) ? null : transferReason.Trim(),
+                EffectiveDate: transferEffectiveDate);
+
+            var res = await EmployeeApiClient.TransferEmployeeAsync(transferringEmployee.Id, req);
+            if (res?.Success == true)
+            {
+                var targetDeptName = departments.FirstOrDefault(d => d.Id == transferTargetDepartmentId)?.Name ?? "mới";
+                successMessage = $"Điều chuyển nhân sự '{transferringEmployee.FullName}' sang phòng ban '{targetDeptName}' thành công!";
+                CloseTransferModal();
+                await LoadDataAsync();
+            }
+            else
+            {
+                errorMessage = res?.Error?.Message ?? "Không thể thực hiện điều chuyển phòng ban.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Lỗi khi điều chuyển: " + ex.Message;
+        }
+        finally
+        {
+            isSubmittingTransfer = false;
+        }
+    }
+
+    private void OpenOffboardModal(EmployeeDto emp)
+    {
+        offboardingEmployee = emp;
+        showOffboardModal = true;
+    }
+
+    private void CloseOffboardModal()
+    {
+        showOffboardModal = false;
+        offboardingEmployee = null;
+    }
+
+    private async Task ExecuteOffboardAsync()
+    {
+        if (offboardingEmployee == null) return;
+
+        isSubmittingOffboard = true;
+        errorMessage = null;
+        try
+        {
+            var ok = await EmployeeApiClient.OffboardEmployeeAsync(offboardingEmployee.Id);
             if (ok)
             {
-                successMessage = $"Đã hoàn tất thôi việc (Offboard) cho nhân sự '{emp.FullName}'. Tài khoản và quyền truy cập đã được thu hồi.";
+                successMessage = $"Đã hoàn tất thôi việc (Offboard) cho nhân sự '{offboardingEmployee.FullName}'. Toàn bộ tài khoản và quyền truy cập đã được thu hồi.";
+                CloseOffboardModal();
                 await LoadDataAsync();
             }
         }
         catch (Exception ex)
         {
             errorMessage = "Lỗi khi thực hiện thôi việc: " + ex.Message;
+        }
+        finally
+        {
+            isSubmittingOffboard = false;
         }
     }
 

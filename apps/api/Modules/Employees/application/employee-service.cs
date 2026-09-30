@@ -29,6 +29,13 @@ public interface IEmployeeService
         long id,
         UpdateEmployeeRequest request,
         long actorUserId,
+        bool hasTransferPermission = true,
+        CancellationToken cancellationToken = default);
+
+    Task<EmployeeDto> TransferDepartmentAsync(
+        long id,
+        TransferDepartmentRequest request,
+        long actorUserId,
         CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<DepartmentDto>> GetDepartmentsAsync(CancellationToken cancellationToken = default);
@@ -38,7 +45,6 @@ public interface IEmployeeService
 
 public sealed class EmployeeService(
     AuthDbContext dbContext,
-    IEmployeeAccessRevoker accessRevoker,
     TimeProvider timeProvider) : IEmployeeService
 {
     public async Task<IReadOnlyList<EmployeeDto>> GetEmployeesAsync(
@@ -263,6 +269,7 @@ public sealed class EmployeeService(
         long id,
         UpdateEmployeeRequest request,
         long actorUserId,
+        bool hasTransferPermission = true,
         CancellationToken cancellationToken = default)
     {
         var employee = await dbContext.Employees
@@ -279,6 +286,12 @@ public sealed class EmployeeService(
         if (request.DepartmentId <= 0 || !await dbContext.Departments.AnyAsync(d => d.Id == request.DepartmentId, cancellationToken))
         {
             throw new DomainException("DEPARTMENT_NOT_FOUND", "Vui lòng chọn phòng ban hợp lệ.");
+        }
+
+        // Kiểm tra quyền điều chuyển nếu có sự thay đổi phòng ban
+        if (employee.DepartmentId != request.DepartmentId && !hasTransferPermission)
+        {
+            throw new DomainException("PERMISSION_DENIED", "Bạn không có quyền 'Điều chuyển phòng ban' (employee.transfer) để thay đổi phòng ban của nhân sự.");
         }
 
         if (request.PositionId.HasValue && request.PositionId.Value > 0 &&
@@ -302,6 +315,13 @@ public sealed class EmployeeService(
         }
 
         var previousStatus = employee.Status;
+        // Chặn chuyển trạng thái sang RESIGNED từ form sửa thông thường
+        if (!string.Equals(previousStatus, "RESIGNED", StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(request.Status, "RESIGNED", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new DomainException("INVALID_OPERATION", "Không thể chuyển trạng thái thôi việc tại form cập nhật hồ sơ thông thường. Vui lòng sử dụng tính năng 'Thôi việc' chuyên biệt để đảm bảo quy trình thu hồi quyền truy cập an toàn.");
+        }
+
         var now = timeProvider.GetUtcNow();
 
         employee.FullName = request.FullName.Trim();
@@ -316,7 +336,10 @@ public sealed class EmployeeService(
         employee.BaseSalary = request.BaseSalary;
         employee.JoinDate = request.JoinDate;
         employee.HireDate = request.HireDate;
-        employee.Status = string.IsNullOrWhiteSpace(request.Status) ? "ACTIVE" : request.Status.Trim().ToUpperInvariant();
+        if (!string.Equals(previousStatus, "RESIGNED", StringComparison.OrdinalIgnoreCase))
+        {
+            employee.Status = string.IsNullOrWhiteSpace(request.Status) ? "ACTIVE" : request.Status.Trim().ToUpperInvariant();
+        }
 
         dbContext.AuditLogs.Add(new AuditLogEntry
         {
@@ -337,18 +360,86 @@ public sealed class EmployeeService(
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        // If status was changed to RESIGNED from active, trigger access revocation
-        if (!string.Equals(previousStatus, "RESIGNED", StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(employee.Status, "RESIGNED", StringComparison.OrdinalIgnoreCase))
-        {
-            await accessRevoker.RevokeAsync(id, actorUserId, cancellationToken);
-        }
-
         var hasAccount = await dbContext.Users
             .AsNoTracking()
             .AnyAsync(u => u.EmployeeId == employee.Id, cancellationToken);
 
         return MapToDto(employee, hasAccount);
+    }
+
+    public async Task<EmployeeDto> TransferDepartmentAsync(
+        long id,
+        TransferDepartmentRequest request,
+        long actorUserId,
+        CancellationToken cancellationToken = default)
+    {
+        var employee = await dbContext.Employees
+            .Include(e => e.Department)
+            .Include(e => e.Position)
+            .FirstOrDefaultAsync(e => e.Id == id, cancellationToken)
+            ?? throw new DomainException("EMPLOYEE_NOT_FOUND", "Không tìm thấy nhân viên.");
+
+        if (string.Equals(employee.Status, "RESIGNED", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new DomainException("INVALID_STATE", "Không thể điều chuyển nhân sự đã thôi việc.");
+        }
+
+        if (employee.DepartmentId == request.TargetDepartmentId)
+        {
+            throw new DomainException("INVALID_TRANSFER", "Phòng ban tiếp nhận phải khác phòng ban hiện tại.");
+        }
+
+        var targetDepartment = await dbContext.Departments
+            .FirstOrDefaultAsync(d => d.Id == request.TargetDepartmentId, cancellationToken)
+            ?? throw new DomainException("DEPARTMENT_NOT_FOUND", "Phòng ban tiếp nhận không tồn tại.");
+
+        if (request.TargetPositionId.HasValue && request.TargetPositionId.Value > 0 &&
+            !await dbContext.Positions.AnyAsync(p => p.Id == request.TargetPositionId.Value, cancellationToken))
+        {
+            throw new DomainException("POSITION_NOT_FOUND", "Chức danh/vị trí công việc mới không tồn tại.");
+        }
+
+        var oldDepartmentName = employee.Department?.Name ?? "Chưa phân bổ";
+        var oldPositionName = employee.Position?.Name ?? "Chưa phân chức vụ";
+        var now = timeProvider.GetUtcNow();
+
+        employee.DepartmentId = request.TargetDepartmentId;
+        if (request.TargetPositionId.HasValue && request.TargetPositionId.Value > 0)
+        {
+            employee.PositionId = request.TargetPositionId.Value;
+        }
+
+        dbContext.AuditLogs.Add(new AuditLogEntry
+        {
+            Id = Guid.NewGuid(),
+            ActorUserId = actorUserId,
+            Action = "employee.transferred",
+            EntityType = "Employee",
+            EntityId = employee.Id.ToString(CultureInfo.InvariantCulture),
+            AfterJson = JsonSerializer.Serialize(new
+            {
+                EmployeeCode = employee.Code,
+                EmployeeName = employee.FullName,
+                FromDepartment = oldDepartmentName,
+                ToDepartment = targetDepartment.Name,
+                Reason = request.Reason,
+                EffectiveDate = request.EffectiveDate
+            }),
+            CreatedAt = now
+        });
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        var saved = await dbContext.Employees
+            .Include(e => e.Department)
+            .Include(e => e.Position)
+            .FirstAsync(e => e.Id == employee.Id, cancellationToken);
+
+        var hasAccount = await dbContext.Users
+            .AsNoTracking()
+            .AnyAsync(u => u.EmployeeId == employee.Id, cancellationToken);
+
+        return MapToDto(saved, hasAccount);
     }
 
     public async Task<IReadOnlyList<DepartmentDto>> GetDepartmentsAsync(CancellationToken cancellationToken = default)

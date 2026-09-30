@@ -18,6 +18,8 @@ public interface IEmployeeApiClient
 
     Task<ApiResponse<EmployeeDto>?> UpdateEmployeeAsync(long id, UpdateEmployeeRequest request, CancellationToken cancellationToken = default);
 
+    Task<ApiResponse<EmployeeDto>?> TransferEmployeeAsync(long employeeId, TransferDepartmentRequest request, CancellationToken cancellationToken = default);
+
     Task<bool> OffboardEmployeeAsync(long employeeId, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<DepartmentDto>> GetDepartmentsAsync(CancellationToken cancellationToken = default);
@@ -57,6 +59,11 @@ public sealed class EmployeeApiClient(HttpClient httpClient, IAuthApiClient auth
     public async Task<ApiResponse<EmployeeDto>?> UpdateEmployeeAsync(long id, UpdateEmployeeRequest request, CancellationToken cancellationToken = default)
     {
         return await SendAsync<EmployeeDto>(HttpMethod.Put, $"api/v1/employees/{id}", request, cancellationToken);
+    }
+
+    public async Task<ApiResponse<EmployeeDto>?> TransferEmployeeAsync(long employeeId, TransferDepartmentRequest request, CancellationToken cancellationToken = default)
+    {
+        return await SendAsync<EmployeeDto>(HttpMethod.Post, $"api/v1/employees/{employeeId}/transfer", request, cancellationToken);
     }
 
     public async Task<bool> OffboardEmployeeAsync(long employeeId, CancellationToken cancellationToken = default)

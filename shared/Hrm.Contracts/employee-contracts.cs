@@ -66,3 +66,9 @@ public sealed record PositionDto(
     string Name,
     string? Title,
     decimal AllowanceRate);
+
+public sealed record TransferDepartmentRequest(
+    long TargetDepartmentId,
+    long? TargetPositionId = null,
+    string? Reason = null,
+    DateOnly? EffectiveDate = null);

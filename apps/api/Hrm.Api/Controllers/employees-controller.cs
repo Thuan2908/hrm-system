@@ -71,7 +71,22 @@ public sealed class EmployeesController(
         [FromBody] UpdateEmployeeRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await employeeService.UpdateEmployeeAsync(id, request, GetActorId(), cancellationToken);
+        var hasTransfer = User.IsInRole("ADMIN")
+            || User.HasClaim("permission", PermissionCodes.EmployeeTransfer)
+            || User.HasClaim("permission", "EMP_TRANSFER");
+
+        var result = await employeeService.UpdateEmployeeAsync(id, request, GetActorId(), hasTransfer, cancellationToken);
+        return Ok(ApiResponse.Ok(result));
+    }
+
+    [HttpPost("{id:long}/transfer")]
+    [Authorize(Policy = PermissionCodes.EmployeeTransfer)]
+    public async Task<ActionResult<ApiResponse<EmployeeDto>>> TransferDepartment(
+        long id,
+        [FromBody] TransferDepartmentRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await employeeService.TransferDepartmentAsync(id, request, GetActorId(), cancellationToken);
         return Ok(ApiResponse.Ok(result));
     }
 
