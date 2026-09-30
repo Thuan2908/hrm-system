@@ -13,6 +13,7 @@ public interface IAttendanceService
     Task<CheckInResultDto> CheckInAsync(long userId, CheckInRequest request, CancellationToken cancellationToken);
     Task<CheckOutResultDto> CheckOutAsync(long userId, CheckOutRequest request, CancellationToken cancellationToken);
     Task<IReadOnlyList<AttendanceRecordDto>> GetMyHistoryAsync(long userId, int days, CancellationToken cancellationToken);
+    Task<IReadOnlyList<TeamAttendanceItemDto>> GetTeamAttendanceSummaryAsync(CancellationToken cancellationToken);
 }
 
 public sealed class AttendanceService(
@@ -183,5 +184,35 @@ public sealed class AttendanceService(
         var vnTime = TimeZoneInfo.ConvertTimeBySystemTimeZoneId(
             timeProvider.GetUtcNow().UtcDateTime, "SE Asia Standard Time");
         return DateOnly.FromDateTime(vnTime);
+    }
+
+    public async Task<IReadOnlyList<TeamAttendanceItemDto>> GetTeamAttendanceSummaryAsync(CancellationToken cancellationToken)
+    {
+        var today = GetCurrentWorkDate();
+        var employees = await authDbContext.Employees.AsNoTracking()
+            .Include(e => e.Department)
+            .OrderBy(e => e.FullName)
+            .ToListAsync(cancellationToken);
+
+        var todayRecords = await dbContext.TimeAttendances.AsNoTracking()
+            .Where(t => t.WorkDate == today)
+            .ToDictionaryAsync(t => t.EmployeeId, cancellationToken);
+
+        return employees.Select(e =>
+        {
+            todayRecords.TryGetValue(e.Id, out var rec);
+            var status = rec is null ? "NOT_CHECKED_IN" : rec.Status;
+            return new TeamAttendanceItemDto(
+                e.Id,
+                e.Code,
+                e.FullName,
+                e.Department?.Name ?? "N/A",
+                today,
+                rec?.CheckInTime,
+                rec?.CheckOutTime,
+                rec?.ActualHours,
+                status
+            );
+        }).ToList();
     }
 }

@@ -214,7 +214,7 @@ public sealed class AdminService(AuthDbContext dbContext, TimeProvider timeProvi
         if (description?.Length > 250)
             throw new DomainException("ROLE_DESCRIPTION_INVALID", "Mô tả vai trò không được vượt quá 250 ký tự.");
 
-        var requestedPermissions = request.Permissions.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        var requestedPermissions = request.Permissions.Select(PermissionCodes.Canonicalize).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         var definitions = await dbContext.Permissions
             .Where(item => requestedPermissions.Contains(item.Code))
             .ToArrayAsync(cancellationToken);
@@ -288,7 +288,7 @@ public sealed class AdminService(AuthDbContext dbContext, TimeProvider timeProvi
     {
         var role = await dbContext.Roles.SingleOrDefaultAsync(item => item.Id == roleId, cancellationToken)
             ?? throw new DomainException("ROLE_NOT_FOUND", "Không tìm thấy vai trò.");
-        var requested = permissions.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        var requested = permissions.Select(PermissionCodes.Canonicalize).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         var definitions = await dbContext.Permissions.Where(item => requested.Contains(item.Code)).ToArrayAsync(cancellationToken);
         if (definitions.Length != requested.Length)
             throw new DomainException("PERMISSION_INVALID", "Danh sách quyền chứa mã không hợp lệ.");

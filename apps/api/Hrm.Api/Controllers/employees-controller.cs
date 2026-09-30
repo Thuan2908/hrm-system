@@ -11,6 +11,16 @@ namespace Hrm.Api.Controllers;
 [Authorize]
 public sealed class EmployeesController(IEmployeeOffboardingService offboardingService) : ControllerBase
 {
+    [HttpGet]
+    [Authorize(Policy = PermissionCodes.EmployeeRead)]
+    public async Task<ActionResult<ApiResponse<IReadOnlyCollection<EmployeeAccountOptionDto>>>> GetDirectory(
+        [FromServices] Hrm.Modules.Auth.Application.IAdminService adminService,
+        CancellationToken cancellationToken)
+    {
+        var result = await adminService.GetEmployeeOptionsAsync(cancellationToken);
+        return Ok(ApiResponse.Ok(result));
+    }
+
     [HttpPost("{employeeId:long}/offboard")]
     [Authorize(Policy = PermissionCodes.EmployeeOffboard)]
     public async Task<ActionResult<ApiResponse<object>>> Offboard(

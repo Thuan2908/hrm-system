@@ -7,8 +7,10 @@ using Hrm.Modules.Auth.Application;
 using Hrm.Modules.Auth.Infrastructure.Persistence;
 using Hrm.Modules.Attendance;
 using Hrm.Modules.Employees;
+using Hrm.Modules.Files;
 using Hrm.Modules.Leave;
 using Hrm.Modules.Payroll;
+using Hrm.Modules.Reports;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
@@ -64,8 +66,9 @@ builder.Services.AddAuthorization(options =>
 {
     foreach (var permission in PermissionCodes.All)
     {
+        var expanded = PermissionCodes.ExpandWithAliases([permission]);
         options.AddPolicy(permission, policy => policy.RequireAssertion(context =>
-            context.User.IsInRole("ADMIN") || context.User.HasClaim("permission", permission)));
+            context.User.IsInRole("ADMIN") || expanded.Any(p => context.User.HasClaim("permission", p))));
     }
 });
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
@@ -76,6 +79,8 @@ builder.Services.AddEmployeesModule(builder.Configuration);
 builder.Services.AddAttendanceModule(builder.Configuration);
 builder.Services.AddLeaveModule(builder.Configuration);
 builder.Services.AddPayrollModule(builder.Configuration);
+builder.Services.AddFilesModule(builder.Configuration);
+builder.Services.AddReportsModule(builder.Configuration);
 
 var healthChecks = builder.Services
     .AddHealthChecks()
@@ -150,6 +155,12 @@ if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("Databas
     if (payrollInitializer is not null)
     {
         await payrollInitializer.InitializeAsync(CancellationToken.None);
+    }
+
+    var filesInitializer = scope.ServiceProvider.GetService<Hrm.Modules.Files.Infrastructure.Persistence.IFilesDatabaseInitializer>();
+    if (filesInitializer is not null)
+    {
+        await filesInitializer.InitializeAsync(CancellationToken.None);
     }
 }
 

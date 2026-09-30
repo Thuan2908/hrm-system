@@ -1,19 +1,14 @@
 @page "/employee/directory"
 @page "/employees"
-@page "/employee/inventory"
-@page "/inventory"
-@page "/employee/sales"
-@page "/sales"
-@page "/employee/procurement"
-@page "/procurement"
 @page "/employee/reports"
 @page "/reports"
 @layout EmployeeLayout
 @attribute [Authorize]
 @inject NavigationManager Navigation
 @inject AdminApiClient AdminApiClient
+@inject IReportApiClient ReportApiClient
 
-<PageTitle>@moduleTitle - Saigon Retail</PageTitle>
+<PageTitle>@moduleTitle - HRM System</PageTitle>
 
 <div class="container-fluid px-0">
     <!-- Header Hero Banner -->
@@ -21,7 +16,7 @@
         <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
             <div>
                 <span class="badge text-white mb-2 px-3 py-1" style="background-color: #10b981; font-size: 0.85rem; border-radius: 20px; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);">
-                    ● PHÂN HỆ ĐÃ ĐƯỢC CẤP QUYỀN
+                    @moduleIcon PHÂN HỆ ĐÃ ĐƯỢC CẤP QUYỀN
                 </span>
                 <h1 class="h3 fw-bold mb-1 text-white">@moduleTitle</h1>
                 <p class="mb-0 text-white-50">@moduleDescription</p>
@@ -104,62 +99,205 @@
             </div>
         </div>
     }
-    else
+    else if (moduleType == ModuleType.Reports)
     {
-        <!-- Thẻ phân hệ nghiệp vụ -->
-        <div class="row g-4">
-            <div class="col-12 col-md-4">
-                <div class="card border-0 shadow-sm p-4 text-center h-100" style="border-radius: 16px;">
-                    <div class="mb-3 fs-1">@moduleIcon</div>
-                    <h5 class="fw-bold text-dark mb-1">Trạng thái phân hệ</h5>
-                    <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill mx-auto mb-3">
-                        ● Quyền truy cập hoạt động
-                    </span>
-                    <p class="text-muted small mb-0">Tài khoản của bạn đã được Admin cấp quyền truy cập đầy đủ phân hệ này.</p>
+        <!-- Báo cáo & Thống kê Nhân sự -->
+        @if (isLoadingReports)
+        {
+            <div class="text-center py-5">
+                <div class="spinner-border text-success" role="status"></div>
+                <div class="text-muted small mt-2">Đang tổng hợp dữ liệu báo cáo nhân sự...</div>
+            </div>
+        }
+        else
+        {
+            <!-- KPI Summary Cards -->
+            <div class="row g-3 mb-4">
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="card border-0 shadow-sm p-3 h-100" style="border-radius: 14px; border-left: 4px solid #10b981 !important;">
+                        <div class="text-muted small fw-semibold">TỔNG NHÂN SỰ</div>
+                        <div class="d-flex align-items-baseline gap-2 mt-1">
+                            <span class="fs-2 fw-bold text-dark">@(summary?.TotalEmployees ?? 0)</span>
+                            <span class="text-success small fw-semibold">(@(summary?.ActiveEmployees ?? 0) đang làm)</span>
+                        </div>
+                        <div class="text-muted small mt-1">@(summary?.ResignedEmployees ?? 0) đã thôi việc</div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="card border-0 shadow-sm p-3 h-100" style="border-radius: 14px; border-left: 4px solid #3b82f6 !important;">
+                        <div class="text-muted small fw-semibold">PHÒNG BAN &amp; TỔ CHỨC</div>
+                        <div class="d-flex align-items-baseline gap-2 mt-1">
+                            <span class="fs-2 fw-bold text-dark">@(summary?.TotalDepartments ?? 0)</span>
+                            <span class="text-muted small">phòng ban</span>
+                        </div>
+                        <div class="text-muted small mt-1">Thâm niên TB: @(tenureReport?.AverageTenureYears ?? 0) năm</div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="card border-0 shadow-sm p-3 h-100" style="border-radius: 14px; border-left: 4px solid #f59e0b !important;">
+                        <div class="text-muted small fw-semibold">QUỸ LƯƠNG THÁNG NÀY</div>
+                        <div class="d-flex align-items-baseline gap-2 mt-1">
+                            <span class="fs-4 fw-bold text-dark">@((summary?.TotalMonthlyPayroll ?? 0).ToString("N0"))</span>
+                            <span class="text-muted small">VNĐ</span>
+                        </div>
+                        <div class="text-muted small mt-1">Theo dữ liệu bảng lương</div>
+                    </div>
+                </div>
+                <div class="col-12 col-sm-6 col-xl-3">
+                    <div class="card border-0 shadow-sm p-3 h-100" style="border-radius: 14px; border-left: 4px solid #8b5cf6 !important;">
+                        <div class="text-muted small fw-semibold">CHẤM CÔNG &amp; PHÉP</div>
+                        <div class="d-flex align-items-baseline gap-2 mt-1">
+                            <span class="fs-2 fw-bold text-dark">@(summary?.TodayAttendanceCount ?? 0)</span>
+                            <span class="text-muted small">lượt công hôm nay</span>
+                        </div>
+                        <div class="text-muted small mt-1">@(summary?.PendingLeaveRequests ?? 0) đơn phép chờ duyệt</div>
+                    </div>
                 </div>
             </div>
 
-            <div class="col-12 col-md-8">
-                <div class="card border-0 shadow-sm p-4 h-100" style="border-radius: 16px;">
-                    <h5 class="fw-bold text-dark mb-3">Thông tin tính năng &amp; Phạm vi nghiệp vụ</h5>
-                    <div class="alert alert-light border d-flex align-items-center gap-3 mb-4" style="border-radius: 12px;">
-                        <span class="fs-4">✨</span>
-                        <div>
-                            <strong>Phân hệ đang trong chu kỳ vận hành mở rộng</strong>
-                            <div class="text-muted small">Mọi giao dịch và thao tác của bạn trong phân hệ này được bảo vệ bởi cơ chế kiểm soát quyền RBAC.</div>
+            <!-- Detailed Report Sections -->
+            <div class="row g-4">
+                <!-- Cơ cấu theo phòng ban -->
+                <div class="col-12 col-lg-6">
+                    <div class="card border-0 shadow-sm h-100" style="border-radius: 16px;">
+                        <div class="card-header bg-white border-bottom border-light py-3 px-4">
+                            <strong class="text-dark">CƠ CẤU NHÂN SỰ THEO PHÒNG BAN</strong>
+                        </div>
+                        <div class="card-body p-4">
+                            @if (headcountReport?.Departments.Count > 0)
+                            {
+                                @foreach (var dept in headcountReport.Departments)
+                                {
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between small mb-1">
+                                            <span class="fw-semibold text-dark">@dept.DepartmentName</span>
+                                            <span class="text-muted">@dept.EmployeeCount nhân sự (@dept.Percentage%)</span>
+                                        </div>
+                                        <div class="progress" style="height: 8px; border-radius: 4px; background-color: #f1f5f9;">
+                                            <div class="progress-bar bg-success" role="progressbar" style="width: @dept.Percentage%;"></div>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <p class="text-muted small mb-0">Chưa có dữ liệu phòng ban.</p>
+                            }
                         </div>
                     </div>
+                </div>
 
-                    <div class="row g-3">
-                        <div class="col-12 col-sm-6">
-                            <div class="p-3 bg-light rounded-3 border">
-                                <div class="text-muted small mb-1">Nhóm quyền áp dụng</div>
-                                <strong class="text-dark">@moduleTitle</strong>
-                            </div>
+                <!-- Thống kê thâm niên -->
+                <div class="col-12 col-lg-6">
+                    <div class="card border-0 shadow-sm h-100" style="border-radius: 16px;">
+                        <div class="card-header bg-white border-bottom border-light py-3 px-4">
+                            <strong class="text-dark">PHÂN BỐ THÂM NIÊN CỐNG HIẾN</strong>
                         </div>
-                        <div class="col-12 col-sm-6">
-                            <div class="p-3 bg-light rounded-3 border">
-                                <div class="text-muted small mb-1">Cấp độ truy cập</div>
-                                <span class="badge bg-emerald text-white px-2 py-1" style="background-color: #059669;">Nhân viên ủy quyền</span>
-                            </div>
+                        <div class="card-body p-4">
+                            @if (tenureReport?.Groups.Count > 0)
+                            {
+                                @foreach (var group in tenureReport.Groups)
+                                {
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between small mb-1">
+                                            <span class="fw-semibold text-dark">@group.GroupLabel</span>
+                                            <span class="text-muted">@group.Count nhân sự (@group.Percentage%)</span>
+                                        </div>
+                                        <div class="progress" style="height: 8px; border-radius: 4px; background-color: #f1f5f9;">
+                                            <div class="progress-bar bg-primary" role="progressbar" style="width: @group.Percentage%;"></div>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <p class="text-muted small mb-0">Chưa có dữ liệu thâm niên.</p>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Phân bổ dải lương -->
+                <div class="col-12 col-lg-6">
+                    <div class="card border-0 shadow-sm h-100" style="border-radius: 16px;">
+                        <div class="card-header bg-white border-bottom border-light py-3 px-4">
+                            <strong class="text-dark">PHÂN BỐ DẢI LƯƠNG NHÂN VIÊN</strong>
+                        </div>
+                        <div class="card-body p-4">
+                            @if (payrollReport?.SalaryRanges.Count > 0)
+                            {
+                                @foreach (var range in payrollReport.SalaryRanges)
+                                {
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between small mb-1">
+                                            <span class="fw-semibold text-dark">@range.RangeLabel</span>
+                                            <span class="text-muted">@range.EmployeeCount người (@range.Percentage%)</span>
+                                        </div>
+                                        <div class="progress" style="height: 8px; border-radius: 4px; background-color: #f1f5f9;">
+                                            <div class="progress-bar bg-warning" role="progressbar" style="width: @range.Percentage%;"></div>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <p class="text-muted small mb-0">Chưa có dữ liệu dải lương.</p>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trình độ học vấn -->
+                <div class="col-12 col-lg-6">
+                    <div class="card border-0 shadow-sm h-100" style="border-radius: 16px;">
+                        <div class="card-header bg-white border-bottom border-light py-3 px-4">
+                            <strong class="text-dark">TRÌNH ĐỘ HỌC VẤN &amp; BẰNG CẤP</strong>
+                        </div>
+                        <div class="card-body p-4">
+                            @if (headcountReport?.EducationLevels.Count > 0)
+                            {
+                                @foreach (var edu in headcountReport.EducationLevels)
+                                {
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between small mb-1">
+                                            <span class="fw-semibold text-dark">@edu.EducationLevel</span>
+                                            <span class="text-muted">@edu.Count nhân sự (@edu.Percentage%)</span>
+                                        </div>
+                                        <div class="progress" style="height: 8px; border-radius: 4px; background-color: #f1f5f9;">
+                                            <div class="progress-bar bg-info" role="progressbar" style="width: @edu.Percentage%;"></div>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <p class="text-muted small mb-0">Chưa có dữ liệu học vấn.</p>
+                            }
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+        }
     }
 </div>
 
 @code {
-    private enum ModuleType { Employees, Inventory, Sales, Procurement, Reports, Generic }
+    private enum ModuleType { Employees, Reports, Generic }
     private ModuleType moduleType = ModuleType.Generic;
-    private string moduleTitle = "Phân hệ Nghiệp vụ";
+    private string moduleTitle = "Phân hệ Nhân sự";
     private string moduleDescription = "Tính năng được kích hoạt theo phân quyền của Quản trị viên.";
-    private string moduleIcon = "📦";
+    private string moduleIcon = "👥";
 
     private IReadOnlyCollection<EmployeeAccountOptionDto> employees = [];
     private bool isLoadingEmployees = false;
     private string searchKeyword = string.Empty;
+
+    // Reports data
+    private bool isLoadingReports = false;
+    private HrDashboardSummaryDto? summary;
+    private HeadcountReportDto? headcountReport;
+    private TenureReportDto? tenureReport;
+    private PayrollReportDto? payrollReport;
 
     private IReadOnlyList<EmployeeAccountOptionDto> filteredEmployees =>
         string.IsNullOrWhiteSpace(searchKeyword)
@@ -175,6 +313,10 @@
         {
             await LoadEmployeesAsync();
         }
+        else if (moduleType == ModuleType.Reports)
+        {
+            await LoadReportsAsync();
+        }
     }
 
     protected override async Task OnParametersSetAsync()
@@ -183,6 +325,10 @@
         if (moduleType == ModuleType.Employees && employees.Count == 0)
         {
             await LoadEmployeesAsync();
+        }
+        else if (moduleType == ModuleType.Reports && summary is null)
+        {
+            await LoadReportsAsync();
         }
     }
 
@@ -194,35 +340,14 @@
         {
             moduleType = ModuleType.Employees;
             moduleTitle = "Tra cứu & Quản lý Danh bạ Nhân sự";
-            moduleDescription = "Danh sách nhân viên, phòng ban và tài khoản nội bộ trong hệ thống.";
+            moduleDescription = "Danh sách nhân viên, phòng ban và trạng thái tài khoản trong hệ thống HRM.";
             moduleIcon = "👥";
-        }
-        else if (path.Contains("inventory"))
-        {
-            moduleType = ModuleType.Inventory;
-            moduleTitle = "Quản lý Kho & Tồn kho (Inventory)";
-            moduleDescription = "Kiểm tra mức tồn kho, quản lý kho hàng và điều chuyển hàng hóa.";
-            moduleIcon = "📦";
-        }
-        else if (path.Contains("sales"))
-        {
-            moduleType = ModuleType.Sales;
-            moduleTitle = "Quản lý Bán hàng & Đơn hàng (Sales)";
-            moduleDescription = "Ghi nhận đơn hàng bán lẻ, doanh thu và danh sách đơn bán hàng.";
-            moduleIcon = "💳";
-        }
-        else if (path.Contains("procurement"))
-        {
-            moduleType = ModuleType.Procurement;
-            moduleTitle = "Mua hàng & Chuỗi cung ứng (Procurement)";
-            moduleDescription = "Theo dõi đơn mua hàng, phiếu nhập kho và danh bạ nhà cung cấp.";
-            moduleIcon = "🛒";
         }
         else if (path.Contains("reports"))
         {
             moduleType = ModuleType.Reports;
-            moduleTitle = "Trung tâm Báo cáo & Thống kê (Reports)";
-            moduleDescription = "Báo cáo biến động nhân sự, chỉ số chấm công và tổng hợp hoạt động.";
+            moduleTitle = "Trung tâm Báo cáo & Thống kê Nhân sự";
+            moduleDescription = "Báo cáo biến động nhân sự, cơ cấu phòng ban, thâm niên và tổng quan quỹ lương.";
             moduleIcon = "📊";
         }
     }
@@ -242,6 +367,33 @@
         finally
         {
             isLoadingEmployees = false;
+        }
+    }
+
+    private async Task LoadReportsAsync()
+    {
+        isLoadingReports = true;
+        try
+        {
+            var summaryTask = ReportApiClient.GetSummaryAsync();
+            var headcountTask = ReportApiClient.GetHeadcountReportAsync();
+            var tenureTask = ReportApiClient.GetTenureReportAsync();
+            var payrollTask = ReportApiClient.GetPayrollReportAsync();
+
+            await Task.WhenAll(summaryTask, headcountTask, tenureTask, payrollTask);
+
+            summary = await summaryTask;
+            headcountReport = await headcountTask;
+            tenureReport = await tenureTask;
+            payrollReport = await payrollTask;
+        }
+        catch
+        {
+            // Report API handles errors gracefully
+        }
+        finally
+        {
+            isLoadingReports = false;
         }
     }
 }

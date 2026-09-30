@@ -40,10 +40,20 @@ public sealed class AdminController(IAdminService adminService) : ControllerBase
     }
 
     [HttpGet("employees")]
-    [Authorize(Policy = PermissionCodes.AdminUserRead)]
     public async Task<ActionResult<ApiResponse<IReadOnlyCollection<EmployeeAccountOptionDto>>>> GetEmployees(
         CancellationToken cancellationToken)
     {
+        var hasAccess = User.IsInRole("ADMIN")
+            || User.HasClaim("permission", PermissionCodes.AdminUserRead)
+            || User.HasClaim("permission", PermissionCodes.EmployeeRead)
+            || User.HasClaim("permission", "EMP_VIEW")
+            || User.HasClaim("permission", "EMP_EDIT");
+
+        if (!hasAccess)
+        {
+            return Forbid();
+        }
+
         var result = await adminService.GetEmployeeOptionsAsync(cancellationToken);
         return Ok(ApiResponse.Ok(result));
     }

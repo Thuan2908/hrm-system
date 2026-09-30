@@ -11,6 +11,8 @@ public interface IPayrollService
 {
     Task<IReadOnlyList<PayslipSummaryDto>> GetMyPayslipsAsync(long userId, CancellationToken cancellationToken);
     Task<PayslipDetailDto> GetPayslipDetailAsync(long userId, long payrollId, CancellationToken cancellationToken);
+    Task<IReadOnlyList<PayrollManagementItemDto>> GetAllPayslipsAsync(short? month, short? year, CancellationToken cancellationToken);
+    Task<int> CalculatePeriodPayrollAsync(short month, short year, long actorUserId, CancellationToken cancellationToken);
 }
 
 public sealed class PayrollService(
@@ -76,5 +78,97 @@ public sealed class PayrollService(
         }
 
         return user.EmployeeId;
+    }
+
+    public async Task<IReadOnlyList<PayrollManagementItemDto>> GetAllPayslipsAsync(short? month, short? year, CancellationToken cancellationToken)
+    {
+        var query = dbContext.Payrolls.AsNoTracking().AsQueryable();
+        if (month.HasValue) query = query.Where(p => p.MonthPeriod == month.Value);
+        if (year.HasValue) query = query.Where(p => p.YearPeriod == year.Value);
+
+        var payrolls = await query
+            .OrderByDescending(p => p.YearPeriod)
+            .ThenByDescending(p => p.MonthPeriod)
+            .ToListAsync(cancellationToken);
+
+        var employeeIds = payrolls.Select(p => p.EmployeeId).Distinct().ToList();
+        var employees = await authDbContext.Employees.AsNoTracking()
+            .Include(e => e.Department)
+            .Where(e => employeeIds.Contains(e.Id))
+            .ToDictionaryAsync(e => e.Id, cancellationToken);
+
+        return payrolls.Select(p =>
+        {
+            employees.TryGetValue(p.EmployeeId, out var emp);
+            return new PayrollManagementItemDto(
+                p.Id,
+                p.EmployeeId,
+                emp?.Code ?? "--",
+                emp?.FullName ?? "Nhân viên #" + p.EmployeeId,
+                emp?.Department?.Name ?? "N/A",
+                p.MonthPeriod,
+                p.YearPeriod,
+                p.ActualDays,
+                p.GrossSalary,
+                p.BhxhDeduct,
+                p.TaxDeduct,
+                p.NetSalary
+            );
+        }).ToList();
+    }
+
+    public async Task<int> CalculatePeriodPayrollAsync(short month, short year, long actorUserId, CancellationToken cancellationToken)
+    {
+        var employees = await authDbContext.Employees.AsNoTracking()
+            .Where(e => e.Status == "ACTIVE")
+            .ToListAsync(cancellationToken);
+
+        if (employees.Count == 0) return 0;
+
+        var maxId = await dbContext.Payrolls.MaxAsync(p => (long?)p.Id, cancellationToken) ?? 0;
+        var processedCount = 0;
+
+        foreach (var emp in employees)
+        {
+            var existing = await dbContext.Payrolls
+                .FirstOrDefaultAsync(p => p.EmployeeId == emp.Id && p.MonthPeriod == month && p.YearPeriod == year, cancellationToken);
+
+            const decimal standardDays = 22m;
+            const decimal baseSalary = 15_000_000m;
+            var gross = baseSalary;
+            var bhxh = Math.Round(gross * 0.105m, 0); // 10.5% BHXH, BHYT, BHTN
+            var taxable = Math.Max(0m, gross - 11_000_000m - bhxh); // Giảm trừ gia cảnh 11tr
+            var tax = Math.Round(taxable * 0.05m, 0);
+            var net = gross - bhxh - tax;
+
+            if (existing is not null)
+            {
+                existing.ActualDays = standardDays;
+                existing.GrossSalary = gross;
+                existing.BhxhDeduct = bhxh;
+                existing.TaxDeduct = tax;
+                existing.NetSalary = net;
+            }
+            else
+            {
+                maxId++;
+                dbContext.Payrolls.Add(new PayrollRecord
+                {
+                    Id = maxId,
+                    EmployeeId = emp.Id,
+                    MonthPeriod = month,
+                    YearPeriod = year,
+                    ActualDays = standardDays,
+                    GrossSalary = gross,
+                    BhxhDeduct = bhxh,
+                    TaxDeduct = tax,
+                    NetSalary = net
+                });
+            }
+            processedCount++;
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return processedCount;
     }
 }

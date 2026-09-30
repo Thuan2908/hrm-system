@@ -15,7 +15,7 @@ internal static class Program
     {
         Console.OutputEncoding = System.Text.Encoding.UTF8;
         Console.WriteLine("===================================================================");
-        Console.WriteLine(" 🚀 Saigon Retail Management System - Local Development Runner");
+        Console.WriteLine(" 🚀 HRM System - Local Development Runner");
         Console.WriteLine("===================================================================");
 
         var rootDir = Directory.GetCurrentDirectory();

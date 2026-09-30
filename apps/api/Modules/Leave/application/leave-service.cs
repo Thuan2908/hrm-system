@@ -13,6 +13,9 @@ public interface ILeaveService
     Task<LeaveRequestDto> CreateLeaveRequestAsync(long userId, CreateLeaveRequestDto request, CancellationToken cancellationToken);
     Task<IReadOnlyList<LeaveRequestDto>> GetMyRequestsAsync(long userId, CancellationToken cancellationToken);
     Task CancelLeaveRequestAsync(long userId, Guid requestId, CancellationToken cancellationToken);
+    Task<IReadOnlyList<PendingLeaveApprovalDto>> GetPendingRequestsAsync(CancellationToken cancellationToken);
+    Task ApproveLeaveRequestAsync(Guid requestId, long actorUserId, CancellationToken cancellationToken);
+    Task RejectLeaveRequestAsync(Guid requestId, string? reason, long actorUserId, CancellationToken cancellationToken);
 }
 
 public sealed class LeaveService(
@@ -177,4 +180,70 @@ public sealed class LeaveService(
         CreatedAt: e.CreatedAt,
         UpdatedAt: e.UpdatedAt
     );
+
+    public async Task<IReadOnlyList<PendingLeaveApprovalDto>> GetPendingRequestsAsync(CancellationToken cancellationToken)
+    {
+        var pending = await dbContext.LeaveRequests.AsNoTracking()
+            .Where(r => r.Status == LeaveStatuses.Pending)
+            .OrderByDescending(r => r.CreatedAt)
+            .ToListAsync(cancellationToken);
+
+        var employeeIds = pending.Select(p => p.EmployeeId).Distinct().ToList();
+        var employees = await authDbContext.Employees.AsNoTracking()
+            .Include(e => e.Department)
+            .Where(e => employeeIds.Contains(e.Id))
+            .ToDictionaryAsync(e => e.Id, cancellationToken);
+
+        return pending.Select(r =>
+        {
+            employees.TryGetValue(r.EmployeeId, out var emp);
+            return new PendingLeaveApprovalDto(
+                r.Id,
+                r.EmployeeId,
+                emp?.Code ?? "--",
+                emp?.FullName ?? "Nhân viên #" + r.EmployeeId,
+                emp?.Department?.Name ?? "N/A",
+                r.StartDate,
+                r.EndDate,
+                r.DaysCount,
+                r.Reason,
+                r.Status,
+                LeaveStatuses.GetDisplayName(r.Status),
+                r.CreatedAt
+            );
+        }).ToList();
+    }
+
+    public async Task ApproveLeaveRequestAsync(Guid requestId, long actorUserId, CancellationToken cancellationToken)
+    {
+        var request = await dbContext.LeaveRequests
+            .FirstOrDefaultAsync(r => r.Id == requestId, cancellationToken)
+            ?? throw new DomainException("LEAVE_REQUEST_NOT_FOUND", "Không tìm thấy đơn xin nghỉ phép.");
+
+        if (request.Status != LeaveStatuses.Pending)
+        {
+            throw new DomainException("LEAVE_ALREADY_PROCESSED", "Đơn xin nghỉ phép đã được xử lý trước đó.");
+        }
+
+        request.Status = LeaveStatuses.Approved;
+        request.UpdatedAt = timeProvider.GetUtcNow();
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task RejectLeaveRequestAsync(Guid requestId, string? reason, long actorUserId, CancellationToken cancellationToken)
+    {
+        var request = await dbContext.LeaveRequests
+            .FirstOrDefaultAsync(r => r.Id == requestId, cancellationToken)
+            ?? throw new DomainException("LEAVE_REQUEST_NOT_FOUND", "Không tìm thấy đơn xin nghỉ phép.");
+
+        if (request.Status != LeaveStatuses.Pending)
+        {
+            throw new DomainException("LEAVE_ALREADY_PROCESSED", "Đơn xin nghỉ phép đã được xử lý trước đó.");
+        }
+
+        request.Status = LeaveStatuses.Rejected;
+        request.RejectionReason = string.IsNullOrWhiteSpace(reason) ? "Quản lý từ chối" : reason.Trim();
+        request.UpdatedAt = timeProvider.GetUtcNow();
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
 }

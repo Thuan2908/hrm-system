@@ -29,15 +29,9 @@
     <ProjectReference Include="../Modules/Auth/Hrm.Modules.Auth.csproj" />
     <ProjectReference Include="../Modules/Employees/Hrm.Modules.Employees.csproj" />
     <ProjectReference Include="../Modules/Files/Hrm.Modules.Files.csproj" />
-    <ProjectReference Include="../Modules/Inventory/Hrm.Modules.Inventory.csproj" />
     <ProjectReference Include="../Modules/Leave/Hrm.Modules.Leave.csproj" />
     <ProjectReference Include="../Modules/Payroll/Hrm.Modules.Payroll.csproj" />
-    <ProjectReference Include="../Modules/Procurement/Hrm.Modules.Procurement.csproj" />
-    <ProjectReference Include="../Modules/Products/Hrm.Modules.Products.csproj" />
     <ProjectReference Include="../Modules/Reports/Hrm.Modules.Reports.csproj" />
-    <ProjectReference Include="../Modules/Sales/Hrm.Modules.Sales.csproj" />
-    <ProjectReference Include="../Modules/Suppliers/Hrm.Modules.Suppliers.csproj" />
-    <ProjectReference Include="../Modules/Warehouses/Hrm.Modules.Warehouses.csproj" />
   </ItemGroup>
 
 </Project>

@@ -436,12 +436,14 @@ public sealed class AuthService(
 
     private async Task<UserSessionDto> CreateSessionAsync(ApplicationUser user, CancellationToken cancellationToken)
     {
-        var permissions = await (
+        var rawPermissions = await (
             from grant in dbContext.RolePermissions.AsNoTracking()
             join permission in dbContext.Permissions.AsNoTracking() on grant.PermissionId equals permission.Id
             where grant.RoleId == user.RoleId
             select permission.Code)
             .Distinct().OrderBy(code => code).ToArrayAsync(cancellationToken);
+
+        var permissions = PermissionCodes.ExpandWithAliases(rawPermissions);
 
         return new UserSessionDto(
             user.Id, user.UserName, user.Employee.FullName,

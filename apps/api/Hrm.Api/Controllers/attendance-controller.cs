@@ -49,6 +49,19 @@ public sealed class AttendanceController(IAttendanceService attendanceService) :
         return Ok(ApiResponse.Ok(result));
     }
 
+    [HttpGet("team-summary")]
+    public async Task<ActionResult<ApiResponse<IReadOnlyList<TeamAttendanceItemDto>>>> GetTeamSummary(CancellationToken cancellationToken)
+    {
+        var hasAccess = User.IsInRole("ADMIN")
+            || User.HasClaim("permission", PermissionCodes.AttendanceTeamApprove)
+            || User.HasClaim("permission", "ATT_APPROVE");
+
+        if (!hasAccess) return Forbid();
+
+        var result = await attendanceService.GetTeamAttendanceSummaryAsync(cancellationToken);
+        return Ok(ApiResponse.Ok(result));
+    }
+
     private long GetUserId() =>
         long.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)
             ? userId
