@@ -21,7 +21,11 @@ public sealed class EmployeesController(
         [FromQuery] string? status,
         CancellationToken cancellationToken)
     {
-        var result = await employeeService.GetEmployeesAsync(keyword, departmentId, status, cancellationToken);
+        var hasWrite = User.IsInRole("ADMIN")
+            || User.HasClaim("permission", PermissionCodes.EmployeeWrite)
+            || User.HasClaim("permission", "EMP_EDIT");
+
+        var result = await employeeService.GetEmployeesAsync(keyword, departmentId, status, hasWrite, cancellationToken);
         return Ok(ApiResponse.Ok(result));
     }
 

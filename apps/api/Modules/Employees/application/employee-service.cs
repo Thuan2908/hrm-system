@@ -15,6 +15,7 @@ public interface IEmployeeService
         string? keyword = null,
         long? departmentId = null,
         string? status = null,
+        bool includeSensitiveInfo = true,
         CancellationToken cancellationToken = default);
 
     Task<EmployeeDto?> GetEmployeeByIdAsync(long id, CancellationToken cancellationToken = default);
@@ -44,6 +45,7 @@ public sealed class EmployeeService(
         string? keyword = null,
         long? departmentId = null,
         string? status = null,
+        bool includeSensitiveInfo = true,
         CancellationToken cancellationToken = default)
     {
         var query = dbContext.Employees
@@ -83,7 +85,7 @@ public sealed class EmployeeService(
             .Select(u => u.EmployeeId)
             .ToHashSetAsync(cancellationToken);
 
-        return employees.Select(e => MapToDto(e, accounts.Contains(e.Id))).ToList();
+        return employees.Select(e => MapToDto(e, accounts.Contains(e.Id), includeSensitiveInfo)).ToList();
     }
 
     public async Task<EmployeeDto?> GetEmployeeByIdAsync(long id, CancellationToken cancellationToken = default)
@@ -367,7 +369,7 @@ public sealed class EmployeeService(
             .ToListAsync(cancellationToken);
     }
 
-    private static EmployeeDto MapToDto(Employee e, bool hasAccount) =>
+    private static EmployeeDto MapToDto(Employee e, bool hasAccount, bool includeSensitiveInfo = true) =>
         new(
             Id: e.Id,
             Code: e.Code,
@@ -376,16 +378,16 @@ public sealed class EmployeeService(
             DepartmentName: e.Department?.Name ?? "Chưa phân bổ",
             PositionId: e.PositionId,
             PositionName: e.Position?.Name,
-            DateOfBirth: e.DateOfBirth,
+            DateOfBirth: includeSensitiveInfo ? e.DateOfBirth : null,
             Gender: e.Gender,
             Phone: e.Phone,
             Email: e.Email,
-            Address: e.Address,
-            EducationLevel: e.EducationLevel,
-            BaseSalary: e.BaseSalary,
+            Address: includeSensitiveInfo ? e.Address : null,
+            EducationLevel: includeSensitiveInfo ? e.EducationLevel : null,
+            BaseSalary: includeSensitiveInfo ? e.BaseSalary : 0,
             JoinDate: e.JoinDate,
-            HireDate: e.HireDate,
+            HireDate: includeSensitiveInfo ? e.HireDate : null,
             Status: e.Status,
-            HasAccount: hasAccount,
+            HasAccount: includeSensitiveInfo && hasAccount,
             CreatedAt: e.CreatedAt);
 }
