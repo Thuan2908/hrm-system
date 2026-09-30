@@ -9,6 +9,7 @@ public sealed class AuthDbContext(DbContextOptions<AuthDbContext> options) : DbC
     public DbSet<ApplicationRole> Roles => Set<ApplicationRole>();
     public DbSet<Employee> Employees => Set<Employee>();
     public DbSet<Department> Departments => Set<Department>();
+    public DbSet<Position> Positions => Set<Position>();
     public DbSet<PermissionDefinition> Permissions => Set<PermissionDefinition>();
     public DbSet<RolePermissionGrant> RolePermissions => Set<RolePermissionGrant>();
     public DbSet<UserSecurityState> UserSecurityStates => Set<UserSecurityState>();
@@ -45,15 +46,38 @@ public sealed class AuthDbContext(DbContextOptions<AuthDbContext> options) : DbC
             entity.Property(role => role.Description).HasColumnName("description");
         });
 
+        builder.Entity<Position>(entity =>
+        {
+            entity.ToTable("positions");
+            entity.HasKey(position => position.Id);
+            entity.Property(position => position.Id).HasColumnName("position_id").ValueGeneratedNever();
+            entity.Property(position => position.Code).HasColumnName("position_code");
+            entity.Property(position => position.Name).HasColumnName("position_name");
+            entity.Property(position => position.Title).HasColumnName("title");
+        });
+
         builder.Entity<Employee>(entity =>
         {
             entity.ToTable("employees");
             entity.HasKey(employee => employee.Id);
             entity.Property(employee => employee.Id).HasColumnName("emp_id").ValueGeneratedNever();
             entity.Property(employee => employee.DepartmentId).HasColumnName("dept_id");
+            entity.Property(employee => employee.PositionId).HasColumnName("position_id");
             entity.Property(employee => employee.Code).HasColumnName("emp_code");
             entity.Property(employee => employee.FullName).HasColumnName("full_name");
+            entity.Property(employee => employee.DateOfBirth).HasColumnName("dob");
+            entity.Property(employee => employee.Gender).HasColumnName("gender");
+            entity.Property(employee => employee.Phone).HasColumnName("phone");
+            entity.Property(employee => employee.Email).HasColumnName("email");
+            entity.Property(employee => employee.Address).HasColumnName("address");
+            entity.Property(employee => employee.EducationLevel).HasColumnName("education_level");
+            entity.Property(employee => employee.BaseSalary).HasColumnName("base_salary");
+            entity.Property(employee => employee.JoinDate).HasColumnName("join_date");
+            entity.Property(employee => employee.HireDate).HasColumnName("hire_date");
+            entity.Property(employee => employee.Status).HasColumnName("status");
+            entity.Property(employee => employee.CreatedAt).HasColumnName("created_at");
             entity.HasOne(employee => employee.Department).WithMany().HasForeignKey(employee => employee.DepartmentId);
+            entity.HasOne(employee => employee.Position).WithMany().HasForeignKey(employee => employee.PositionId).IsRequired(false);
         });
 
         builder.Entity<Department>(entity =>

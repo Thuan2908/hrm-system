@@ -58,6 +58,42 @@ public sealed class AuthController(IAuthService authService) : ControllerBase
         return Ok(ApiResponse.Ok(result));
     }
 
+    [Authorize]
+    [HttpGet("profile")]
+    public async Task<ActionResult<ApiResponse<EmployeeProfileDto>>> GetProfile(CancellationToken cancellationToken)
+    {
+        var result = await authService.GetEmployeeProfileAsync(GetUserId(), cancellationToken);
+        return Ok(ApiResponse.Ok(result));
+    }
+
+    [Authorize]
+    [HttpGet("session-status")]
+    public async Task<ActionResult<ApiResponse<AccountStatusDto>>> GetSessionStatus(CancellationToken cancellationToken)
+    {
+        var result = await authService.CheckAccountStatusAsync(GetUserId(), cancellationToken);
+        return Ok(ApiResponse.Ok(result));
+    }
+
+    [Authorize]
+    [HttpPut("profile")]
+    public async Task<ActionResult<ApiResponse<UserSessionDto>>> UpdateProfile(
+        [FromBody] UpdateProfileRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await authService.UpdateProfileAsync(GetUserId(), request, cancellationToken);
+        return Ok(ApiResponse.Ok(result));
+    }
+
+    [Authorize]
+    [HttpPost("change-password")]
+    public async Task<ActionResult<ApiResponse<object>>> ChangePassword(
+        [FromBody] ChangePasswordRequest request,
+        CancellationToken cancellationToken)
+    {
+        await authService.ChangePasswordAsync(GetUserId(), request, cancellationToken);
+        return Ok(ApiResponse.Ok<object>(new { message = "Đổi mật khẩu thành công." }));
+    }
+
     private long GetUserId() =>
         long.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)
             ? userId

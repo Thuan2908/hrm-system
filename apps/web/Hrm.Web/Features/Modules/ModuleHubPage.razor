@@ -1,0 +1,247 @@
+@page "/employee/directory"
+@page "/employees"
+@page "/employee/inventory"
+@page "/inventory"
+@page "/employee/sales"
+@page "/sales"
+@page "/employee/procurement"
+@page "/procurement"
+@page "/employee/reports"
+@page "/reports"
+@layout EmployeeLayout
+@attribute [Authorize]
+@inject NavigationManager Navigation
+@inject AdminApiClient AdminApiClient
+
+<PageTitle>@moduleTitle - Saigon Retail</PageTitle>
+
+<div class="container-fluid px-0">
+    <!-- Header Hero Banner -->
+    <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #052e22 0%, #065f46 50%, #047857 100%); color: white; border-radius: 18px; box-shadow: 0 12px 30px rgba(5, 46, 34, 0.25) !important;">
+        <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <div>
+                <span class="badge text-white mb-2 px-3 py-1" style="background-color: #10b981; font-size: 0.85rem; border-radius: 20px; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);">
+                    ● PHÂN HỆ ĐÃ ĐƯỢC CẤP QUYỀN
+                </span>
+                <h1 class="h3 fw-bold mb-1 text-white">@moduleTitle</h1>
+                <p class="mb-0 text-white-50">@moduleDescription</p>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <a class="btn btn-outline-light rounded-pill px-4 py-2" href="employee/attendance">
+                    ← Về trang Chấm công
+                </a>
+            </div>
+        </div>
+    </div>
+
+    @if (moduleType == ModuleType.Employees)
+    {
+        <!-- Danh bạ nhân viên -->
+        <div class="card border-0 shadow-sm mb-4" style="border-radius: 16px;">
+            <div class="card-header bg-white border-bottom border-light py-3 px-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                <div>
+                    <strong class="text-dark fs-5">DANH BẠ NHÂN SỰ NỘI BỘ</strong>
+                    <div class="text-muted small">Tra cứu thông tin nhân viên theo phân quyền truy cập</div>
+                </div>
+                <div class="w-auto">
+                    <input type="text" class="form-control form-control-sm rounded-pill px-3" placeholder="🔍 Tìm tên hoặc mã nhân viên..."
+                           @bind="searchKeyword" @bind:event="oninput" style="min-width: 250px;" />
+                </div>
+            </div>
+            <div class="card-body p-0">
+                @if (isLoadingEmployees)
+                {
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-success" role="status"></div>
+                        <div class="text-muted small mt-2">Đang tải danh sách nhân sự...</div>
+                    </div>
+                }
+                else if (filteredEmployees.Count == 0)
+                {
+                    <div class="text-center py-5 text-muted">
+                        <p class="mb-0">Không tìm thấy nhân viên nào phù hợp.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light text-secondary small text-uppercase">
+                                <tr>
+                                    <th class="ps-4">Mã NV</th>
+                                    <th>Họ và tên</th>
+                                    <th>Phòng ban</th>
+                                    <th>Trạng thái tài khoản</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var emp in filteredEmployees)
+                                {
+                                    <tr>
+                                        <td class="ps-4 font-monospace fw-semibold text-dark">@emp.Code</td>
+                                        <td>
+                                            <div class="fw-bold text-dark">@emp.FullName</div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-light text-dark border">@emp.Department</span>
+                                        </td>
+                                        <td>
+                                            @if (emp.HasAccount)
+                                            {
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle">Đã có tài khoản</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary-subtle text-secondary">Chưa kích hoạt</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- Thẻ phân hệ nghiệp vụ -->
+        <div class="row g-4">
+            <div class="col-12 col-md-4">
+                <div class="card border-0 shadow-sm p-4 text-center h-100" style="border-radius: 16px;">
+                    <div class="mb-3 fs-1">@moduleIcon</div>
+                    <h5 class="fw-bold text-dark mb-1">Trạng thái phân hệ</h5>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill mx-auto mb-3">
+                        ● Quyền truy cập hoạt động
+                    </span>
+                    <p class="text-muted small mb-0">Tài khoản của bạn đã được Admin cấp quyền truy cập đầy đủ phân hệ này.</p>
+                </div>
+            </div>
+
+            <div class="col-12 col-md-8">
+                <div class="card border-0 shadow-sm p-4 h-100" style="border-radius: 16px;">
+                    <h5 class="fw-bold text-dark mb-3">Thông tin tính năng &amp; Phạm vi nghiệp vụ</h5>
+                    <div class="alert alert-light border d-flex align-items-center gap-3 mb-4" style="border-radius: 12px;">
+                        <span class="fs-4">✨</span>
+                        <div>
+                            <strong>Phân hệ đang trong chu kỳ vận hành mở rộng</strong>
+                            <div class="text-muted small">Mọi giao dịch và thao tác của bạn trong phân hệ này được bảo vệ bởi cơ chế kiểm soát quyền RBAC.</div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-12 col-sm-6">
+                            <div class="p-3 bg-light rounded-3 border">
+                                <div class="text-muted small mb-1">Nhóm quyền áp dụng</div>
+                                <strong class="text-dark">@moduleTitle</strong>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6">
+                            <div class="p-3 bg-light rounded-3 border">
+                                <div class="text-muted small mb-1">Cấp độ truy cập</div>
+                                <span class="badge bg-emerald text-white px-2 py-1" style="background-color: #059669;">Nhân viên ủy quyền</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private enum ModuleType { Employees, Inventory, Sales, Procurement, Reports, Generic }
+    private ModuleType moduleType = ModuleType.Generic;
+    private string moduleTitle = "Phân hệ Nghiệp vụ";
+    private string moduleDescription = "Tính năng được kích hoạt theo phân quyền của Quản trị viên.";
+    private string moduleIcon = "📦";
+
+    private IReadOnlyCollection<EmployeeAccountOptionDto> employees = [];
+    private bool isLoadingEmployees = false;
+    private string searchKeyword = string.Empty;
+
+    private IReadOnlyList<EmployeeAccountOptionDto> filteredEmployees =>
+        string.IsNullOrWhiteSpace(searchKeyword)
+            ? employees.ToList()
+            : employees.Where(e => (e.FullName?.Contains(searchKeyword, StringComparison.OrdinalIgnoreCase) == true)
+                                || (e.Code?.Contains(searchKeyword, StringComparison.OrdinalIgnoreCase) == true)
+                                || (e.Department?.Contains(searchKeyword, StringComparison.OrdinalIgnoreCase) == true)).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        ResolveModuleFromUri();
+        if (moduleType == ModuleType.Employees)
+        {
+            await LoadEmployeesAsync();
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        ResolveModuleFromUri();
+        if (moduleType == ModuleType.Employees && employees.Count == 0)
+        {
+            await LoadEmployeesAsync();
+        }
+    }
+
+    private void ResolveModuleFromUri()
+    {
+        var path = Navigation.ToBaseRelativePath(Navigation.Uri).ToLowerInvariant();
+
+        if (path.Contains("employee/directory") || path.Contains("employees"))
+        {
+            moduleType = ModuleType.Employees;
+            moduleTitle = "Tra cứu & Quản lý Danh bạ Nhân sự";
+            moduleDescription = "Danh sách nhân viên, phòng ban và tài khoản nội bộ trong hệ thống.";
+            moduleIcon = "👥";
+        }
+        else if (path.Contains("inventory"))
+        {
+            moduleType = ModuleType.Inventory;
+            moduleTitle = "Quản lý Kho & Tồn kho (Inventory)";
+            moduleDescription = "Kiểm tra mức tồn kho, quản lý kho hàng và điều chuyển hàng hóa.";
+            moduleIcon = "📦";
+        }
+        else if (path.Contains("sales"))
+        {
+            moduleType = ModuleType.Sales;
+            moduleTitle = "Quản lý Bán hàng & Đơn hàng (Sales)";
+            moduleDescription = "Ghi nhận đơn hàng bán lẻ, doanh thu và danh sách đơn bán hàng.";
+            moduleIcon = "💳";
+        }
+        else if (path.Contains("procurement"))
+        {
+            moduleType = ModuleType.Procurement;
+            moduleTitle = "Mua hàng & Chuỗi cung ứng (Procurement)";
+            moduleDescription = "Theo dõi đơn mua hàng, phiếu nhập kho và danh bạ nhà cung cấp.";
+            moduleIcon = "🛒";
+        }
+        else if (path.Contains("reports"))
+        {
+            moduleType = ModuleType.Reports;
+            moduleTitle = "Trung tâm Báo cáo & Thống kê (Reports)";
+            moduleDescription = "Báo cáo biến động nhân sự, chỉ số chấm công và tổng hợp hoạt động.";
+            moduleIcon = "📊";
+        }
+    }
+
+    private async Task LoadEmployeesAsync()
+    {
+        isLoadingEmployees = true;
+        try
+        {
+            var res = await AdminApiClient.GetEmployeesAsync();
+            employees = res?.Data ?? [];
+        }
+        catch
+        {
+            employees = [];
+        }
+        finally
+        {
+            isLoadingEmployees = false;
+        }
+    }
+}

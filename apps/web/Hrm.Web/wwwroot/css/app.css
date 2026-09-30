@@ -370,6 +370,17 @@ code {
     margin: .5rem 0 .7rem;
 }
 
+.emp-nav-section-title {
+    color: #6ee7b7;
+    opacity: 0.75;
+    font-size: .62rem;
+    font-weight: 850;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    padding: .6rem .75rem .2rem;
+    margin-top: .4rem;
+}
+
 .emp-nav {
     display: flex;
     flex-direction: column;
@@ -470,6 +481,16 @@ code {
     display: flex;
     align-items: center;
     gap: .75rem;
+    padding: .4rem .75rem;
+    border-radius: .95rem;
+    transition: all .2s ease;
+    border: 1px solid transparent;
+}
+
+.emp-user:hover {
+    background: rgba(16, 185, 129, 0.08);
+    border-color: rgba(16, 185, 129, 0.25);
+    transform: translateY(-1px);
 }
 
 .emp-user > span:last-child {
