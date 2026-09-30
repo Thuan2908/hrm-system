@@ -29,6 +29,17 @@ public sealed class PayrollController(IPayrollService payrollService) : Controll
         return Ok(ApiResponse.Ok(result));
     }
 
+    [HttpGet("my-payslips/yearly")]
+    [Authorize(Policy = PermissionCodes.PayrollSelfRead)]
+    public async Task<ActionResult<ApiResponse<YearlyPayrollSummaryDto>>> GetMyYearlyPayslips(
+        [FromQuery] short year,
+        CancellationToken cancellationToken)
+    {
+        var targetYear = year > 0 ? year : (short)DateTime.UtcNow.Year;
+        var result = await payrollService.GetMyYearlyPayslipsAsync(GetUserId(), targetYear, cancellationToken);
+        return Ok(ApiResponse.Ok(result));
+    }
+
     [HttpGet("all")]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<PayrollManagementItemDto>>>> GetAllPayslips(
         [FromQuery] short? month,

@@ -43,3 +43,13 @@ public sealed record PayrollManagementItemDto(
     decimal TaxDeduct,
     decimal NetSalary
 );
+
+public sealed record YearlyPayrollSummaryDto(
+    short YearPeriod,
+    decimal TotalActualDays,
+    decimal TotalGrossSalary,
+    decimal TotalBhxhDeduct,
+    decimal TotalTaxDeduct,
+    decimal TotalNetSalary,
+    IReadOnlyList<PayslipSummaryDto> MonthlyRecords
+);

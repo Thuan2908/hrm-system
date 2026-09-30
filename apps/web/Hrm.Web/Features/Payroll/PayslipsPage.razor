@@ -27,6 +27,44 @@
         </div>
     </div>
 
+    <!-- View Mode Switch Tabs (Hidden when printing) -->
+    <div class="card border-0 shadow-sm p-2 mb-4 d-print-none" style="border-radius: 16px; background-color: #ffffff; border: 1px solid #eef2f6 !important;">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div class="d-inline-flex p-1 rounded-pill" style="background-color: #f1f5f9;">
+                <button type="button" class="btn btn-sm rounded-pill px-3 py-2 fw-semibold @(!isYearlyView ? "btn-success text-white shadow-sm" : "btn-link text-secondary text-decoration-none")"
+                        style="@(!isYearlyView ? "background-color: #059669; border-color: #059669;" : "")"
+                        @onclick="() => SwitchView(false)">
+                    📅 Phiếu lương theo tháng
+                </button>
+                <button type="button" class="btn btn-sm rounded-pill px-3 py-2 fw-semibold @(isYearlyView ? "btn-success text-white shadow-sm" : "btn-link text-secondary text-decoration-none")"
+                        style="@(isYearlyView ? "background-color: #059669; border-color: #059669;" : "")"
+                        @onclick="() => SwitchView(true)">
+                    📊 Bảng kê thu nhập cả năm
+                </button>
+            </div>
+
+            @if (isYearlyView)
+            {
+                <div class="d-flex align-items-center gap-2 flex-nowrap ms-auto">
+                    <span class="small text-secondary fw-semibold text-nowrap">Chọn năm:</span>
+                    <select class="form-select form-select-sm fw-bold rounded-pill bg-light border-0 shadow-none"
+                            style="width: 130px; height: 36px; padding-left: 14px; padding-right: 32px !important; cursor: pointer; color: #0f172a;"
+                            value="@selectedYear" @onchange="OnYearChangedAsync">
+                        <option value="2026">Năm 2026</option>
+                        <option value="2025">Năm 2025</option>
+                        <option value="2024">Năm 2024</option>
+                    </select>
+                    <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 fw-semibold shadow-sm text-nowrap d-inline-flex align-items-center gap-1"
+                            style="height: 36px;"
+                            @onclick="PrintPayslipAsync">
+                        <span>🖨️</span>
+                        <span>In bảng lương năm</span>
+                    </button>
+                </div>
+            }
+        </div>
+    </div>
+
     @if (!string.IsNullOrWhiteSpace(errorMessage))
     {
         <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm d-flex align-items-center gap-2 mb-4 d-print-none" role="alert" style="border-radius: 12px;">
@@ -36,202 +74,500 @@
         </div>
     }
 
-    @if (isLoading && payslips.Count == 0)
+    @if (!isYearlyView)
     {
-        <div class="py-5 text-center text-muted">
-            <div class="spinner-border text-success mb-3" role="status"></div>
-            <p>Đang tải thông tin bảng lương...</p>
-        </div>
-    }
-    else if (payslips.Count == 0)
-    {
-        <div class="card border-0 shadow-sm p-5 text-center text-muted" style="border-radius: 16px;">
-            <div class="display-5 text-secondary mb-3">📄</div>
-            <h5 class="fw-bold text-dark">Chưa có phiếu lương nào</h5>
-            <p class="mb-0">Phiếu lương sẽ được phát hành sau khi phòng Nhân sự &amp; Kế toán hoàn tất chốt bảng công hàng tháng.</p>
-        </div>
-    }
-    else
-    {
-        <!-- Latest Period Highlight Card (Hidden when printing) -->
-        @if (selectedPayslip is not null)
+        @if (isLoading && payslips.Count == 0)
         {
-            <div class="card border-0 shadow-sm mb-4 d-print-none" style="border-radius: 16px; background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%); border-left: 6px solid #10b981 !important;">
-                <div class="card-body p-4">
-                    <div class="row g-4 align-items-center">
-                        <div class="col-12 col-md-4">
-                            <span class="text-uppercase small text-muted fw-bold d-block mb-1">KỲ LƯƠNG ĐANG XEM</span>
-                            <h4 class="fw-bold text-dark mb-1">Tháng @selectedPayslip.MonthPeriod/@selectedPayslip.YearPeriod</h4>
-                            <span class="badge bg-success-subtle text-success border border-success px-3 py-1 rounded-pill">
-                                ✓ Đã quyết toán
-                            </span>
-                        </div>
-                        <div class="col-6 col-md-4 text-md-center">
-                            <span class="text-uppercase small text-muted fw-bold d-block mb-1">NGÀY CÔNG THỰC TẾ</span>
-                            <span class="fs-3 fw-bold text-dark">@selectedPayslip.ActualDays</span>
-                            <small class="text-muted d-block">ngày làm việc ghi nhận</small>
-                        </div>
-                        <div class="col-6 col-md-4 text-md-end">
-                            <span class="text-uppercase small text-muted fw-bold d-block mb-1">THỰC LĨNH (NET)</span>
-                            <span class="fs-2 fw-bold text-success font-monospace">@FormatVnd(selectedPayslip.NetSalary)</span>
-                            <small class="text-muted d-block">Đã thanh toán chuyển khoản</small>
-                        </div>
-                    </div>
-                </div>
+            <div class="py-5 text-center text-muted">
+                <div class="spinner-border text-success mb-3" role="status"></div>
+                <p>Đang tải thông tin bảng lương...</p>
             </div>
         }
-
-        <div class="row g-4">
-            <!-- Left Column: Period List (Hidden when printing) -->
-            <div class="col-12 col-lg-4 d-print-none">
-                <div class="card border-0 shadow-sm h-100" style="border-radius: 16px;">
-                    <div class="card-header bg-white border-bottom border-light py-3 px-4">
-                        <strong class="text-dark">DANH SÁCH KỲ LƯƠNG</strong>
-                    </div>
-                    <div class="list-group list-group-flush p-2">
-                        @foreach (var item in payslips)
-                        {
-                            var isCurrent = selectedPayslip?.Id == item.Id;
-                            <button type="button"
-                                    class="list-group-item list-group-item-action p-3 rounded-3 mb-2 border-0 d-flex justify-content-between align-items-center @(isCurrent ? "bg-success-subtle text-success fw-bold border border-success-subtle" : "")"
-                                    @onclick="() => SelectPayslipAsync(item.Id)">
-                                <div>
-                                    <div class="fw-bold fs-6">Tháng @item.MonthPeriod/@item.YearPeriod</div>
-                                    <div class="small text-muted">@item.ActualDays ngày công</div>
-                                </div>
-                                <div class="text-end">
-                                    <div class="fw-bold text-success font-monospace">@FormatVnd(item.NetSalary)</div>
-                                    <small class="text-muted">Chi tiết →</small>
-                                </div>
-                            </button>
-                        }
+        else if (payslips.Count == 0)
+        {
+            <div class="card border-0 shadow-sm p-5 text-center text-muted" style="border-radius: 16px;">
+                <div class="display-5 text-secondary mb-3">📄</div>
+                <h5 class="fw-bold text-dark">Chưa có phiếu lương nào</h5>
+                <p class="mb-0">Phiếu lương sẽ được phát hành sau khi phòng Nhân sự &amp; Kế toán hoàn tất chốt bảng công hàng tháng.</p>
+            </div>
+        }
+        else
+        {
+            <!-- Latest Period Highlight Card (Hidden when printing) -->
+            @if (selectedPayslip is not null)
+            {
+                <div class="card border-0 shadow-sm mb-4 d-print-none" style="border-radius: 16px; background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%); border-left: 6px solid #10b981 !important;">
+                    <div class="card-body p-4">
+                        <div class="row g-4 align-items-center">
+                            <div class="col-12 col-md-4">
+                                <span class="text-uppercase small text-muted fw-bold d-block mb-1">KỲ LƯƠNG ĐANG XEM</span>
+                                <h4 class="fw-bold text-dark mb-1">Tháng @selectedPayslip.MonthPeriod/@selectedPayslip.YearPeriod</h4>
+                                <span class="badge bg-success-subtle text-success border border-success px-3 py-1 rounded-pill">
+                                    ✓ Đã quyết toán
+                                </span>
+                            </div>
+                            <div class="col-6 col-md-4 text-md-center">
+                                <span class="text-uppercase small text-muted fw-bold d-block mb-1">NGÀY CÔNG THỰC TẾ</span>
+                                <span class="fs-3 fw-bold text-dark">@selectedPayslip.ActualDays</span>
+                                <small class="text-muted d-block">ngày làm việc ghi nhận</small>
+                            </div>
+                            <div class="col-6 col-md-4 text-md-end">
+                                <span class="text-uppercase small text-muted fw-bold d-block mb-1">THỰC LĨNH (NET)</span>
+                                <span class="fs-2 fw-bold text-success font-monospace">@FormatVnd(selectedPayslip.NetSalary)</span>
+                                <small class="text-muted d-block">Đã thanh toán chuyển khoản</small>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
+            }
 
-            <!-- Right Column: Payslip Detailed Breakdown -->
-            <div class="col-12 col-lg-8">
-                @if (isLoadingDetail)
-                {
-                    <div class="card border-0 shadow-sm p-5 text-center text-muted" style="border-radius: 16px;">
-                        <div class="spinner-border text-success mb-3" role="status"></div>
-                        <p>Đang tải chi tiết phiếu lương...</p>
+            <div class="row g-4">
+                <!-- Left Column: Period List (Hidden when printing) -->
+                <div class="col-12 col-lg-4 d-print-none">
+                    <div class="card border-0 shadow-sm h-100" style="border-radius: 16px;">
+                        <div class="card-header bg-white border-bottom border-light py-3 px-4">
+                            <strong class="text-dark">DANH SÁCH KỲ LƯƠNG</strong>
+                        </div>
+                        <div class="list-group list-group-flush p-2">
+                            @foreach (var item in payslips)
+                            {
+                                var isCurrent = selectedPayslip?.Id == item.Id;
+                                <button type="button"
+                                        class="list-group-item list-group-item-action p-3 rounded-3 mb-2 border-0 d-flex justify-content-between align-items-center @(isCurrent ? "bg-success-subtle text-success fw-bold border border-success-subtle" : "")"
+                                        @onclick="() => SelectPayslipAsync(item.Id)">
+                                    <div>
+                                        <div class="fw-bold fs-6">Tháng @item.MonthPeriod/@item.YearPeriod</div>
+                                        <div class="small text-muted">@item.ActualDays ngày công</div>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="fw-bold text-success font-monospace">@FormatVnd(item.NetSalary)</div>
+                                        <small class="text-muted">Chi tiết →</small>
+                                    </div>
+                                </button>
+                            }
+                        </div>
                     </div>
-                }
-                else if (selectedPayslip is not null)
-                {
+                </div>
+
+                <!-- Right Column: Payslip Detailed Breakdown -->
+                <div class="col-12 col-lg-8">
+                    @if (isLoadingDetail)
+                    {
+                        <div class="card border-0 shadow-sm p-5 text-center text-muted" style="border-radius: 16px;">
+                            <div class="spinner-border text-success mb-3" role="status"></div>
+                            <p>Đang tải chi tiết phiếu lương...</p>
+                        </div>
+                    }
+                    else if (selectedPayslip is not null)
+                    {
                     <div id="printable-payslip" class="card border-0 shadow-sm" style="border-radius: 16px;">
-                        <div class="card-header bg-white border-bottom border-light py-3 px-4 d-flex justify-content-between align-items-center">
+                        <div class="card-header bg-white border-bottom border-light py-3 px-4 d-flex justify-content-between align-items-center d-print-none">
                             <div>
                                 <strong class="text-dark fs-5">BẢNG KÊ CHI TIẾT THU NHẬP</strong>
                                 <small class="text-muted d-block">Kỳ lương: Tháng @selectedPayslip.MonthPeriod năm @selectedPayslip.YearPeriod</small>
                             </div>
                             <div class="d-flex align-items-center gap-2">
-                                <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 fw-semibold shadow-sm d-print-none"
+                                <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 fw-semibold shadow-sm"
                                         @onclick="PrintPayslipAsync">
                                     🖨️ In phiếu lương
                                 </button>
-                                <span class="badge bg-light text-secondary border px-3 py-2 rounded-pill font-monospace d-print-none">
+                                <span class="badge bg-light text-secondary border px-3 py-2 rounded-pill font-monospace">
                                     ID: #@selectedPayslip.Id
                                 </span>
                             </div>
                         </div>
                         <div class="card-body p-4 payslip-body">
-                            <!-- Print Header (Visible only on Print/PDF) -->
-                            <div class="d-none d-print-block text-center pb-2 mb-3 border-bottom payslip-print-header">
-                                <div class="fw-bold text-uppercase fs-6">CÔNG TY CỔ PHẦN SAIGON RETAIL</div>
-                                <div class="small text-muted" style="font-size: 8.5pt;">Hệ thống Quản trị Nhân sự &amp; Tiền lương</div>
-                                <h3 class="fw-bold mt-2 mb-1 text-dark" style="font-size: 15pt;">PHIẾU LƯƠNG NHÂN VIÊN</h3>
-                                <div class="text-secondary fw-semibold small">Kỳ lương: Tháng @selectedPayslip.MonthPeriod năm @selectedPayslip.YearPeriod</div>
-                                <div class="mt-2 small text-secondary d-flex justify-content-between px-2" style="font-size: 9pt;">
-                                    <span>Họ và tên: <strong class="text-dark">@(employeeFullName ?? "Nhân viên")</strong></span>
-                                    <span>Mã phiếu: <strong class="text-dark">#@selectedPayslip.Id</strong></span>
-                                    <span>Ngày in: <strong class="text-dark">@DateTime.Now.ToString("dd/MM/yyyy HH:mm")</strong></span>
+                            <!-- Print Header (Visible ONLY on Print/PDF) -->
+                            <div class="d-none d-print-block pb-3 mb-3 border-bottom payslip-print-header">
+                                <!-- Top 2-Column Corporate Header -->
+                                <div class="d-flex justify-content-between align-items-start mb-3" style="font-size: 8.5pt; line-height: 1.35;">
+                                    <div style="width: 55%;">
+                                        <div class="fw-bold text-uppercase" style="font-size: 9.5pt; color: #0f172a;">CÔNG TY CỔ PHẦN SAIGON RETAIL</div>
+                                        <div class="text-secondary">Phòng Quản trị Nhân sự &amp; Tiền lương</div>
+                                        <div class="text-secondary">Địa chỉ: 123 Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP. HCM</div>
+                                    </div>
+                                    <div class="text-end" style="width: 45%;">
+                                        <div class="fw-bold text-uppercase" style="font-size: 9pt; color: #0f172a;">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
+                                        <div class="fw-semibold fst-italic" style="font-size: 8pt;">Độc lập - Tự do - Hạnh phúc</div>
+                                        <div class="text-muted mt-1" style="font-size: 7.5pt;">Mẫu số: 01/PL-HRM (Kèm theo QĐ Lương)</div>
+                                    </div>
+                                </div>
+
+                                <!-- Centered Document Title -->
+                                <div class="text-center my-3">
+                                    <h2 class="fw-bold text-uppercase text-dark mb-1" style="font-size: 13pt; letter-spacing: 0.5px;">
+                                        PHIẾU LƯƠNG NHÂN VIÊN CHI TIẾT
+                                    </h2>
+                                    <div class="fst-italic text-secondary" style="font-size: 8.5pt;">
+                                        (Kỳ chi trả: Tháng @selectedPayslip.MonthPeriod năm @selectedPayslip.YearPeriod)
+                                    </div>
+                                </div>
+
+                                <!-- Employee Information Box (2-column key-value) -->
+                                <div class="p-2 rounded mb-2" style="background-color: #f8fafc; border: 1px solid #e2e8f0; font-size: 8.5pt;">
+                                    <div class="row g-2">
+                                        <div class="col-6">
+                                            <span>Họ và tên người lao động:</span>
+                                            <strong class="text-dark ms-1">@(employeeFullName ?? "Nhân viên")</strong>
+                                        </div>
+                                        <div class="col-6 text-end">
+                                            <span>Mã số hồ sơ nhân sự:</span>
+                                            <strong class="text-dark ms-1">#@selectedPayslip.EmployeeId.ToString("D5")</strong>
+                                        </div>
+                                        <div class="col-6">
+                                            <span>Ngày công thực tế ghi nhận:</span>
+                                            <strong class="text-dark ms-1">@selectedPayslip.ActualDays.ToString("0.#") ngày</strong>
+                                            <span class="text-muted small"> (chuẩn 22 ngày)</span>
+                                        </div>
+                                        <div class="col-6 text-end">
+                                            <span>Mã phiếu / Thời điểm in:</span>
+                                            <strong class="text-dark ms-1">#PL-@selectedPayslip.Id.ToString("D5")</strong>
+                                            <span class="text-muted small"> (@DateTime.Now.ToString("dd/MM/yyyy HH:mm"))</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
-                            <!-- Section A: Thu nhập -->
-                            <div class="mb-3 payslip-section">
-                                <h6 class="fw-bold text-success mb-2 border-bottom pb-1" style="font-size: 10pt;">
-                                    A. CÁC KHOẢN THU NHẬP (GROSS)
-                                </h6>
-                                <table class="table table-sm table-borderless align-middle mb-0">
-                                    <tbody>
+                            <!-- Structured Table of Earnings and Deductions -->
+                            <div class="table-responsive mb-3">
+                                <table class="table table-bordered align-middle mb-0" style="border-color: #cbd5e1;">
+                                    <thead class="table-light small text-secondary">
                                         <tr>
-                                            <td class="text-muted py-1">1. Số ngày công thực tế ghi nhận</td>
-                                            <td class="text-end fw-bold text-dark py-1">@selectedPayslip.ActualDays ngày</td>
+                                            <th class="text-center" style="width: 8%;">STT</th>
+                                            <th style="width: 48%;">KHOẢN MỤC THU NHẬP &amp; KHẤU TRỪ</th>
+                                            <th class="text-center" style="width: 20%;">CĂN CỨ TÍNH TOÁN</th>
+                                            <th class="text-end" style="width: 24%;">SỐ TIỀN (VNĐ)</th>
                                         </tr>
-                                        <tr class="border-top">
-                                            <td class="fw-bold text-dark pt-1 pb-1">TỔNG THU NHẬP GỘP (GROSS):</td>
-                                            <td class="text-end fw-bold text-success pt-1 pb-1 font-monospace">
-                                                @FormatVnd(selectedPayslip.GrossSalary)
+                                    </thead>
+                                    <tbody>
+                                        <!-- SECTION A: THU NHẬP -->
+                                        <tr style="background-color: #f8fafc;">
+                                            <td colspan="4" class="fw-bold text-success py-2">
+                                                A. CÁC KHOẢN THU NHẬP (GROSS SALARY)
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-center">1</td>
+                                            <td>Số ngày công làm việc thực tế ghi nhận</td>
+                                            <td class="text-center">@selectedPayslip.ActualDays.ToString("0.#") ngày / 22 ngày công chuẩn</td>
+                                            <td class="text-end font-monospace">@selectedPayslip.ActualDays.ToString("0.#") công</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-center">2</td>
+                                            <td>Lương vị trí &amp; Phụ cấp chức vụ (theo công thực tế)</td>
+                                            <td class="text-center text-muted">Lương cơ bản + tỷ lệ phụ cấp</td>
+                                            <td class="text-end font-monospace fw-semibold text-dark">@FormatVnd(selectedPayslip.GrossSalary)</td>
+                                        </tr>
+                                        <tr class="fw-bold" style="background-color: #f0fdf4;">
+                                            <td colspan="3" class="text-dark">TỔNG THU NHẬP GỘP (GROSS):</td>
+                                            <td class="text-end text-success font-monospace">@FormatVnd(selectedPayslip.GrossSalary)</td>
+                                        </tr>
+
+                                        <!-- SECTION B: KHẤU TRỪ -->
+                                        <tr style="background-color: #f8fafc;">
+                                            <td colspan="4" class="fw-bold text-danger py-2">
+                                                B. CÁC KHOẢN TRÍCH NỘP &amp; KHẤU TRỪ THEO NGHĨA VỤ LUẬT
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-center">1</td>
+                                            <td>Bảo hiểm Xã hội, Y tế, Thất nghiệp (BHXH 10.5%)</td>
+                                            <td class="text-center text-muted">8% BHXH + 1.5% BHYT + 1% BHTN</td>
+                                            <td class="text-end font-monospace text-danger">-@FormatVnd(selectedPayslip.BhxhDeduct)</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-center">2</td>
+                                            <td>Thuế Thu nhập Cá nhân tạm trích (TNCN)</td>
+                                            <td class="text-center text-muted">Biểu thuế lũy tiến từng phần</td>
+                                            <td class="text-end font-monospace text-danger">-@FormatVnd(selectedPayslip.TaxDeduct)</td>
+                                        </tr>
+                                        <tr class="fw-bold" style="background-color: #fef2f2;">
+                                            <td colspan="3" class="text-dark">TỔNG CÁC KHOẢN TRÍCH NỘP:</td>
+                                            <td class="text-end text-danger font-monospace">-@FormatVnd(selectedPayslip.BhxhDeduct + selectedPayslip.TaxDeduct)</td>
+                                        </tr>
+
+                                        <!-- SECTION C: NET PAY -->
+                                        <tr style="background-color: #ecfdf5; border-top: 2px solid #10b981;">
+                                            <td colspan="3" class="py-3">
+                                                <div class="fw-bold text-success text-uppercase" style="font-size: 1rem;">
+                                                    C. THỰC LĨNH CHUYỂN KHOẢN (NET SALARY)
+                                                </div>
+                                                <small class="text-muted d-block">Đã khấu trừ toàn bộ nghĩa vụ BHXH và thuế TNCN theo quy định</small>
+                                            </td>
+                                            <td class="text-end py-3">
+                                                <span class="fs-4 fw-bold text-success font-monospace">@FormatVnd(selectedPayslip.NetSalary)</span>
                                             </td>
                                         </tr>
                                     </tbody>
                                 </table>
                             </div>
 
-                            <!-- Section B: Khấu trừ -->
-                            <div class="mb-3 payslip-section">
-                                <h6 class="fw-bold text-danger mb-2 border-bottom pb-1" style="font-size: 10pt;">
-                                    B. CÁC KHOẢN TRÍCH NỘP &amp; KHẤU TRỪ THEO LUẬT
-                                </h6>
-                                <table class="table table-sm table-borderless align-middle mb-0">
-                                    <tbody>
-                                        <tr>
-                                            <td class="text-muted py-1">1. Bảo hiểm Xã hội, Y tế, Thất nghiệp (BHXH)</td>
-                                            <td class="text-end text-danger py-1"> - @FormatVnd(selectedPayslip.BhxhDeduct)</td>
-                                        </tr>
-                                        <tr>
-                                            <td class="text-muted py-1">2. Thuế Thu nhập Cá nhân (TNCN)</td>
-                                            <td class="text-end text-danger py-1"> - @FormatVnd(selectedPayslip.TaxDeduct)</td>
-                                        </tr>
-                                        <tr class="border-top">
-                                            <td class="fw-bold text-dark pt-1 pb-1">TỔNG CÁC KHOẢN KHẤU TRỪ:</td>
-                                            <td class="text-end fw-bold text-danger pt-1 pb-1 font-monospace">
-                                                - @FormatVnd(selectedPayslip.BhxhDeduct + selectedPayslip.TaxDeduct)
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            <!-- Section C: Thực lĩnh Net -->
-                            <div class="p-3 rounded-3 d-flex justify-content-between align-items-center mb-3 payslip-net-box"
-                                 style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border: 1px solid #10b981;">
-                                <div>
-                                    <small class="text-success text-uppercase fw-bold d-block" style="font-size: 8.5pt;">THỰC LĨNH CHUYỂN KHOẢN (NET)</small>
-                                    <span class="text-muted small" style="font-size: 8pt;">Đã bao gồm phụ cấp và trừ nghĩa vụ bảo hiểm &amp; thuế</span>
-                                </div>
-                                <div class="text-end">
-                                    <span class="fs-3 fw-bold text-success font-monospace">@FormatVnd(selectedPayslip.NetSalary)</span>
-                                </div>
+                            <!-- Print Legal Note -->
+                            <div class="d-none d-print-block mt-2 text-muted fst-italic" style="font-size: 7.5pt;">
+                                * Ghi chú: Phiếu lương được trích xuất từ Hệ thống Quản trị HRM Saigon Retail. Mọi thắc mắc về số liệu ngày công hoặc chi trả, người lao động vui lòng phản hồi phòng Kế toán / Nhân sự trong vòng 03 ngày làm việc kể từ ngày nhận phiếu.
                             </div>
 
                             <!-- Print Signatures (Visible only on Print/PDF) -->
-                            <div class="d-none d-print-flex justify-content-between mt-3 pt-2 text-center payslip-signatures">
-                                <div style="width: 30%;">
-                                    <div class="fw-bold" style="font-size: 9.5pt;">Người lập biểu</div>
-                                    <div class="text-muted fst-italic" style="font-size: 8pt;">(Ký, ghi rõ họ tên)</div>
-                                    <div style="height: 48px;"></div>
+                            <div class="d-none d-print-flex justify-content-between mt-4 pt-3 text-center payslip-signatures">
+                                <div style="width: 23%;">
+                                    <div class="fw-bold" style="font-size: 9pt;">Người lập biểu</div>
+                                    <div class="text-muted fst-italic" style="font-size: 7.5pt;">(Ký, ghi rõ họ tên)</div>
+                                    <div style="height: 50px;"></div>
                                 </div>
-                                <div style="width: 30%;">
-                                    <div class="fw-bold" style="font-size: 9.5pt;">Kế toán trưởng</div>
-                                    <div class="text-muted fst-italic" style="font-size: 8pt;">(Ký, ghi rõ họ tên)</div>
-                                    <div style="height: 48px;"></div>
+                                <div style="width: 23%;">
+                                    <div class="fw-bold" style="font-size: 9pt;">Kế toán trưởng</div>
+                                    <div class="text-muted fst-italic" style="font-size: 7.5pt;">(Ký, ghi rõ họ tên)</div>
+                                    <div style="height: 50px;"></div>
                                 </div>
-                                <div style="width: 30%;">
-                                    <div class="fw-bold" style="font-size: 9.5pt;">Người nhận (Nhân viên)</div>
-                                    <div class="text-muted fst-italic" style="font-size: 8pt;">(Ký, ghi rõ họ tên)</div>
-                                    <div style="height: 48px;"></div>
-                                    <div class="fw-semibold text-dark" style="font-size: 9pt;">@(employeeFullName ?? "")</div>
+                                <div style="width: 23%;">
+                                    <div class="fw-bold" style="font-size: 9pt;">Người nhận (Nhân viên)</div>
+                                    <div class="text-muted fst-italic" style="font-size: 7.5pt;">(Ký, ghi rõ họ tên)</div>
+                                    <div style="height: 50px;"></div>
+                                    <div class="fw-semibold text-dark" style="font-size: 8.5pt;">@(employeeFullName ?? "")</div>
+                                </div>
+                                <div style="width: 23%;">
+                                    <div class="fw-bold" style="font-size: 9pt;">Giám đốc điều hành</div>
+                                    <div class="text-muted fst-italic" style="font-size: 7.5pt;">(Ký, đóng dấu)</div>
+                                    <div style="height: 50px;"></div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                }
+                    }
+                </div>
             </div>
-        </div>
+        }
+    }
+    else
+    {
+        <!-- BẢNG KÊ THU NHẬP CẢ NĂM (YEARLY PAYSLIP STATEMENT) -->
+        @if (isLoadingYearly)
+        {
+            <div class="py-5 text-center text-muted">
+                <div class="spinner-border text-success mb-3" role="status"></div>
+                <p>Đang tổng hợp dữ liệu bảng kê thu nhập năm @selectedYear...</p>
+            </div>
+        }
+        else if (yearlySummary is null)
+        {
+            <div class="card border-0 shadow-sm p-5 text-center text-muted" style="border-radius: 16px;">
+                <div class="display-5 text-secondary mb-3">📊</div>
+                <h5 class="fw-bold text-dark">Chưa có dữ liệu bảng lương năm @selectedYear</h5>
+                <p class="mb-0">Chưa có kỳ lương nào được phê duyệt hoặc chốt công trong năm @selectedYear.</p>
+            </div>
+        }
+        else
+        {
+            <!-- KPI Cards for the year (Hidden when printing) -->
+            <div class="d-print-none">
+                <div class="row g-3 mb-4">
+                    <div class="col-12 col-sm-6 col-xl-3">
+                        <div class="card border-0 shadow-sm p-3 h-100" style="border-radius: 14px; border-left: 4px solid #3b82f6 !important;">
+                            <div class="text-muted small fw-semibold text-uppercase">TỔNG NGÀY CÔNG CẢ NĂM</div>
+                            <div class="fs-3 fw-bold text-dark mt-1">@yearlySummary.TotalActualDays.ToString("0.#") <small class="fs-6 text-muted fw-normal">ngày</small></div>
+                            <div class="small text-muted mt-1">Ghi nhận từ các kỳ đã chốt lương</div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-6 col-xl-3">
+                        <div class="card border-0 shadow-sm p-3 h-100" style="border-radius: 14px; border-left: 4px solid #10b981 !important;">
+                            <div class="text-muted small fw-semibold text-uppercase">TỔNG THU NHẬP GỘP (GROSS)</div>
+                            <div class="fs-3 fw-bold text-success font-monospace mt-1">@FormatVnd(yearlySummary.TotalGrossSalary)</div>
+                            <div class="small text-muted mt-1">Lương cơ bản + phụ cấp chức vụ</div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-6 col-xl-3">
+                        <div class="card border-0 shadow-sm p-3 h-100" style="border-radius: 14px; border-left: 4px solid #ef4444 !important;">
+                            <div class="text-muted small fw-semibold text-uppercase">TỔNG TRÍCH NỘP (BHXH + THUẾ)</div>
+                            <div class="fs-3 fw-bold text-danger font-monospace mt-1">-@FormatVnd(yearlySummary.TotalBhxhDeduct + yearlySummary.TotalTaxDeduct)</div>
+                            <div class="small text-muted mt-1">BHXH: @FormatVnd(yearlySummary.TotalBhxhDeduct) | Thuế: @FormatVnd(yearlySummary.TotalTaxDeduct)</div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-6 col-xl-3">
+                        <div class="card border-0 shadow-sm p-3 h-100" style="border-radius: 14px; border-left: 4px solid #059669 !important; background: linear-gradient(135deg, #ffffff 0%, #ecfdf5 100%);">
+                            <div class="text-success small fw-bold text-uppercase">TỔNG THỰC NHẬN CẢ NĂM (NET)</div>
+                            <div class="fs-3 fw-bold text-success font-monospace mt-1">@FormatVnd(yearlySummary.TotalNetSalary)</div>
+                            <div class="small text-muted mt-1">Thu nhập sau khi trừ toàn bộ nghĩa vụ</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Yearly Statement Table & Printable Card -->
+            <div id="printable-yearly-payslip" class="card border-0 shadow-sm" style="border-radius: 16px;">
+                <div class="card-header bg-white border-bottom border-light py-3 px-4 d-flex justify-content-between align-items-center d-print-none">
+                    <div>
+                        <strong class="text-dark fs-5">BẢNG KÊ THU NHẬP VÀ QUYẾT TOÁN CẢ NĂM @selectedYear</strong>
+                        <small class="text-muted d-block">Tổng kết chi tiết 12 tháng công và các nghĩa vụ trích nộp theo luật</small>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 fw-semibold shadow-sm"
+                            @onclick="PrintPayslipAsync">
+                        🖨️ In bảng lương năm
+                    </button>
+                </div>
+                <div class="card-body p-4 payslip-body">
+                    <!-- Print Header (Visible ONLY on Print/PDF) -->
+                    <div class="d-none d-print-block pb-3 mb-3 border-bottom payslip-print-header">
+                        <!-- Top 2-Column Corporate Header -->
+                        <div class="d-flex justify-content-between align-items-start mb-3" style="font-size: 8.5pt; line-height: 1.35;">
+                            <div style="width: 55%;">
+                                <div class="fw-bold text-uppercase" style="font-size: 9.5pt; color: #0f172a;">CÔNG TY CỔ PHẦN SAIGON RETAIL</div>
+                                <div class="text-secondary">Phòng Quản trị Nhân sự &amp; Tiền lương</div>
+                                <div class="text-secondary">Địa chỉ: 123 Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP. HCM</div>
+                            </div>
+                            <div class="text-end" style="width: 45%;">
+                                <div class="fw-bold text-uppercase" style="font-size: 9pt; color: #0f172a;">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
+                                <div class="fw-semibold fst-italic" style="font-size: 8pt;">Độc lập - Tự do - Hạnh phúc</div>
+                                <div class="text-muted mt-1" style="font-size: 7.5pt;">Mẫu số: 02/BK-TNCN (Quy chế Tài chính)</div>
+                            </div>
+                        </div>
+
+                        <!-- Centered Document Title -->
+                        <div class="text-center my-3">
+                            <h2 class="fw-bold text-uppercase text-dark mb-1" style="font-size: 13pt; letter-spacing: 0.5px;">
+                                BẢNG KÊ THU NHẬP &amp; QUYẾT TOÁN LƯƠNG NĂM @selectedYear
+                            </h2>
+                            <div class="fst-italic text-secondary" style="font-size: 8.5pt;">
+                                (Dùng cho quyết toán thuế TNCN, đối chiếu thu nhập và lưu trữ hồ sơ lao động)
+                            </div>
+                        </div>
+
+                        <!-- Employee Information Box (2-column key-value) -->
+                        <div class="p-2 rounded mb-2" style="background-color: #f8fafc; border: 1px solid #e2e8f0; font-size: 8.5pt;">
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <span>Họ và tên người lao động:</span>
+                                    <strong class="text-dark ms-1">@(employeeFullName ?? "Nhân viên")</strong>
+                                </div>
+                                <div class="col-6 text-end">
+                                    <span>Năm tài chính / quyết toán:</span>
+                                    <strong class="text-dark ms-1">@selectedYear</strong>
+                                </div>
+                                <div class="col-6">
+                                    <span>Mã số hồ sơ nhân sự:</span>
+                                    <strong class="text-dark ms-1">#@(yearlySummary.MonthlyRecords.FirstOrDefault()?.EmployeeId.ToString("D5") ?? "00001")</strong>
+                                </div>
+                                <div class="col-6 text-end">
+                                    <span>Thời điểm xuất biểu mẫu:</span>
+                                    <strong class="text-dark ms-1">@DateTime.Now.ToString("dd/MM/yyyy HH:mm")</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Executive Summary Banner (Compact 5-metric strip for print) -->
+                        <div class="d-flex justify-content-between p-2 rounded mb-2 text-center" style="background-color: #f0fdf4; border: 1px solid #86efac; font-size: 8pt;">
+                            <div style="flex: 1; border-right: 1px solid #bbf7d0;">
+                                <div class="text-muted text-uppercase" style="font-size: 7pt;">TỔNG CÔNG</div>
+                                <div class="fw-bold text-dark fs-6">@yearlySummary.TotalActualDays.ToString("0.#") ngày</div>
+                            </div>
+                            <div style="flex: 1.3; border-right: 1px solid #bbf7d0;">
+                                <div class="text-muted text-uppercase" style="font-size: 7pt;">TỔNG GROSS</div>
+                                <div class="fw-bold text-dark fs-6 font-monospace">@FormatVnd(yearlySummary.TotalGrossSalary)</div>
+                            </div>
+                            <div style="flex: 1.3; border-right: 1px solid #bbf7d0;">
+                                <div class="text-muted text-uppercase" style="font-size: 7pt;">BHXH (10.5%)</div>
+                                <div class="fw-bold text-danger fs-6 font-monospace">-@FormatVnd(yearlySummary.TotalBhxhDeduct)</div>
+                            </div>
+                            <div style="flex: 1.3; border-right: 1px solid #bbf7d0;">
+                                <div class="text-muted text-uppercase" style="font-size: 7pt;">THUẾ TNCN</div>
+                                <div class="fw-bold text-danger fs-6 font-monospace">-@FormatVnd(yearlySummary.TotalTaxDeduct)</div>
+                            </div>
+                            <div style="flex: 1.5;">
+                                <div class="text-success text-uppercase fw-bold" style="font-size: 7pt;">THỰC LĨNH CẢ NĂM (NET)</div>
+                                <div class="fw-bold text-success fs-6 font-monospace">@FormatVnd(yearlySummary.TotalNetSalary)</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle mb-0" style="border-color: #cbd5e1;">
+                            <thead class="table-light text-center small text-secondary">
+                                <tr>
+                                    <th style="width: 10%;">THÁNG</th>
+                                    <th style="width: 13%;">NGÀY CÔNG</th>
+                                    <th style="width: 18%;">LƯƠNG GROSS</th>
+                                    <th style="width: 16%;">BHXH (10.5%)</th>
+                                    <th style="width: 16%;">THUẾ TNCN</th>
+                                    <th style="width: 17%;">NET THỰC LĨNH</th>
+                                    <th style="width: 10%;">TRẠNG THÁI</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (short m = 1; m <= 12; m++)
+                                {
+                                    var currentMonth = m;
+                                    var rec = yearlySummary.MonthlyRecords.FirstOrDefault(r => r.MonthPeriod == currentMonth);
+                                    if (rec != null)
+                                    {
+                                        <tr>
+                                            <td class="text-center fw-bold">Tháng @m</td>
+                                            <td class="text-center">@rec.ActualDays.ToString("0.#") ngày</td>
+                                            <td class="text-end font-monospace">@FormatVnd(rec.GrossSalary)</td>
+                                            <td class="text-end font-monospace text-danger">-@FormatVnd(rec.BhxhDeduct)</td>
+                                            <td class="text-end font-monospace text-danger">-@FormatVnd(rec.TaxDeduct)</td>
+                                            <td class="text-end font-monospace fw-bold text-success">@FormatVnd(rec.NetSalary)</td>
+                                            <td class="text-center"><span class="badge bg-success-subtle text-success border border-success px-2 py-1 rounded-pill" style="font-size: 7.5pt;">✓ Đã quyết toán</span></td>
+                                        </tr>
+                                    }
+                                    else
+                                    {
+                                        <tr class="text-muted" style="background-color: #fafbfc;">
+                                            <td class="text-center text-muted">Tháng @m</td>
+                                            <td class="text-center text-muted fst-italic">0 ngày</td>
+                                            <td class="text-end text-muted font-monospace">-</td>
+                                            <td class="text-end text-muted font-monospace">-</td>
+                                            <td class="text-end text-muted font-monospace">-</td>
+                                            <td class="text-end text-muted font-monospace">-</td>
+                                            <td class="text-center text-muted small fst-italic" style="font-size: 7.5pt;">Chưa phát sinh</td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                            <tfoot class="table-light fw-bold">
+                                <tr style="background-color: #ecfdf5; font-size: 1rem;">
+                                    <td class="text-center text-success text-uppercase">TỔNG CỘNG</td>
+                                    <td class="text-center text-dark">@yearlySummary.TotalActualDays.ToString("0.#") ngày</td>
+                                    <td class="text-end font-monospace text-dark">@FormatVnd(yearlySummary.TotalGrossSalary)</td>
+                                    <td class="text-end font-monospace text-danger">-@FormatVnd(yearlySummary.TotalBhxhDeduct)</td>
+                                    <td class="text-end font-monospace text-danger">-@FormatVnd(yearlySummary.TotalTaxDeduct)</td>
+                                    <td class="text-end font-monospace text-success fs-6">@FormatVnd(yearlySummary.TotalNetSalary)</td>
+                                    <td class="text-center text-success small font-monospace">12 tháng</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
+                    <!-- Print Legal Note -->
+                    <div class="d-none d-print-block mt-2 text-muted fst-italic" style="font-size: 7.5pt;">
+                        * Ghi chú: Bảng kê này được trích xuất tự động từ Hệ thống Quản trị HRM Saigon Retail, có giá trị đối chiếu thu nhập và quyết toán thuế TNCN năm @selectedYear của người lao động.
+                    </div>
+
+                    <!-- Print Signatures (Visible only on Print/PDF) -->
+                    <div class="d-none d-print-flex justify-content-between mt-4 pt-3 text-center payslip-signatures">
+                        <div style="width: 23%;">
+                            <div class="fw-bold" style="font-size: 9pt;">Người lập biểu</div>
+                            <div class="text-muted fst-italic" style="font-size: 7.5pt;">(Ký, ghi rõ họ tên)</div>
+                            <div style="height: 50px;"></div>
+                        </div>
+                        <div style="width: 23%;">
+                            <div class="fw-bold" style="font-size: 9pt;">Kế toán trưởng</div>
+                            <div class="text-muted fst-italic" style="font-size: 7.5pt;">(Ký, ghi rõ họ tên)</div>
+                            <div style="height: 50px;"></div>
+                        </div>
+                        <div style="width: 23%;">
+                            <div class="fw-bold" style="font-size: 9pt;">Người nhận (Nhân viên)</div>
+                            <div class="text-muted fst-italic" style="font-size: 7.5pt;">(Ký, ghi rõ họ tên)</div>
+                            <div style="height: 50px;"></div>
+                            <div class="fw-semibold text-dark" style="font-size: 8.5pt;">@(employeeFullName ?? "")</div>
+                        </div>
+                        <div style="width: 23%;">
+                            <div class="fw-bold" style="font-size: 9pt;">Giám đốc điều hành</div>
+                            <div class="text-muted fst-italic" style="font-size: 7.5pt;">(Ký, đóng dấu)</div>
+                            <div style="height: 50px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
     }
 
     <!-- Payroll Management Panel for HR & Admin -->
@@ -326,8 +662,12 @@
     private IReadOnlyList<PayslipSummaryDto> payslips = [];
     private IReadOnlyList<PayrollManagementItemDto> allPayrollRecords = [];
     private PayslipDetailDto? selectedPayslip;
+    private YearlyPayrollSummaryDto? yearlySummary;
+    private bool isYearlyView = false;
+    private short selectedYear = (short)DateTime.Today.Year;
     private bool isLoading = true;
     private bool isLoadingDetail = false;
+    private bool isLoadingYearly = false;
     private bool isLoadingAllPayrolls = false;
     private bool isCalculatingPayroll = false;
     private string? errorMessage;
@@ -342,6 +682,42 @@
         employeeFullName = session?.User.FullName ?? session?.User.UserName;
         await LoadDataAsync();
         _ = LoadAllPayrollsAsync();
+    }
+
+    private async Task SwitchView(bool yearly)
+    {
+        isYearlyView = yearly;
+        if (isYearlyView && yearlySummary == null)
+        {
+            await LoadYearlyPayslipsAsync();
+        }
+    }
+
+    private async Task OnYearChangedAsync(ChangeEventArgs e)
+    {
+        if (short.TryParse(e.Value?.ToString(), out var year))
+        {
+            selectedYear = year;
+            await LoadYearlyPayslipsAsync();
+        }
+    }
+
+    private async Task LoadYearlyPayslipsAsync()
+    {
+        isLoadingYearly = true;
+        errorMessage = null;
+        try
+        {
+            yearlySummary = await PayrollApiClient.GetMyYearlyPayslipsAsync(selectedYear);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Lỗi khi tải bảng kê thu nhập năm: " + ex.Message;
+        }
+        finally
+        {
+            isLoadingYearly = false;
+        }
     }
 
     private async Task LoadAllPayrollsAsync()
@@ -372,6 +748,10 @@
             payrollSuccessMsg = $"Đã tính toán và cập nhật bảng lương tháng {calcMonth}/{calcYear} thành công cho {count} nhân sự!";
             await LoadAllPayrollsAsync();
             await LoadDataAsync();
+            if (isYearlyView)
+            {
+                await LoadYearlyPayslipsAsync();
+            }
         }
         catch (Exception ex)
         {

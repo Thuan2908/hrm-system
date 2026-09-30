@@ -8,12 +8,20 @@ public interface IPayrollApiClient
 {
     Task<IReadOnlyList<PayslipSummaryDto>> GetMyPayslipsAsync(CancellationToken cancellationToken = default);
     Task<PayslipDetailDto?> GetPayslipDetailAsync(long payslipId, CancellationToken cancellationToken = default);
+    Task<YearlyPayrollSummaryDto?> GetMyYearlyPayslipsAsync(short year, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<PayrollManagementItemDto>> GetAllPayslipsAsync(short? month = null, short? year = null, CancellationToken cancellationToken = default);
     Task<int> CalculatePayrollAsync(short month, short year, CancellationToken cancellationToken = default);
 }
 
 public sealed class PayrollApiClient(HttpClient httpClient, IAuthApiClient authApiClient) : IPayrollApiClient
 {
+    public async Task<YearlyPayrollSummaryDto?> GetMyYearlyPayslipsAsync(short year, CancellationToken cancellationToken = default)
+    {
+        var response = await SendAsync<YearlyPayrollSummaryDto>(
+            HttpMethod.Get, $"api/v1/payroll/my-payslips/yearly?year={year}", null, cancellationToken);
+        return response?.Data;
+    }
+
     public async Task<IReadOnlyList<PayrollManagementItemDto>> GetAllPayslipsAsync(short? month = null, short? year = null, CancellationToken cancellationToken = default)
     {
         var url = "api/v1/payroll/all";
