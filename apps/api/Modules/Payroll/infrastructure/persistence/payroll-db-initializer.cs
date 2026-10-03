@@ -45,6 +45,29 @@ public sealed class PayrollDatabaseInitializer(PayrollDbContext dbContext) : IPa
                   WHERE rp.role_id = r.role_id AND rp.perm_id = p.perm_id);
             """, cancellationToken);
 
+        // Đồng bộ sequence cho identity column payroll_id để tránh lỗi duplicate key pk_payrolls
+        const string syncSequenceSql = """
+            DO $$
+            DECLARE
+                max_id bigint;
+                seq_name text;
+            BEGIN
+                IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'payrolls') THEN
+                    SELECT COALESCE(MAX(payroll_id), 0) INTO max_id FROM payrolls;
+                    seq_name := pg_get_serial_sequence('payrolls', 'payroll_id');
+                    IF seq_name IS NOT NULL THEN
+                        IF max_id > 0 THEN
+                            PERFORM setval(seq_name, max_id, true);
+                        ELSE
+                            PERFORM setval(seq_name, 1, false);
+                        END IF;
+                    END IF;
+                END IF;
+            END $$;
+            """;
+
+        await dbContext.Database.ExecuteSqlRawAsync(syncSequenceSql, cancellationToken);
+
         // 5. Seed dữ liệu lương mẫu vào bảng payrolls cho nhân viên để có dữ liệu xem ngay lập tức
         // Kỳ lương Tháng 8/2026
         await dbContext.Database.ExecuteSqlRawAsync("""
@@ -91,6 +114,9 @@ public sealed class PayrollDatabaseInitializer(PayrollDbContext dbContext) : IPa
                   WHERE p.emp_id = u.emp_id AND p.month_period = 7 AND p.year_period = 2026
               );
             """, cancellationToken);
+
+        // Đồng bộ lại sequence sau khi insert seed
+        await dbContext.Database.ExecuteSqlRawAsync(syncSequenceSql, cancellationToken);
 
         await transaction.CommitAsync(cancellationToken);
     }
