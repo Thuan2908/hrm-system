@@ -68,6 +68,17 @@ public sealed class AuthDatabaseInitializer(AuthDbContext dbContext) : IAuthData
                 last_seen_at timestamp with time zone NOT NULL
             );
             CREATE INDEX IF NOT EXISTS ix_user_active_sessions_last_seen_at ON user_active_sessions(last_seen_at);
+
+            -- Bổ sung danh mục chức danh chuẩn cho các phòng ban nếu chưa có
+            INSERT INTO positions (position_id, position_code, position_name, title, allowance_rate)
+            VALUES
+                (11, 'POS_11', 'Chuyên Viên Kinh Doanh', 'Chuyên Viên Kinh Doanh', 1.00),
+                (12, 'POS_12', 'Chuyên Viên Marketing & Tiếp Thị', 'Chuyên Viên Marketing & Tiếp Thị', 1.05),
+                (13, 'POS_13', 'Nhân Viên Bán Hàng', 'Nhân Viên Bán Hàng', 1.00),
+                (14, 'POS_14', 'Chuyên Viên C&B (Tiền Lương & Đãi Ngộ)', 'Chuyên Viên C&B', 1.00),
+                (15, 'POS_15', 'Thủ Quỹ & Ngân Quỹ', 'Thủ Quỹ', 1.00),
+                (16, 'POS_16', 'Chuyên Viên Chăm Sóc Khách Hàng (CSKH)', 'Chuyên Viên CSKH', 1.00)
+            ON CONFLICT (position_id) DO NOTHING;
             """, cancellationToken);
 
         foreach (var def in PermissionCodes.Catalog)

@@ -28,6 +28,7 @@ public sealed class Position
     public string? Code { get; set; }
     public required string Name { get; set; }
     public string? Title { get; set; }
+    public decimal AllowanceRate { get; set; }
 }
 
 public sealed class Employee

@@ -22,6 +22,10 @@ public sealed class LeaveDbContext(DbContextOptions<LeaveDbContext> options) : D
             entity.Property(e => e.Reason).HasColumnName("reason").IsRequired();
             entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(50).IsRequired();
             entity.Property(e => e.RejectionReason).HasColumnName("rejection_reason");
+            entity.Property(e => e.AttachmentFileId).HasColumnName("attachment_file_id");
+            entity.Property(e => e.AttachmentFileName).HasColumnName("attachment_file_name");
+            entity.Property(e => e.ApprovedByUserId).HasColumnName("approved_by_user_id");
+            entity.Property(e => e.ApprovedAt).HasColumnName("approved_at");
             entity.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
             entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
 

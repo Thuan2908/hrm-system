@@ -9,6 +9,7 @@ public interface ILeaveApiClient
     Task<LeaveBalanceSummaryDto?> GetBalanceAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<LeaveRequestDto>> GetMyRequestsAsync(CancellationToken cancellationToken = default);
     Task<LeaveRequestDto?> CreateRequestAsync(CreateLeaveRequestDto request, CancellationToken cancellationToken = default);
+    Task<LeaveRequestDto?> UpdateRequestAsync(Guid requestId, UpdateLeaveRequestDto request, CancellationToken cancellationToken = default);
     Task<bool> CancelRequestAsync(Guid requestId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<PendingLeaveApprovalDto>> GetPendingRequestsAsync(CancellationToken cancellationToken = default);
     Task<bool> ApproveRequestAsync(Guid requestId, CancellationToken cancellationToken = default);
@@ -74,6 +75,22 @@ public sealed class LeaveApiClient(HttpClient httpClient, IAuthApiClient authApi
         if (response is null || !response.Success || response.Data is null)
         {
             throw new InvalidOperationException(response?.Error?.Message ?? "Không thể gửi đơn xin nghỉ phép.");
+        }
+
+        return response.Data;
+    }
+
+    public async Task<LeaveRequestDto?> UpdateRequestAsync(
+        Guid requestId,
+        UpdateLeaveRequestDto request,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await SendAsync<LeaveRequestDto>(
+            HttpMethod.Put, $"api/v1/leave/requests/{requestId}", request, cancellationToken);
+
+        if (response is null || !response.Success || response.Data is null)
+        {
+            throw new InvalidOperationException(response?.Error?.Message ?? "Không thể cập nhật đơn xin nghỉ phép.");
         }
 
         return response.Data;

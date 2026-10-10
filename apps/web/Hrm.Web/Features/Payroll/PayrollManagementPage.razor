@@ -1,0 +1,345 @@
+@page "/employee/payroll-management"
+@page "/payroll/management"
+@page "/admin/payroll"
+@layout EmployeeLayout
+@attribute [Authorize]
+@inject IPayrollManagementApiClient PayrollManagementApiClient
+
+<PageTitle>Quản lý &amp; Chốt bảng lương - Saigon Retail</PageTitle>
+
+<div class="container-fluid px-0">
+    <!-- Header Hero Banner -->
+    <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #052e22 0%, #065f46 50%, #047857 100%); color: white; border-radius: 18px; box-shadow: 0 12px 30px rgba(5, 46, 34, 0.25) !important;">
+        <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <div>
+                <span class="badge text-white mb-2 px-3 py-1" style="background-color: #10b981; font-size: 0.85rem; border-radius: 20px; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);">
+                    ● PHÂN HỆ QUẢN LÝ TIỀN LƯƠNG &amp; ĐÃI NGỘ
+                </span>
+                <h1 class="h3 fw-bold mb-1 text-white">Quản lý &amp; Chốt bảng lương toàn doanh nghiệp</h1>
+                <p class="mb-0 text-white-50">Tính toán tự động ngày công thực tế, đóng BHXH bắt buộc 10.5%, thuế TNCN và chốt lương thực lĩnh.</p>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <a class="btn btn-outline-light rounded-pill px-4 py-2" href="employee/payslips">
+                    ← Phiếu lương của tôi
+                </a>
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm d-flex align-items-center gap-2 mb-4" role="alert" style="border-radius: 14px; background-color: #ecfdf5; color: #065f46;">
+            <span style="font-size: 1.25rem;">✓</span>
+            <div>@successMessage</div>
+            <button type="button" class="btn-close ms-auto" @onclick="() => successMessage = null"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm d-flex align-items-center gap-2 mb-4" role="alert" style="border-radius: 14px;">
+            <span style="font-size: 1.25rem;">⚠</span>
+            <div>@errorMessage</div>
+            <button type="button" class="btn-close ms-auto" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    <!-- Toolbar: Month/Year selector & Run payroll button -->
+    <div class="card border-0 shadow-sm mb-4" style="border-radius: 18px;">
+        <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <div class="d-flex flex-wrap align-items-center gap-3">
+                <div class="d-flex align-items-center gap-2">
+                    <label class="form-label mb-0 fw-semibold text-secondary small">Kỳ tính lương:</label>
+                    <select class="form-select form-select-sm fw-medium" @bind="selectedMonth" style="width: auto; border-radius: 10px;">
+                        @for (int m = 1; m <= 12; m++)
+                        {
+                            <option value="@m">Tháng @m</option>
+                        }
+                    </select>
+                    <select class="form-select form-select-sm fw-medium" @bind="selectedYear" style="width: auto; border-radius: 10px;">
+                        <option value="2026">2026</option>
+                        <option value="2025">2025</option>
+                    </select>
+                </div>
+
+                <button class="btn btn-sm btn-outline-success rounded-pill px-3" @onclick="LoadPayrollRecordsAsync" disabled="@isLoading">
+                    ↻ Lọc dữ liệu
+                </button>
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-success rounded-pill px-4 py-2 fw-semibold shadow-sm"
+                        style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35) !important;"
+                        disabled="@isCalculating"
+                        @onclick="RunPayrollCalculationAsync">
+                    @if (isCalculating)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        <span>Đang tính toán lương...</span>
+                    }
+                    else
+                    {
+                        <span>▶ Chạy tính lương Tháng @selectedMonth/@selectedYear</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI Summary Row for Selected Period -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm p-3 h-100" style="border-radius: 16px; border-left: 4px solid #3b82f6 !important;">
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                    <span class="text-muted small fw-semibold text-uppercase">Số nhân sự chốt lương</span>
+                    <span class="badge bg-primary-subtle text-primary rounded-pill">Kỳ @selectedMonth/@selectedYear</span>
+                </div>
+                <div class="fs-3 fw-bold text-dark font-monospace mt-1">@payrollRecords.Count</div>
+                <div class="small text-muted mt-1">Nhân viên có dữ liệu kỳ này</div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm p-3 h-100" style="border-radius: 16px; border-left: 4px solid #10b981 !important;">
+                <div class="text-muted small fw-semibold text-uppercase">Tổng quỹ lương GROSS</div>
+                <div class="fs-3 fw-bold text-dark font-monospace mt-1">@FormatVnd(payrollRecords.Sum(r => r.GrossSalary))</div>
+                <div class="small text-muted mt-1">Bao gồm lương cơ bản &amp; phụ cấp</div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm p-3 h-100" style="border-radius: 16px; border-left: 4px solid #ef4444 !important;">
+                <div class="text-muted small fw-semibold text-uppercase">Tổng trích nộp (BHXH + Thuế)</div>
+                <div class="fs-3 fw-bold text-danger font-monospace mt-1">-@FormatVnd(payrollRecords.Sum(r => r.BhxhDeduct + r.TaxDeduct))</div>
+                <div class="small text-muted mt-1">BHXH 10.5% + Thuế thu nhập cá nhân</div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-xl-3">
+            <div class="card border-0 shadow-sm p-3 h-100" style="border-radius: 16px; border-left: 4px solid #059669 !important; background: linear-gradient(135deg, #ffffff 0%, #ecfdf5 100%);">
+                <div class="text-success small fw-bold text-uppercase">Tổng chi trả thực lĩnh (NET)</div>
+                <div class="fs-3 fw-bold text-success font-monospace mt-1">@FormatVnd(payrollRecords.Sum(r => r.NetSalary))</div>
+                <div class="small text-muted mt-1">Tổng thực nhận chuyển khoản cho nhân viên</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payroll Records Table with Pagination -->
+    <div class="card border-0 shadow-sm" style="border-radius: 18px;">
+        <div class="card-header bg-white border-bottom border-light py-3 px-4 d-flex justify-content-between align-items-center">
+            <div>
+                <strong class="text-dark fs-5">📋 BẢNG LƯƠNG CHI TIẾT TOÀN DOANH NGHIỆP</strong>
+                <div class="text-muted small">Kỳ lương Tháng @selectedMonth năm @selectedYear · @payrollRecords.Count nhân sự</div>
+            </div>
+            <span class="badge bg-success-subtle text-success border border-success-subtle">
+                ✓ Dữ liệu chuẩn
+            </span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light text-secondary small">
+                        <tr>
+                            <th class="ps-4">NHÂN VIÊN</th>
+                            <th>PHÒNG BAN</th>
+                            <th>KỲ LƯƠNG</th>
+                            <th>CÔNG THỰC TẾ</th>
+                            <th>LƯƠNG GROSS</th>
+                            <th>BHXH (10.5%)</th>
+                            <th>THUẾ TNCN</th>
+                            <th class="pe-4 text-end">NET THỰC LĨNH</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (payrollRecords.Count == 0 && !isLoading)
+                        {
+                            <tr>
+                                <td colspan="8" class="text-center py-5 text-muted">
+                                    <div class="fs-3 mb-2">📁</div>
+                                    <div>Chưa có dữ liệu bảng lương cho Tháng @selectedMonth/@selectedYear.</div>
+                                    <div class="small text-muted mt-1">Bấm nút <strong>"▶ Chạy tính lương"</strong> ở trên để tổng hợp công và tính lương cho kỳ này.</div>
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var item in pagedPayrollRecords)
+                            {
+                                <tr>
+                                    <td class="ps-4">
+                                        <strong class="text-dark">@item.FullName</strong>
+                                        <div class="small text-muted font-monospace">@item.EmployeeCode</div>
+                                    </td>
+                                    <td><span class="badge bg-light text-dark border">@item.DepartmentName</span></td>
+                                    <td><span class="badge bg-secondary-subtle text-secondary font-monospace">@item.MonthPeriod/@item.YearPeriod</span></td>
+                                    <td><span class="badge bg-info-subtle text-info-emphasis border border-info-subtle">@item.ActualDays.ToString("0.#") ngày</span></td>
+                                    <td class="font-monospace">@FormatVnd(item.GrossSalary)</td>
+                                    <td class="font-monospace text-danger">-@FormatVnd(item.BhxhDeduct)</td>
+                                    <td class="font-monospace text-danger">-@FormatVnd(item.TaxDeduct)</td>
+                                    <td class="pe-4 text-end font-monospace">
+                                        <strong class="text-success fs-6">@FormatVnd(item.NetSalary)</strong>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Pagination Footer -->
+        @if (payrollRecords.Count > 0)
+        {
+            <div class="card-footer bg-white border-top border-light py-3 px-4 d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
+                <div class="small text-muted">
+                    Hiển thị <strong class="text-dark">@(((currentPage - 1) * pageSize) + 1)</strong>
+                    đến <strong class="text-dark">@(Math.Min(currentPage * pageSize, payrollRecords.Count))</strong>
+                    trong tổng số <strong class="text-dark">@payrollRecords.Count</strong> nhân sự
+                </div>
+
+                <div class="d-flex align-items-center gap-2">
+                    <span class="small text-muted me-1">Số dòng:</span>
+                    <select class="form-select form-select-sm" style="width: auto; border-radius: 8px;" value="@pageSize" @onchange="OnPageSizeChanged">
+                        <option value="5">5 / trang</option>
+                        <option value="10">10 / trang</option>
+                        <option value="20">20 / trang</option>
+                        <option value="50">50 / trang</option>
+                    </select>
+
+                    <ul class="pagination pagination-sm mb-0 ms-2 pagination-custom">
+                        <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                            <button class="page-link" @onclick="() => SetPage(1)" title="Trang đầu">«</button>
+                        </li>
+                        <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                            <button class="page-link" @onclick="() => SetPage(currentPage - 1)" title="Trang trước">‹</button>
+                        </li>
+
+                        @for (int i = 1; i <= totalPages; i++)
+                        {
+                            var pageNum = i;
+                            if (pageNum == 1 || pageNum == totalPages || (pageNum >= currentPage - 1 && pageNum <= currentPage + 1))
+                            {
+                                <li class="page-item @(currentPage == pageNum ? "active" : "")">
+                                    <button class="page-link" @onclick="() => SetPage(pageNum)">@pageNum</button>
+                                </li>
+                            }
+                            else if (pageNum == currentPage - 2 || pageNum == currentPage + 2)
+                            {
+                                <li class="page-item disabled"><span class="page-link">...</span></li>
+                            }
+                        }
+
+                        <li class="page-item @(currentPage >= totalPages ? "disabled" : "")">
+                            <button class="page-link" @onclick="() => SetPage(currentPage + 1)" title="Trang kế">›</button>
+                        </li>
+                        <li class="page-item @(currentPage >= totalPages ? "disabled" : "")">
+                            <button class="page-link" @onclick="() => SetPage(totalPages)" title="Trang cuối">»</button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .pagination-custom .page-link {
+        border-radius: 8px;
+        margin: 0 2px;
+        border: 1px solid #e2e8f0;
+        color: #334155;
+        font-size: 0.85rem;
+        padding: 5px 12px;
+    }
+    .pagination-custom .page-item.active .page-link {
+        background-color: #059669;
+        border-color: #059669;
+        color: white;
+        font-weight: 600;
+        box-shadow: 0 2px 6px rgba(5, 150, 105, 0.35);
+    }
+</style>
+
+@code {
+    private IReadOnlyList<PayrollManagementItemDto> payrollRecords = [];
+    private bool isLoading = true;
+    private bool isCalculating = false;
+    private string? successMessage;
+    private string? errorMessage;
+
+    private short selectedMonth = (short)DateTime.Today.Month;
+    private short selectedYear = (short)DateTime.Today.Year;
+
+    private int currentPage = 1;
+    private int pageSize = 10;
+    private int totalPages => Math.Max(1, (int)Math.Ceiling((double)payrollRecords.Count / pageSize));
+    private IEnumerable<PayrollManagementItemDto> pagedPayrollRecords => payrollRecords.Skip((currentPage - 1) * pageSize).Take(pageSize);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPayrollRecordsAsync();
+    }
+
+    private async Task LoadPayrollRecordsAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+        try
+        {
+            payrollRecords = await PayrollManagementApiClient.GetAllPayslipsAsync(selectedMonth, selectedYear);
+            if (currentPage > totalPages)
+            {
+                currentPage = 1;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Lỗi khi tải danh sách bảng lương: " + ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task RunPayrollCalculationAsync()
+    {
+        isCalculating = true;
+        errorMessage = null;
+        successMessage = null;
+        try
+        {
+            var count = await PayrollManagementApiClient.CalculatePayrollAsync(selectedMonth, selectedYear);
+            successMessage = $"✓ Tính toán thành công! Đã chốt và cập nhật bảng lương cho {count} nhân sự trong Tháng {selectedMonth}/{selectedYear}.";
+            await LoadPayrollRecordsAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Không thể chạy tính lương: " + ex.Message;
+        }
+        finally
+        {
+            isCalculating = false;
+        }
+    }
+
+    private void SetPage(int page)
+    {
+        if (page >= 1 && page <= totalPages)
+        {
+            currentPage = page;
+        }
+    }
+
+    private void OnPageSizeChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var size) && size > 0)
+        {
+            pageSize = size;
+            currentPage = 1;
+        }
+    }
+
+    private static string FormatVnd(decimal amount) =>
+        amount == 0 ? "0 VNĐ" : $"{amount:#,##0} VNĐ";
+}
