@@ -391,6 +391,94 @@
         }
     </div>
 
+    <!-- Modal Chỉnh sửa đơn nghỉ phép (Chỉ áp dụng khi Chờ duyệt) -->
+    @if (editingRequest != null)
+    {
+        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px); z-index: 1050;">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+                    <div class="modal-header border-bottom py-3 px-4" style="background-color: #f8fafc; border-top-left-radius: 20px; border-top-right-radius: 20px;">
+                        <div>
+                            <h5 class="modal-title fw-bold text-dark mb-0">✏️ Chỉnh sửa đơn nghỉ phép</h5>
+                            <small class="text-muted">Đơn nộp lúc @editingRequest.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm") · Trạng thái: Chờ duyệt</small>
+                        </div>
+                        <button type="button" class="btn-close" @onclick="CloseEditModal" disabled="@isSavingEdit"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        @if (!string.IsNullOrWhiteSpace(editErrorMessage))
+                        {
+                            <div class="alert alert-danger py-2 small mb-3">@editErrorMessage</div>
+                        }
+
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label small fw-semibold text-secondary">Loại đơn <span class="text-danger">*</span></label>
+                                <select class="form-select fw-medium" @bind="editModel.LeaveType" @bind:after="RecalculateEditDays">
+                                    <option value="@LeaveTypes.Annual">🏖️ Nghỉ phép năm (Hưởng 100% lương, trừ vào 12 ngày phép)</option>
+                                    <option value="@LeaveTypes.Sick">🩺 Nghỉ ốm đau (Không trừ phép năm, BHXH chi trả theo chế độ)</option>
+                                    <option value="@LeaveTypes.Maternity">👶 Nghỉ thai sản (Theo chế độ Luật BHXH quy định)</option>
+                                    <option value="@LeaveTypes.Resignation">🚪 Nghỉ việc / Thôi việc (Báo trước ngày làm việc cuối cùng)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold text-secondary">
+                                    @(editModel.LeaveType == LeaveTypes.Resignation ? "Ngày làm việc cuối cùng *" : "Từ ngày *")
+                                </label>
+                                <input type="date" class="form-control" @bind="editModel.StartDate" @bind:after="RecalculateEditDays" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold text-secondary">Đến ngày *</label>
+                                <input type="date" class="form-control" @bind="editModel.EndDate" @bind:after="RecalculateEditDays" disabled="@(editModel.LeaveType == LeaveTypes.Resignation)" />
+                            </div>
+                            <div class="col-12">
+                                <div class="p-2.5 rounded-3 d-flex justify-content-between align-items-center" style="background-color: #f0fdf4; border: 1px solid #bbf7d0;">
+                                    <span class="small text-secondary">Số ngày nghỉ dự tính (không tính Chủ Nhật):</span>
+                                    <span class="badge bg-success fs-6 px-3 py-1">@editDaysCount.ToString("0.#") ngày</span>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small fw-semibold text-secondary">Lý do xin nghỉ / Nội dung <span class="text-danger">*</span></label>
+                                <textarea class="form-control" rows="3" @bind="editModel.Reason" placeholder="Nhập lý do chi tiết..."></textarea>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label small fw-semibold text-secondary d-flex align-items-center gap-1">
+                                    <span>📎</span> Tệp đính kèm / Giấy tờ minh chứng (Tùy chọn)
+                                </label>
+                                @if (!string.IsNullOrEmpty(editModel.AttachmentFileName))
+                                {
+                                    <div class="d-flex align-items-center justify-content-between p-2 rounded border mb-2 bg-light">
+                                        <div class="small text-dark fw-medium text-truncate me-2">
+                                            📄 @editModel.AttachmentFileName
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" @onclick="RemoveEditFile" title="Gỡ tệp">
+                                            ✕ Gỡ tệp
+                                        </button>
+                                    </div>
+                                }
+                                <InputFile class="form-control form-control-sm" OnChange="HandleEditFileUpload" accept=".png,.jpg,.jpeg,.pdf" />
+                                @if (isUploadingEditFile)
+                                {
+                                    <div class="small text-muted mt-1">Đang tải tệp lên...</div>
+                                }
+                                else if (!string.IsNullOrEmpty(editFileUploadMessage))
+                                {
+                                    <div class="small text-success mt-1">@editFileUploadMessage</div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-top py-2 px-4 bg-light" style="border-bottom-left-radius: 20px; border-bottom-right-radius: 20px;">
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-4" @onclick="CloseEditModal" disabled="@isSavingEdit">
+                            Hủy bỏ
+                        </button>
+                        <button type="button" class="btn btn-sm btn-success rounded-pill px-4" @onclick="SaveEditRequestAsync" disabled="@(isSavingEdit || isUploadingEditFile)">
+                            @(isSavingEdit ? "Đang lưu..." : "💾 Lưu thay đổi")
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
 </div>
 
 <style>
@@ -428,11 +516,6 @@
     private int leaveTotalPages => Math.Max(1, (int)Math.Ceiling((double)requests.Count / leavePageSize));
     private IEnumerable<LeaveRequestDto> pagedRequests => requests.Skip((leaveCurrentPage - 1) * leavePageSize).Take(leavePageSize);
 
-    private int approvalCurrentPage = 1;
-    private int approvalPageSize = 5;
-    private int approvalTotalPages => Math.Max(1, (int)Math.Ceiling((double)pendingApprovals.Count / approvalPageSize));
-    private IEnumerable<PendingLeaveApprovalDto> pagedApprovals => pendingApprovals.Skip((approvalCurrentPage - 1) * approvalPageSize).Take(approvalPageSize);
-
     private void SetLeavePage(int page)
     {
         if (page >= 1 && page <= leaveTotalPages)
@@ -447,23 +530,6 @@
         {
             leavePageSize = size;
             leaveCurrentPage = 1;
-        }
-    }
-
-    private void SetApprovalPage(int page)
-    {
-        if (page >= 1 && page <= approvalTotalPages)
-        {
-            approvalCurrentPage = page;
-        }
-    }
-
-    private void OnApprovalPageSizeChanged(ChangeEventArgs e)
-    {
-        if (int.TryParse(e.Value?.ToString(), out var size) && size > 0)
-        {
-            approvalPageSize = size;
-            approvalCurrentPage = 1;
         }
     }
 
@@ -483,6 +549,40 @@
         formModel.EndDate = DateOnly.FromDateTime(DateTime.Today.AddDays(1));
         RecalculateDays();
         await LoadDataAsync();
+    }
+
+    private async Task HandleFileUpload(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file is null) return;
+        if (file.Size > 15 * 1024 * 1024)
+        {
+            errorMessage = "Dung lượng tệp không được vượt quá 15MB.";
+            return;
+        }
+
+        isUploadingFile = true;
+        errorMessage = null;
+        uploadFileMessage = null;
+
+        try
+        {
+            var result = await FileApiClient.UploadFileAsync(file, "Leave");
+            if (result is not null)
+            {
+                formModel.AttachmentFileId = result.Id;
+                formModel.AttachmentFileName = result.FileName;
+                uploadFileMessage = $"✓ Đã tải lên: {result.FileName}";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Lỗi khi tải tệp: " + ex.Message;
+        }
+        finally
+        {
+            isUploadingFile = false;
+        }
     }
 
 

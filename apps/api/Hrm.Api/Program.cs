@@ -142,7 +142,7 @@ builder.Services
 
 var app = builder.Build();
 
-if (app.Configuration.GetValue<bool>("Database:InitializeAuthSupportSchema"))
+if (app.Configuration.GetValue<bool>("Database:InitializeAuthSupportSchema", true))
 {
     await using var scope = app.Services.CreateAsyncScope();
     var authInitializer = scope.ServiceProvider.GetService<IAuthDatabaseInitializer>();

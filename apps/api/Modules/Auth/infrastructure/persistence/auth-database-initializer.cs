@@ -69,6 +69,29 @@ public sealed class AuthDatabaseInitializer(AuthDbContext dbContext) : IAuthData
             );
             CREATE INDEX IF NOT EXISTS ix_user_active_sessions_last_seen_at ON user_active_sessions(last_seen_at);
 
+            -- Bổ sung các cột hồ sơ nhân viên nếu chưa tồn tại
+            ALTER TABLE employees ADD COLUMN IF NOT EXISTS dob date;
+            ALTER TABLE employees ADD COLUMN IF NOT EXISTS gender varchar(20);
+            ALTER TABLE employees ADD COLUMN IF NOT EXISTS phone varchar(50);
+            ALTER TABLE employees ADD COLUMN IF NOT EXISTS email varchar(255);
+            ALTER TABLE employees ADD COLUMN IF NOT EXISTS address text;
+            ALTER TABLE employees ADD COLUMN IF NOT EXISTS education_level varchar(100);
+            ALTER TABLE employees ADD COLUMN IF NOT EXISTS base_salary numeric(15,2) DEFAULT 0;
+            ALTER TABLE employees ADD COLUMN IF NOT EXISTS join_date date;
+            ALTER TABLE employees ADD COLUMN IF NOT EXISTS hire_date date;
+            ALTER TABLE employees ADD COLUMN IF NOT EXISTS status varchar(50) DEFAULT 'ACTIVE';
+            ALTER TABLE employees ADD COLUMN IF NOT EXISTS created_at timestamp with time zone DEFAULT now();
+
+            UPDATE employees SET hire_date = COALESCE(join_date, CURRENT_DATE) WHERE hire_date IS NULL;
+            UPDATE employees SET join_date = COALESCE(hire_date, CURRENT_DATE) WHERE join_date IS NULL;
+
+            ALTER TABLE departments ADD COLUMN IF NOT EXISTS dept_code varchar(50);
+
+            ALTER TABLE positions ADD COLUMN IF NOT EXISTS position_code varchar(50);
+            ALTER TABLE positions ADD COLUMN IF NOT EXISTS title varchar(255);
+            ALTER TABLE positions ADD COLUMN IF NOT EXISTS allowance_rate numeric(5,2) DEFAULT 1.0;
+            UPDATE positions SET title = position_name WHERE title IS NULL;
+
             -- Bổ sung danh mục chức danh chuẩn cho các phòng ban nếu chưa có
             INSERT INTO positions (position_id, position_code, position_name, title, allowance_rate)
             VALUES
