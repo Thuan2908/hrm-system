@@ -34,6 +34,17 @@ public sealed class AttendanceDatabaseInitializer(AttendanceDbContext dbContext)
 
             CREATE INDEX IF NOT EXISTS ix_time_attendances_work_date
                 ON time_attendances(work_date);
+
+            DO $$
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1 FROM pg_constraint WHERE conname = 'fk_timeattendances_employees'
+                ) THEN
+                    ALTER TABLE time_attendances
+                    ADD CONSTRAINT fk_timeattendances_employees
+                    FOREIGN KEY (emp_id) REFERENCES employees(emp_id) ON DELETE RESTRICT;
+                END IF;
+            END $$;
             """, cancellationToken);
 
         // Đảm bảo quyền attendance.self.write tồn tại trong bảng permissions

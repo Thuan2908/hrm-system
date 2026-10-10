@@ -1,4 +1,5 @@
 using Hrm.Contracts;
+using Hrm.Modules.Auth.Contracts;
 using Hrm.Modules.Auth.Infrastructure.Persistence;
 using Hrm.Modules.Leave.Domain;
 using Hrm.Modules.Leave.Infrastructure.Persistence;
@@ -22,6 +23,7 @@ public interface ILeaveService
 public sealed class LeaveService(
     LeaveDbContext dbContext,
     AuthDbContext authDbContext,
+    IEmployeeAccessRevoker accessRevoker,
     TimeProvider timeProvider) : ILeaveService
 {
     private const decimal StandardAnnualLeaveDays = 12.0m;
@@ -341,6 +343,8 @@ public sealed class LeaveService(
                 emp.Status = "RESIGNED";
                 await authDbContext.SaveChangesAsync(cancellationToken);
             }
+
+            await accessRevoker.RevokeAsync(request.EmployeeId, actorUserId, cancellationToken);
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);

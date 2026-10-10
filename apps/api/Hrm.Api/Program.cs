@@ -68,7 +68,19 @@ builder.Services.AddAuthorization(options =>
     {
         var expanded = PermissionCodes.ExpandWithAliases([permission]);
         options.AddPolicy(permission, policy => policy.RequireAssertion(context =>
-            context.User.IsInRole("ADMIN") || expanded.Any(p => context.User.HasClaim("permission", p))));
+        {
+            if (context.User.IsInRole("ADMIN")) return true;
+            if (expanded.Any(p => context.User.HasClaim("permission", p))) return true;
+
+            // Quyền Quản lý & Thêm mới (Write) mặc nhiên bao gồm quyền Đọc danh bạ (Read)
+            if (permission == PermissionCodes.EmployeeRead &&
+                (context.User.HasClaim("permission", PermissionCodes.EmployeeWrite) || context.User.HasClaim("permission", "EMP_EDIT")))
+            {
+                return true;
+            }
+
+            return false;
+        }));
     }
 });
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
@@ -139,6 +151,18 @@ if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("Databas
         await authInitializer.InitializeAsync(CancellationToken.None);
     }
 
+    var employeesInitializer = scope.ServiceProvider.GetService<Hrm.Modules.Employees.Infrastructure.Persistence.IEmployeesDatabaseInitializer>();
+    if (employeesInitializer is not null)
+    {
+        await employeesInitializer.InitializeAsync(CancellationToken.None);
+    }
+
+    var filesInitializer = scope.ServiceProvider.GetService<Hrm.Modules.Files.Infrastructure.Persistence.IFilesDatabaseInitializer>();
+    if (filesInitializer is not null)
+    {
+        await filesInitializer.InitializeAsync(CancellationToken.None);
+    }
+
     var attendanceInitializer = scope.ServiceProvider.GetService<Hrm.Modules.Attendance.Infrastructure.Persistence.IAttendanceDatabaseInitializer>();
     if (attendanceInitializer is not null)
     {
@@ -155,12 +179,6 @@ if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("Databas
     if (payrollInitializer is not null)
     {
         await payrollInitializer.InitializeAsync(CancellationToken.None);
-    }
-
-    var filesInitializer = scope.ServiceProvider.GetService<Hrm.Modules.Files.Infrastructure.Persistence.IFilesDatabaseInitializer>();
-    if (filesInitializer is not null)
-    {
-        await filesInitializer.InitializeAsync(CancellationToken.None);
     }
 }
 

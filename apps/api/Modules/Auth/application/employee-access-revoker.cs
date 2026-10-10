@@ -45,6 +45,14 @@ public sealed class EmployeeAccessRevoker(
             token.RevokedAt = now;
         }
 
+        var activeSessions = await dbContext.ActiveSessions
+            .Where(session => session.UserId == user.Id)
+            .ToArrayAsync(cancellationToken);
+        if (activeSessions.Length > 0)
+        {
+            dbContext.ActiveSessions.RemoveRange(activeSessions);
+        }
+
         dbContext.AuditLogs.Add(new AuditLogEntry
         {
             Id = Guid.NewGuid(),

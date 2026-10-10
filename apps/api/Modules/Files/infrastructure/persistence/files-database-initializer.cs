@@ -37,6 +37,17 @@ public sealed class FilesDatabaseInitializer(FilesDbContext dbContext) : IFilesD
 
             CREATE INDEX IF NOT EXISTS ix_file_attachments_created_at
                 ON file_attachments(created_at);
+
+            DO $$
+            BEGIN
+                IF NOT EXISTS (
+                    SELECT 1 FROM pg_constraint WHERE conname = 'fk_fileattachments_users'
+                ) THEN
+                    ALTER TABLE file_attachments
+                    ADD CONSTRAINT fk_fileattachments_users
+                    FOREIGN KEY (uploaded_by_user_id) REFERENCES users(user_id) ON DELETE RESTRICT;
+                END IF;
+            END $$;
             """, cancellationToken);
 
         await transaction.CommitAsync(cancellationToken);

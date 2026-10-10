@@ -57,6 +57,38 @@ public sealed class LeaveDatabaseInitializer(LeaveDbContext dbContext) : ILeaveD
             ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS attachment_file_name text NULL;
             ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS approved_by_user_id bigint NULL;
             ALTER TABLE leave_requests ADD COLUMN IF NOT EXISTS approved_at timestamp with time zone NULL;
+
+            DO $$
+            BEGIN
+                -- 1. FK tới employees
+                IF NOT EXISTS (
+                    SELECT 1 FROM pg_constraint WHERE conname = 'fk_leaverequests_employees'
+                ) THEN
+                    ALTER TABLE leave_requests
+                    ADD CONSTRAINT fk_leaverequests_employees
+                    FOREIGN KEY (emp_id) REFERENCES employees(emp_id) ON DELETE RESTRICT;
+                END IF;
+
+                -- 2. FK tới users (người duyệt)
+                IF NOT EXISTS (
+                    SELECT 1 FROM pg_constraint WHERE conname = 'fk_leaverequests_approved_by_user'
+                ) THEN
+                    ALTER TABLE leave_requests
+                    ADD CONSTRAINT fk_leaverequests_approved_by_user
+                    FOREIGN KEY (approved_by_user_id) REFERENCES users(user_id) ON DELETE SET NULL;
+                END IF;
+
+                -- 3. FK tới file_attachments (file đính kèm)
+                IF NOT EXISTS (
+                    SELECT 1 FROM pg_constraint WHERE conname = 'fk_leaverequests_file_attachments'
+                ) AND EXISTS (
+                    SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'file_attachments'
+                ) THEN
+                    ALTER TABLE leave_requests
+                    ADD CONSTRAINT fk_leaverequests_file_attachments
+                    FOREIGN KEY (attachment_file_id) REFERENCES file_attachments(id) ON DELETE SET NULL;
+                END IF;
+            END $$;
             """, cancellationToken);
 
         // Đảm bảo quyền leave.self.create tồn tại trong bảng permissions
