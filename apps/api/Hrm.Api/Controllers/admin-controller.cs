@@ -8,7 +8,6 @@ namespace Hrm.Api.Controllers;
 
 [ApiController]
 [Route("api/v1/admin")]
-[Authorize(Roles = "ADMIN")]
 public sealed class AdminController(IAdminService adminService) : ControllerBase
 {
     [HttpGet("users")]

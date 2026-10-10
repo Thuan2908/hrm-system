@@ -7,10 +7,8 @@ public static class PermissionCodes
     public const string EmployeeTransfer = "employee.transfer";
     public const string EmployeeOffboard = "employee.offboard";
     public const string AttendanceSelfWrite = "attendance.self.write";
-    public const string AttendanceTeamApprove = "attendance.team.approve";
     public const string LeaveSelfCreate = "leave.self.create";
-    public const string LeaveTeamApprove = "leave.team.approve";
-    public const string LeaveHrApprove = "leave.hr.approve";
+    public const string LeaveApprove = "leave.approve";
     public const string PayrollRun = "payroll.run";
     public const string PayrollFinalize = "payroll.finalize";
     public const string PayrollSelfRead = "payroll.self.read";
@@ -24,8 +22,8 @@ public static class PermissionCodes
     public static IReadOnlyList<string> All { get; } =
     [
         EmployeeRead, EmployeeWrite, EmployeeTransfer, EmployeeOffboard,
-        AttendanceSelfWrite, AttendanceTeamApprove,
-        LeaveSelfCreate, LeaveTeamApprove, LeaveHrApprove,
+        AttendanceSelfWrite,
+        LeaveSelfCreate, LeaveApprove,
         PayrollRun, PayrollFinalize, PayrollSelfRead, ReportRead,
         AdminUserRead, AdminUserSearch, AdminUserManage, AdminRbacManage, AuditRead
     ];
@@ -33,10 +31,8 @@ public static class PermissionCodes
     public static IReadOnlyList<PermissionDefinition> Catalog { get; } =
     [
         new(AttendanceSelfWrite, "Chấm công vào/ra cá nhân", "Chấm công", "Cho phép nhân viên tự điểm danh vào/ra ca làm việc hàng ngày", ["ATT_CHECKIN", "attendance.write"]),
-        new(AttendanceTeamApprove, "Duyệt chấm công nhóm", "Chấm công", "Theo dõi và xác nhận dữ liệu chấm công của các thành viên trong nhóm", ["ATT_APPROVE"]),
         new(LeaveSelfCreate, "Tạo đơn xin nghỉ phép", "Nghỉ phép", "Tạo và gửi yêu cầu xin nghỉ phép, nghỉ ốm, nghỉ bù", ["LEAVE_REQUEST", "leave.create"]),
-        new(LeaveTeamApprove, "Duyệt đơn nghỉ phép nhóm", "Nghỉ phép", "Trưởng nhóm / Quản lý xét duyệt đơn nghỉ của nhân viên", ["LEAVE_APPROVE"]),
-        new(LeaveHrApprove, "Duyệt phép cấp HR", "Nghỉ phép", "Bộ phận Nhân sự phê duyệt chính thức và cập nhật phép năm", ["LEAVE_HR_APPROVE"]),
+        new(LeaveApprove, "Duyệt đơn nghỉ phép", "Nghỉ phép", "Trưởng nhóm / Quản lý / HR xét duyệt đơn nghỉ của nhân viên", ["LEAVE_APPROVE", "leave.team.approve", "leave.hr.approve"]),
         new(PayrollSelfRead, "Xem phiếu lương cá nhân", "Tiền lương", "Xem chi tiết bảng lương, các khoản phụ cấp và khấu trừ cá nhân", ["PAYROLL_VIEW", "payroll.read"]),
         new(PayrollRun, "Tính & Chốt bảng lương", "Tiền lương", "Tổng hợp công và tính lương cho nhân viên toàn đơn vị", ["PAYROLL_MANAGE"]),
         new(PayrollFinalize, "Duyệt chi lương chính thức", "Tiền lương", "Khóa sổ bảng lương và xuất phiếu chi trả", ["PAYROLL_FINALIZE"]),
