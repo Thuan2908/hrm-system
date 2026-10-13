@@ -1285,10 +1285,18 @@ code {
 /* --------------------------------------------------------------------------
    Pagination & Page Size Controls (Chuẩn hóa chọn dòng & phân trang)
    -------------------------------------------------------------------------- */
+.emp-page-size-label,
+.card-footer span.text-muted {
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+}
+
 .emp-page-size-select,
 .card-footer select.form-select,
 .card-footer .form-select-sm {
     min-width: 120px !important;
+    width: auto !important;
+    flex-shrink: 0 !important;
     padding-top: 0.35rem !important;
     padding-bottom: 0.35rem !important;
     padding-left: 0.75rem !important;
