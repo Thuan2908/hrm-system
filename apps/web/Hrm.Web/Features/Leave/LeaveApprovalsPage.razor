@@ -6,27 +6,26 @@
 <PageTitle>Duyệt đơn nghỉ phép - Saigon Retail</PageTitle>
 
 <div class="container-fluid px-0">
-    <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #0f172a 0%, #334155 100%); color: white; border-radius: 18px; box-shadow: 0 12px 30px rgba(15, 23, 42, 0.25) !important;">
-        <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-            <div>
-                <span class="badge text-white mb-2 px-3 py-1" style="background-color: #3b82f6; font-size: 0.85rem; border-radius: 20px;">
-                    ● QUẢN LÝ & DUYỆT ĐƠN
-                </span>
-                <h1 class="h3 fw-bold mb-1 text-white">Duyệt Đơn Xin Nghỉ Phép</h1>
-                <p class="mb-0 text-white-50">Phê duyệt hoặc từ chối các yêu cầu nghỉ phép của nhân sự trong bộ phận.</p>
+    <div class="emp-page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+        <div>
+            <div class="emp-page-header-subtitle d-flex align-items-center gap-2">
+                <i class="bi bi-clipboard2-check text-primary"></i>
+                <span>QUẢN LÝ &amp; DUYỆT ĐƠN</span>
             </div>
-            <div class="d-flex align-items-center gap-2">
-                <button class="btn btn-outline-light rounded-pill px-4 py-2" @onclick="LoadPendingApprovalsAsync" disabled="@isLoadingApprovals">
-                    ↻ Làm mới
-                </button>
-            </div>
+            <h1 class="emp-page-header-title">Duyệt Đơn Xin Nghỉ Phép</h1>
+            <p class="emp-page-header-desc">Phê duyệt hoặc từ chối các yêu cầu nghỉ phép của nhân sự trong bộ phận.</p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn emp-btn-secondary" @onclick="LoadPendingApprovalsAsync" disabled="@isLoadingApprovals">
+                <i class="bi bi-arrow-clockwise me-1"></i> Làm mới
+            </button>
         </div>
     </div>
 
     @if (!string.IsNullOrWhiteSpace(successMessage))
     {
         <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm d-flex align-items-center gap-2 mb-4" role="alert" style="border-radius: 12px; background-color: #ecfdf5; color: #065f46;">
-            <span style="font-size: 1.25rem;">✓</span>
+            <i class="bi bi-check-circle-fill fs-5 text-success"></i>
             <div>@successMessage</div>
             <button type="button" class="btn-close ms-auto" @onclick="() => successMessage = null"></button>
         </div>
@@ -35,7 +34,7 @@
     @if (!string.IsNullOrWhiteSpace(errorMessage))
     {
         <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm d-flex align-items-center gap-2 mb-4" role="alert" style="border-radius: 12px;">
-            <span style="font-size: 1.25rem;">⚠</span>
+            <i class="bi bi-exclamation-triangle-fill fs-5 text-danger"></i>
             <div>@errorMessage</div>
             <button type="button" class="btn-close ms-auto" @onclick="() => errorMessage = null"></button>
         </div>
@@ -45,16 +44,17 @@
         <Authorized Context="authCtx">
             @if (authCtx.User.IsInRole("ADMIN") || authCtx.User.HasClaim("permission", PermissionCodes.LeaveApprove) || authCtx.User.HasClaim("permission", "LEAVE_APPROVE"))
             {
-                <div class="card border-0 shadow-sm" style="border-radius: 16px;">
+                <div class="card emp-card">
                     <div class="card-header bg-white border-bottom border-light py-3 px-4 d-flex justify-content-between align-items-center">
-                        <div>
-                            <strong class="text-dark fs-5">✍️ DANH SÁCH ĐƠN NGHỈ PHÉP CHỜ DUYỆT</strong>
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-list-check text-primary fs-5"></i>
+                            <strong class="text-dark fs-6 text-uppercase fw-bold" style="letter-spacing: 0.5px;">Danh Sách Đơn Nghỉ Phép Chờ Duyệt</strong>
                         </div>
-                        <span class="badge bg-warning text-dark border border-warning-subtle">@(pendingApprovals.Count) đơn chờ duyệt</span>
+                        <span class="emp-badge emp-badge-warning">@(pendingApprovals.Count) đơn chờ duyệt</span>
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0">
+                            <table class="table emp-table align-middle mb-0">
                                 <thead class="table-light text-secondary small">
                                     <tr>
                                         <th class="ps-4">NHÂN VIÊN</th>
@@ -71,7 +71,7 @@
                                     {
                                         <tr>
                                             <td colspan="7" class="text-center py-5 text-muted">
-                                                <div class="mb-2" style="font-size: 2rem;">🎉</div>
+                                                <i class="bi bi-inbox fs-1 text-muted d-block mb-2"></i>
                                                 Hiện tại không có đơn xin nghỉ phép nào đang chờ duyệt.
                                             </td>
                                         </tr>
@@ -82,35 +82,37 @@
                                         {
                                             <tr>
                                                 <td class="ps-4">
-                                                    <strong>@p.EmployeeName</strong>
+                                                    <strong class="text-dark">@p.EmployeeName</strong>
                                                     <div class="small text-muted font-monospace">@p.EmployeeCode</div>
                                                 </td>
-                                                <td><span class="badge bg-light text-dark border">@p.DepartmentName</span></td>
+                                                <td><span class="emp-badge emp-badge-neutral">@p.DepartmentName</span></td>
                                                 <td>
-                                                    <div class="small font-monospace">
+                                                    <div class="small font-monospace tabular-nums">
                                                         @p.StartDate.ToString("dd/MM/yyyy") - @p.EndDate.ToString("dd/MM/yyyy")
                                                     </div>
                                                 </td>
                                                 <td>
-                                                    <span class="badge bg-success-subtle text-success">@p.DaysCount.ToString("0.#") ngày</span>
+                                                    <span class="emp-badge emp-badge-success tabular-nums">@p.DaysCount.ToString("0.#") ngày</span>
                                                 </td>
                                                 <td class="small text-muted" style="max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="@p.Reason">
                                                     @p.Reason
                                                 </td>
-                                                <td class="small text-muted">
+                                                <td class="small text-muted tabular-nums">
                                                     @p.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
                                                 </td>
                                                 <td class="pe-4 text-end">
-                                                    <button class="btn btn-sm btn-success rounded-pill px-3 me-1 shadow-sm"
-                                                            disabled="@isProcessingApproval"
-                                                            @onclick="() => ApproveLeaveAsync(p.Id)">
-                                                        ✓ Duyệt
-                                                    </button>
-                                                    <button class="btn btn-sm btn-outline-danger rounded-pill px-3 shadow-sm"
-                                                            disabled="@isProcessingApproval"
-                                                            @onclick="() => RejectLeaveAsync(p.Id)">
-                                                        ✕ Từ chối
-                                                    </button>
+                                                    <div class="emp-actions-group justify-content-end">
+                                                        <button class="emp-action-btn emp-action-btn-primary"
+                                                                disabled="@isProcessingApproval"
+                                                                @onclick="() => ApproveLeaveAsync(p.Id)">
+                                                            <i class="bi bi-check-lg"></i> Duyệt
+                                                        </button>
+                                                        <button class="emp-action-btn emp-action-btn-danger"
+                                                                disabled="@isProcessingApproval"
+                                                                @onclick="() => RejectLeaveAsync(p.Id)">
+                                                            <i class="bi bi-x-lg"></i> Từ chối
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         }

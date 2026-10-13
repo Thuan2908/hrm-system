@@ -3,40 +3,78 @@
 @attribute [Authorize]
 @inject AdminApiClient AdminApiClient
 
-<PageTitle>Nhật ký kiểm toán</PageTitle>
+<PageTitle>Nhật ký kiểm toán - Saigon Retail</PageTitle>
 
-<h1 class="h3">Nhật ký kiểm toán</h1>
-<p class="text-secondary">Theo dõi thay đổi tài khoản, trạng thái và phân quyền hệ thống.</p>
-
-<section class="card border-0 shadow-sm mt-4">
-    <div class="card-body">
-        <div class="row g-2 mb-3">
-            <div class="col-md-6"><input class="form-control" placeholder="Lọc theo action" @bind="action" @bind:event="oninput" /></div>
-            <div class="col-md-2"><button class="btn btn-outline-primary w-100" @onclick="SearchAsync">Lọc</button></div>
+<div class="emp-page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+    <div>
+        <div class="emp-page-header-subtitle d-flex align-items-center gap-2">
+            <i class="bi bi-shield-check text-primary"></i>
+            <span>HỆ THỐNG AN NINH &amp; KIỂM TOÁN</span>
         </div>
+        <h1 class="emp-page-header-title">Nhật ký kiểm toán hệ thống</h1>
+        <p class="emp-page-header-desc">Theo dõi toàn bộ thay đổi tài khoản, trạng thái nhân sự và lịch sử phân quyền vận hành.</p>
+    </div>
+</div>
+
+<section class="card emp-card">
+    <div class="card-body p-4">
+        <div class="row g-2 mb-4">
+            <div class="col-md-6 col-lg-5">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                    <input class="form-control border-start-0 ps-0 shadow-none" placeholder="Lọc theo hành động (Action)..." @bind="action" @bind:event="oninput" />
+                </div>
+            </div>
+            <div class="col-md-3 col-lg-2">
+                <button class="btn emp-btn-primary w-100" @onclick="SearchAsync">
+                    <i class="bi bi-funnel me-1"></i> Lọc dữ liệu
+                </button>
+            </div>
+        </div>
+
         @if (entries.Count == 0)
         {
-            <p class="text-secondary mb-0">Không có dữ liệu audit.</p>
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-shield-slash fs-1 text-muted d-block mb-2"></i>
+                <p class="mb-0">Không có dữ liệu nhật ký kiểm toán phù hợp.</p>
+            </div>
         }
         else
         {
             <div class="table-responsive">
-                <table class="table align-middle">
-                    <thead><tr><th>Thời gian</th><th>Action</th><th>Đối tượng</th><th>Actor</th></tr></thead>
+                <table class="table emp-table align-middle mb-3">
+                    <thead class="table-light text-secondary small text-uppercase">
+                        <tr>
+                            <th class="ps-4">Thời gian</th>
+                            <th>Hành động (Action)</th>
+                            <th>Đối tượng</th>
+                            <th class="pe-4">Tài khoản thực hiện</th>
+                        </tr>
+                    </thead>
                     <tbody>
                     @foreach (var entry in entries)
                     {
                         <tr>
-                            <td>@entry.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss")</td>
-                            <td><code>@entry.Action</code></td>
-                            <td>@entry.EntityType · @entry.EntityId</td>
-                            <td>@(entry.ActorUserId?.ToString() ?? "system")</td>
+                            <td class="ps-4 font-monospace tabular-nums">@entry.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss")</td>
+                            <td><span class="emp-badge emp-badge-neutral font-monospace">@entry.Action</span></td>
+                            <td class="font-monospace">@entry.EntityType · @entry.EntityId</td>
+                            <td class="pe-4">@(entry.ActorUserId?.ToString() ?? "system")</td>
                         </tr>
                     }
                     </tbody>
                 </table>
             </div>
-            <div class="d-flex justify-content-between"><span class="text-secondary">Tổng: @total</span><div><button class="btn btn-sm btn-outline-secondary me-2" disabled="@(page <= 1)" @onclick="PreviousPageAsync">Trước</button><button class="btn btn-sm btn-outline-secondary" disabled="@(page * 20 >= total)" @onclick="NextPageAsync">Sau</button></div></div>
+            <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                <span class="text-muted small">Tổng số: <strong class="text-dark tabular-nums">@total</strong> bản ghi</span>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm emp-btn-secondary" disabled="@(page <= 1)" @onclick="PreviousPageAsync">
+                        <i class="bi bi-chevron-left me-1"></i> Trước
+                    </button>
+                    <button class="btn btn-sm emp-btn-secondary" disabled="@(page * 20 >= total)" @onclick="NextPageAsync">
+                        Sau <i class="bi bi-chevron-right ms-1"></i>
+                    </button>
+                </div>
+            </div>
         }
     </div>
 </section>

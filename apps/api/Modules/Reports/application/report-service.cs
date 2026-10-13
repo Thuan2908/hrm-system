@@ -34,9 +34,14 @@ public sealed class ReportService(ReportsDbContext dbContext) : IReportService
 
         if (monthlyPayroll == 0m)
         {
-            monthlyPayroll = await dbContext.Employees
+            var activeEmpIds = await dbContext.Employees
                 .Where(e => e.Status == "WORKING" || e.Status == "ACTIVE")
-                .SumAsync(e => (decimal?)e.BaseSalary, cancellationToken) ?? 0m;
+                .Select(e => e.Id)
+                .ToListAsync(cancellationToken);
+
+            monthlyPayroll = await dbContext.SalaryProfiles
+                .Where(sp => sp.IsCurrent && activeEmpIds.Contains(sp.EmployeeId))
+                .SumAsync(sp => (decimal?)sp.BaseSalary, cancellationToken) ?? 0m;
         }
 
         var pendingLeaveRequests = await dbContext.Leaves
@@ -78,7 +83,7 @@ public sealed class ReportService(ReportsDbContext dbContext) : IReportService
             .ToList();
 
         var educations = employees
-            .GroupBy(e => string.IsNullOrWhiteSpace(e.EducationLevel) ? "Khác" : e.EducationLevel)
+            .GroupBy(e => EducationLevelCatalog.ToDisplayName(e.EducationLevel))
             .Select(g => new EducationDistributionDto(
                 g.Key,
                 g.Count(),
@@ -113,7 +118,7 @@ public sealed class ReportService(ReportsDbContext dbContext) : IReportService
 
         foreach (var emp in employees)
         {
-            var startDate = emp.JoinDate ?? emp.HireDate ?? DateOnly.FromDateTime(emp.CreatedAt.UtcDateTime);
+            var startDate = emp.HireDate ?? DateOnly.FromDateTime(emp.CreatedAt.UtcDateTime);
             var days = Math.Max(0, today.DayNumber - startDate.DayNumber);
             totalDays += days;
 
@@ -140,10 +145,10 @@ public sealed class ReportService(ReportsDbContext dbContext) : IReportService
 
         var groups = new List<TenureGroupDto>
         {
-            new("Dưới 1 năm", lessThan1Year, total > 0 ? Math.Round((decimal)lessThan1Year * 100 / total, 1) : 0m),
+            new("< 1 năm", lessThan1Year, total > 0 ? Math.Round((decimal)lessThan1Year * 100 / total, 1) : 0m),
             new("1 - 3 năm", oneToThreeYears, total > 0 ? Math.Round((decimal)oneToThreeYears * 100 / total, 1) : 0m),
             new("3 - 5 năm", threeToFiveYears, total > 0 ? Math.Round((decimal)threeToFiveYears * 100 / total, 1) : 0m),
-            new("Trên 5 năm", over5Years, total > 0 ? Math.Round((decimal)over5Years * 100 / total, 1) : 0m)
+            new("> 5 năm", over5Years, total > 0 ? Math.Round((decimal)over5Years * 100 / total, 1) : 0m)
         };
 
         return new TenureReportDto(avgTenureYears, groups);
@@ -198,49 +203,58 @@ public sealed class ReportService(ReportsDbContext dbContext) : IReportService
         var insurance = payrolls.Sum(p => p.BhxhDeduct);
         var tax = payrolls.Sum(p => p.TaxDeduct);
 
-        // Salary range analysis
+        // Lấy danh sách lương từ SalaryProfiles hiện hành (chuẩn 3NF) hoặc fallback sang bảng employees
+        var activeEmpIds = await dbContext.Employees
+            .AsNoTracking()
+            .Where(e => e.Status == "WORKING" || e.Status == "ACTIVE")
+            .Select(e => e.Id)
+            .ToListAsync(cancellationToken);
+
+        var currentProfiles = await dbContext.SalaryProfiles
+            .AsNoTracking()
+            .Where(sp => sp.IsCurrent && activeEmpIds.Contains(sp.EmployeeId))
+            .ToListAsync(cancellationToken);
+
+        var salaries = currentProfiles.Select(sp => sp.BaseSalary).ToList();
+
+        // Phân bổ mức lương theo 3 nhóm chuẩn đề bài: Dưới 10tr, 10-20tr, Trên 20tr
         var rangeUnder10 = 0;
         var range10To20 = 0;
-        var range20To30 = 0;
-        var rangeOver30 = 0;
-
-        var salaries = payrolls.Count > 0
-            ? payrolls.Select(p => p.GrossSalary).ToList()
-            : await dbContext.Employees
-                .Where(e => (e.Status == "WORKING" || e.Status == "ACTIVE") && e.BaseSalary.HasValue)
-                .Select(e => e.BaseSalary!.Value)
-                .ToListAsync(cancellationToken);
+        var rangeOver20 = 0;
 
         var totalSalaryCount = salaries.Count;
         foreach (var s in salaries)
         {
             if (s < 10_000_000m) rangeUnder10++;
-            else if (s < 20_000_000m) range10To20++;
-            else if (s < 30_000_000m) range20To30++;
-            else rangeOver30++;
+            else if (s <= 20_000_000m) range10To20++;
+            else rangeOver20++;
         }
 
         var ranges = new List<SalaryRangeDto>
         {
             new("Dưới 10 triệu", rangeUnder10, totalSalaryCount > 0 ? Math.Round((decimal)rangeUnder10 * 100 / totalSalaryCount, 1) : 0m),
             new("10 - 20 triệu", range10To20, totalSalaryCount > 0 ? Math.Round((decimal)range10To20 * 100 / totalSalaryCount, 1) : 0m),
-            new("20 - 30 triệu", range20To30, totalSalaryCount > 0 ? Math.Round((decimal)range20To30 * 100 / totalSalaryCount, 1) : 0m),
-            new("Trên 30 triệu", rangeOver30, totalSalaryCount > 0 ? Math.Round((decimal)rangeOver30 * 100 / totalSalaryCount, 1) : 0m)
+            new("Trên 20 triệu", rangeOver20, totalSalaryCount > 0 ? Math.Round((decimal)rangeOver20 * 100 / totalSalaryCount, 1) : 0m)
         };
 
         // Department breakdown
         var empWithDept = await dbContext.Employees
             .AsNoTracking()
             .Include(e => e.Department)
-            .Where(e => (e.Status == "WORKING" || e.Status == "ACTIVE") && e.BaseSalary.HasValue)
+            .Where(e => (e.Status == "WORKING" || e.Status == "ACTIVE"))
             .ToListAsync(cancellationToken);
+
+        var salaryMap = currentProfiles.ToDictionary(sp => sp.EmployeeId, sp => sp.BaseSalary);
 
         var deptSalaries = empWithDept
             .GroupBy(e => e.Department?.Name ?? "Chưa phân bổ")
-            .Select(g => new DepartmentSalaryDto(
-                g.Key,
-                Math.Round(g.Average(e => e.BaseSalary ?? 0m), 0),
-                g.Sum(e => e.BaseSalary ?? 0m)))
+            .Select(g =>
+            {
+                var deptSals = g.Select(e => salaryMap.TryGetValue(e.Id, out var sal) ? sal : 0m).ToList();
+                var avg = deptSals.Count > 0 ? Math.Round(deptSals.Average(), 0) : 0m;
+                var totalSal = deptSals.Sum();
+                return new DepartmentSalaryDto(g.Key, avg, totalSal);
+            })
             .OrderByDescending(d => d.TotalSalary)
             .ToList();
 

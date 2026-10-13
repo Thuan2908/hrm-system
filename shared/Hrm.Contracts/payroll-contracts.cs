@@ -9,7 +9,11 @@ public sealed record PayslipSummaryDto(
     decimal GrossSalary,
     decimal BhxhDeduct,
     decimal TaxDeduct,
-    decimal NetSalary
+    decimal NetSalary,
+    decimal StandardWorkingDays = 22m,
+    decimal SnapshotBaseSalary = 0m,
+    decimal SnapshotPositionAllowance = 0m,
+    decimal SnapshotOtherAllowance = 0m
 );
 
 public sealed record PayslipDetailDto(
@@ -21,7 +25,11 @@ public sealed record PayslipDetailDto(
     decimal GrossSalary,
     decimal BhxhDeduct,
     decimal TaxDeduct,
-    decimal NetSalary
+    decimal NetSalary,
+    decimal StandardWorkingDays = 22m,
+    decimal SnapshotBaseSalary = 0m,
+    decimal SnapshotPositionAllowance = 0m,
+    decimal SnapshotOtherAllowance = 0m
 );
 
 public sealed record CalculatePayrollRequest(
@@ -41,7 +49,11 @@ public sealed record PayrollManagementItemDto(
     decimal GrossSalary,
     decimal BhxhDeduct,
     decimal TaxDeduct,
-    decimal NetSalary
+    decimal NetSalary,
+    decimal StandardWorkingDays = 22m,
+    decimal SnapshotBaseSalary = 0m,
+    decimal SnapshotPositionAllowance = 0m,
+    decimal SnapshotOtherAllowance = 0m
 );
 
 public sealed record YearlyPayrollSummaryDto(

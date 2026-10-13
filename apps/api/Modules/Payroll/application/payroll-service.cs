@@ -37,7 +37,11 @@ public sealed class PayrollService(
                 p.GrossSalary,
                 p.BhxhDeduct,
                 p.TaxDeduct,
-                p.NetSalary))
+                p.NetSalary,
+                p.StandardWorkingDays,
+                p.SnapshotBaseSalary,
+                p.SnapshotPositionAllowance,
+                p.SnapshotOtherAllowance))
             .ToListAsync(cancellationToken);
 
         return list;
@@ -64,7 +68,11 @@ public sealed class PayrollService(
             GrossSalary: payroll.GrossSalary,
             BhxhDeduct: payroll.BhxhDeduct,
             TaxDeduct: payroll.TaxDeduct,
-            NetSalary: payroll.NetSalary
+            NetSalary: payroll.NetSalary,
+            StandardWorkingDays: payroll.StandardWorkingDays,
+            SnapshotBaseSalary: payroll.SnapshotBaseSalary,
+            SnapshotPositionAllowance: payroll.SnapshotPositionAllowance,
+            SnapshotOtherAllowance: payroll.SnapshotOtherAllowance
         );
     }
 
@@ -84,7 +92,11 @@ public sealed class PayrollService(
                 p.GrossSalary,
                 p.BhxhDeduct,
                 p.TaxDeduct,
-                p.NetSalary))
+                p.NetSalary,
+                p.StandardWorkingDays,
+                p.SnapshotBaseSalary,
+                p.SnapshotPositionAllowance,
+                p.SnapshotOtherAllowance))
             .ToListAsync(cancellationToken);
 
         var totalDays = list.Sum(p => p.ActualDays);
@@ -149,7 +161,11 @@ public sealed class PayrollService(
                 p.GrossSalary,
                 p.BhxhDeduct,
                 p.TaxDeduct,
-                p.NetSalary
+                p.NetSalary,
+                p.StandardWorkingDays,
+                p.SnapshotBaseSalary,
+                p.SnapshotPositionAllowance,
+                p.SnapshotOtherAllowance
             );
         }).ToList();
     }
@@ -158,6 +174,7 @@ public sealed class PayrollService(
     {
         var employees = await authDbContext.Employees.AsNoTracking()
             .Include(e => e.Position)
+            .Include(e => e.SalaryProfiles)
             .Where(e => e.Status == "ACTIVE")
             .ToListAsync(cancellationToken);
 
@@ -165,6 +182,8 @@ public sealed class PayrollService(
 
         var maxId = await dbContext.Payrolls.MaxAsync(p => (long?)p.Id, cancellationToken) ?? 0;
         var processedCount = 0;
+        var periodStart = new DateOnly(year, month, 1);
+        var periodEnd = new DateOnly(year, month, DateTime.DaysInMonth(year, month));
 
         foreach (var emp in employees)
         {
@@ -172,13 +191,19 @@ public sealed class PayrollService(
                 .FirstOrDefaultAsync(p => p.EmployeeId == emp.Id && p.MonthPeriod == month && p.YearPeriod == year, cancellationToken);
 
             const decimal standardDays = 22m;
-            // Lấy lương cơ bản của nhân viên (mặc định 10 triệu nếu chưa set)
-            var baseSalary = emp.BaseSalary > 0 ? emp.BaseSalary : 10_000_000m;
-            // Tính phụ cấp chức vụ từ allowance_rate trong bảng positions
-            var allowanceRate = emp.Position?.AllowanceRate ?? 0m;
-            var positionAllowance = Math.Round(baseSalary * allowanceRate, 0);
 
-            var gross = baseSalary + positionAllowance;
+            // Tìm hồ sơ lương áp dụng cho kỳ tính lương (chuẩn 3NF temporal lookup)
+            var activeProfile = emp.SalaryProfiles
+                .Where(sp => sp.EffectiveDate <= periodEnd && (sp.ExpiryDate == null || sp.ExpiryDate >= periodStart))
+                .OrderByDescending(sp => sp.IsCurrent)
+                .ThenByDescending(sp => sp.EffectiveDate)
+                .FirstOrDefault();
+
+            var baseSalary = activeProfile?.BaseSalary ?? 10_000_000m;
+            var posAllowance = activeProfile?.PositionAllowance ?? 0m;
+            var otherAllowance = activeProfile?.OtherAllowance ?? 0m;
+
+            var gross = baseSalary + posAllowance + otherAllowance;
             var bhxh = Math.Round(gross * 0.105m, 0); // 10.5% BHXH, BHYT, BHTN
             var taxable = Math.Max(0m, gross - 11_000_000m - bhxh); // Giảm trừ gia cảnh 11tr
             var tax = Math.Round(taxable * 0.05m, 0);
@@ -187,6 +212,10 @@ public sealed class PayrollService(
             if (existing is not null)
             {
                 existing.ActualDays = standardDays;
+                existing.StandardWorkingDays = standardDays;
+                existing.SnapshotBaseSalary = baseSalary;
+                existing.SnapshotPositionAllowance = posAllowance;
+                existing.SnapshotOtherAllowance = otherAllowance;
                 existing.GrossSalary = gross;
                 existing.BhxhDeduct = bhxh;
                 existing.TaxDeduct = tax;
@@ -202,6 +231,10 @@ public sealed class PayrollService(
                     MonthPeriod = month,
                     YearPeriod = year,
                     ActualDays = standardDays,
+                    StandardWorkingDays = standardDays,
+                    SnapshotBaseSalary = baseSalary,
+                    SnapshotPositionAllowance = posAllowance,
+                    SnapshotOtherAllowance = otherAllowance,
                     GrossSalary = gross,
                     BhxhDeduct = bhxh,
                     TaxDeduct = tax,

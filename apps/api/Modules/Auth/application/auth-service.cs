@@ -220,11 +220,14 @@ public sealed class AuthService(
                 .ThenInclude(e => e.Department)
             .Include(u => u.Employee)
                 .ThenInclude(e => e.Position)
+            .Include(u => u.Employee)
+                .ThenInclude(e => e.SalaryProfiles)
             .Include(u => u.Role)
             .SingleOrDefaultAsync(u => u.Id == userId, cancellationToken)
             ?? throw new DomainException("AUTH_USER_NOT_FOUND", "Không tìm thấy tài khoản.");
 
         var emp = user.Employee;
+        var currentSalary = emp.SalaryProfiles.FirstOrDefault(sp => sp.IsCurrent)?.BaseSalary ?? 0m;
         return new EmployeeProfileDto(
             EmployeeId: emp.Id,
             EmployeeCode: emp.Code,
@@ -233,15 +236,14 @@ public sealed class AuthService(
             RoleName: user.Role.Name,
             DepartmentName: emp.Department.Name,
             DepartmentCode: emp.Department.Code,
-            PositionName: emp.Position?.Name ?? emp.Position?.Title,
+            PositionName: emp.Position?.Name,
             DateOfBirth: emp.DateOfBirth,
             Gender: emp.Gender,
             Phone: emp.Phone,
             Email: emp.Email,
             Address: emp.Address,
             EducationLevel: emp.EducationLevel,
-            BaseSalary: emp.BaseSalary,
-            JoinDate: emp.JoinDate,
+            BaseSalary: currentSalary,
             HireDate: emp.HireDate,
             Status: emp.Status,
             CreatedAt: emp.CreatedAt);

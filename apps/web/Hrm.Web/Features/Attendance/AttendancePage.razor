@@ -9,26 +9,26 @@
 <PageTitle>Điểm danh &amp; Chấm công - Saigon Retail</PageTitle>
 
 <div class="container-fluid px-0">
-    <!-- Header Hero Banner -->
-    <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #052e22 0%, #065f46 50%, #047857 100%); color: white; border-radius: 18px; box-shadow: 0 12px 30px rgba(5, 46, 34, 0.25) !important;">
-        <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+    <!-- Minimal Header -->
+    <div class="emp-page-header mb-4">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
             <div>
-                <span class="badge text-white mb-2 px-3 py-1" style="background-color: #10b981; font-size: 0.85rem; border-radius: 20px; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);">
-                    ● HỆ THỐNG ĐIỂM DANH THỜI GIAN THỰC
-                </span>
-                <h1 class="h3 fw-bold mb-1 text-white">Chấm công hàng ngày</h1>
-                <p class="mb-0 text-white-50">Ghi nhận giờ vào và giờ ra ca làm việc chính xác, minh bạch và tức thì.</p>
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="emp-badge-tag">● HỆ THỐNG ĐIỂM DANH THỜI GIAN THỰC</span>
+                </div>
+                <h1 class="emp-page-title mb-1">Chấm công hàng ngày</h1>
+                <p class="emp-page-desc mb-0">Ghi nhận giờ vào và giờ ra ca làm việc chính xác, minh bạch và tức thì.</p>
             </div>
-            <div class="text-md-end p-3 px-4 rounded-4" style="background: rgba(0, 0, 0, 0.28); border: 1px solid rgba(52, 211, 153, 0.25);">
-                <div class="text-uppercase small" style="color: #6ee7b7; letter-spacing: 1px;">@currentDateStr</div>
-                <div class="display-6 fw-bold text-white font-monospace">@currentTimeStr</div>
+            <div class="text-md-end p-3 px-4 rounded-3" style="background: var(--emp-surface-subtle); border: 1px solid var(--emp-border);">
+                <div class="text-uppercase small fw-bold" style="color: var(--emp-primary); letter-spacing: 0.05em;">@currentDateStr</div>
+                <div class="display-6 fw-bold font-monospace tabular-nums" style="color: var(--emp-heading);">@currentTimeStr</div>
             </div>
         </div>
     </div>
 
     @if (!string.IsNullOrWhiteSpace(successMessage))
     {
-        <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm d-flex align-items-center gap-2 mb-4" role="alert" style="border-radius: 14px; background-color: #ecfdf5; color: #065f46;">
+        <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm d-flex align-items-center gap-2 mb-4" role="alert" style="border-radius: 10px; background-color: var(--emp-success-bg); color: var(--emp-success); border: 1px solid #BBF7D0 !important;">
             <span style="font-size: 1.25rem;">✓</span>
             <div>@successMessage</div>
             <button type="button" class="btn-close ms-auto" @onclick="() => successMessage = null"></button>
@@ -37,7 +37,7 @@
 
     @if (!string.IsNullOrWhiteSpace(errorMessage))
     {
-        <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm d-flex align-items-center gap-2 mb-4" role="alert" style="border-radius: 14px;">
+        <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm d-flex align-items-center gap-2 mb-4" role="alert" style="border-radius: 10px; background-color: var(--emp-danger-bg); color: var(--emp-danger); border: 1px solid #FECACA !important;">
             <span style="font-size: 1.25rem;">⚠</span>
             <div>@errorMessage</div>
             <button type="button" class="btn-close ms-auto" @onclick="() => errorMessage = null"></button>
@@ -48,33 +48,33 @@
     <div class="row g-4 mb-4">
         <!-- Col 1: Action Check-in / Check-out Hub -->
         <div class="col-12 col-lg-7">
-            <div class="card border-0 shadow-sm h-100" style="border-radius: 18px;">
+            <div class="card border-0 shadow-sm h-100" style="border-radius: 14px;">
                 <div class="card-header bg-white border-bottom border-light py-3 px-4 d-flex justify-content-between align-items-center">
                     <div class="d-flex align-items-center gap-2">
-                        <span class="fs-5">📋</span>
-                        <span class="fw-bold text-dark" style="letter-spacing: 0.3px;">ĐIỂM DANH &amp; VÀO CA</span>
+                        <i class="bi bi-clock-history" style="color: var(--emp-primary);"></i>
+                        <span class="fw-bold" style="color: var(--emp-heading); font-size: 0.88rem; letter-spacing: 0.05em;">ĐIỂM DANH &amp; VÀO CA</span>
                     </div>
                     @if (isLoading)
                     {
-                        <span class="spinner-border spinner-border-sm text-success" role="status"></span>
+                        <span class="spinner-border spinner-border-sm" style="color: var(--emp-primary);" role="status"></span>
                     }
                     else if (todayStatus is not null)
                     {
                         @if (!todayStatus.HasCheckedIn)
                         {
-                            <span class="badge px-3 py-2 rounded-pill fw-semibold" style="background-color: #f1f5f9; color: #475569; border: 1px solid #cbd5e1;">
+                            <span class="emp-badge-neutral">
                                 <span class="me-1">⚪</span> Chưa vào ca
                             </span>
                         }
                         else if (todayStatus.HasCheckedIn && !todayStatus.HasCheckedOut)
                         {
-                            <span class="badge px-3 py-2 rounded-pill fw-semibold" style="background-color: #ecfdf5; color: #059669; border: 1px solid #a7f3d0;">
-                                <span class="spinner-grow spinner-grow-sm me-1 text-success" style="width: 8px; height: 8px;" role="status"></span> Đang trong ca làm việc
+                            <span class="emp-badge-warning">
+                                <span class="spinner-grow spinner-grow-sm me-1" style="width: 8px; height: 8px;" role="status"></span> Đang trong ca làm việc
                             </span>
                         }
                         else
                         {
-                            <span class="badge px-3 py-2 rounded-pill fw-semibold" style="background-color: #f0fdf4; color: #16a34a; border: 1px solid #86efac;">
+                            <span class="emp-badge-success">
                                 ✓ Đã hoàn thành ca
                             </span>
                         }
@@ -438,7 +438,7 @@
 
                 <div class="d-flex align-items-center gap-2">
                     <span class="small text-muted me-1">Số dòng:</span>
-                    <select class="form-select form-select-sm" style="width: auto; border-radius: 8px;" value="@historyPageSize" @onchange="OnHistoryPageSizeChanged">
+                    <select class="form-select form-select-sm emp-page-size-select" value="@historyPageSize" @onchange="OnHistoryPageSizeChanged">
                         <option value="5">5 / trang</option>
                         <option value="10">10 / trang</option>
                         <option value="15">15 / trang</option>
@@ -692,21 +692,6 @@
         font-size: 1.25rem;
         font-weight: 700;
         line-height: 1.2;
-    }
-    .pagination-custom .page-link {
-        border-radius: 8px;
-        margin: 0 2px;
-        border: 1px solid #e2e8f0;
-        color: #334155;
-        font-size: 0.85rem;
-        padding: 5px 12px;
-    }
-    .pagination-custom .page-item.active .page-link {
-        background-color: #059669;
-        border-color: #059669;
-        color: white;
-        font-weight: 600;
-        box-shadow: 0 2px 6px rgba(5, 150, 105, 0.35);
     }
 </style>
 

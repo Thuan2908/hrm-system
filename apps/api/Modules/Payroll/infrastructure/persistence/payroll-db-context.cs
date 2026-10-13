@@ -18,6 +18,10 @@ public sealed class PayrollDbContext(DbContextOptions<PayrollDbContext> options)
             entity.Property(e => e.MonthPeriod).HasColumnName("month_period").IsRequired();
             entity.Property(e => e.YearPeriod).HasColumnName("year_period").IsRequired();
             entity.Property(e => e.ActualDays).HasColumnName("actual_days").HasPrecision(5, 2).IsRequired();
+            entity.Property(e => e.StandardWorkingDays).HasColumnName("standard_working_days").HasPrecision(4, 1).IsRequired();
+            entity.Property(e => e.SnapshotBaseSalary).HasColumnName("snapshot_base_salary").HasPrecision(18, 2).IsRequired();
+            entity.Property(e => e.SnapshotPositionAllowance).HasColumnName("snapshot_position_allowance").HasPrecision(18, 2).IsRequired();
+            entity.Property(e => e.SnapshotOtherAllowance).HasColumnName("snapshot_other_allowance").HasPrecision(18, 2).IsRequired();
             entity.Property(e => e.GrossSalary).HasColumnName("gross_sal").HasPrecision(18, 2).IsRequired();
             entity.Property(e => e.BhxhDeduct).HasColumnName("bhxh_deduct").HasPrecision(18, 2).IsRequired();
             entity.Property(e => e.TaxDeduct).HasColumnName("tax_deduct").HasPrecision(18, 2).IsRequired();

@@ -7,8 +7,12 @@
     <title>Saigon Retail Management System</title>
     <base href="/" />
     <link rel="preload" id="webassembly" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="css/app.css?v=4" />
+    <link rel="stylesheet" href="lib/bootstrap-icons/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="css/app.css?v=12" />
     <link rel="icon" type="image/png" href="favicon.png" />
     <link href="Hrm.Web.styles.css" rel="stylesheet" />
     <script type="importmap"></script>
@@ -29,6 +33,21 @@
         <span class="dismiss">🗙</span>
     </div>
     <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                const baseUri = document.baseURI || '/';
+                const swUrl = new URL('service-worker.js', baseUri).href;
+                navigator.serviceWorker.register(swUrl)
+                    .then(reg => {
+                        console.log('[HRM] Service Worker registered for offline fallback, scope:', reg.scope);
+                    })
+                    .catch(err => {
+                        console.warn('[HRM] Service Worker registration failed:', err);
+                    });
+            });
+        }
+    </script>
 </body>
 
 </html>
