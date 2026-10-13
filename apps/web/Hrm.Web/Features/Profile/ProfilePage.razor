@@ -8,30 +8,29 @@
 
 <div class="container-fluid px-0">
     <!-- Header Hero Banner -->
-    <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #052e22 0%, #065f46 50%, #047857 100%); color: white; border-radius: 18px; box-shadow: 0 12px 30px rgba(5, 46, 34, 0.25) !important;">
-        <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-            <div>
-                <span class="badge text-white mb-2 px-3 py-1" style="background-color: #10b981; font-size: 0.85rem; border-radius: 20px; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);">
-                    ● HỒ SƠ NHÂN SỰ TOÀN DIỆN
-                </span>
-                <h1 class="h3 fw-bold mb-1 text-white">Hồ sơ cá nhân &amp; Thông tin nhân viên</h1>
-                <p class="mb-0 text-white-50">Xem đầy đủ các trường thông tin lưu trữ trong hệ thống, cập nhật thông tin liên lạc và quản lý mật khẩu.</p>
+    <div class="emp-page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+        <div>
+            <div class="emp-page-header-subtitle d-flex align-items-center gap-2">
+                <i class="bi bi-person-lines-fill text-primary"></i>
+                <span>HỒ SƠ NHÂN SỰ TOÀN DIỆN</span>
             </div>
-            <div class="d-flex align-items-center gap-2">
-                <button class="btn btn-outline-light rounded-pill px-3 py-2 btn-sm" @onclick="LoadProfileAsync" title="Làm mới dữ liệu">
-                    <span>↻</span> Tải lại
-                </button>
-                <a class="btn btn-light rounded-pill px-4 py-2 fw-semibold text-success shadow-sm" href="employee/attendance">
-                    ← Về Chấm công
-                </a>
-            </div>
+            <h1 class="emp-page-header-title">Hồ sơ cá nhân &amp; Thông tin nhân viên</h1>
+            <p class="emp-page-header-desc">Xem đầy đủ thông tin lưu trữ trong hệ thống, cập nhật thông tin liên lạc và quản lý mật khẩu.</p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn emp-btn-secondary" @onclick="LoadProfileAsync" title="Làm mới dữ liệu">
+                <i class="bi bi-arrow-clockwise me-1"></i> Tải lại
+            </button>
+            <a class="btn emp-btn-primary" href="employee/attendance">
+                <i class="bi bi-arrow-left me-1"></i> Về Chấm công
+            </a>
         </div>
     </div>
 
     @if (!string.IsNullOrWhiteSpace(globalSuccessMessage))
     {
-        <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm d-flex align-items-center gap-2 mb-4" role="alert" style="border-radius: 14px; background-color: #ecfdf5; color: #065f46;">
-            <span style="font-size: 1.25rem;">✓</span>
+        <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm d-flex align-items-center gap-2 mb-4" role="alert" style="border-radius: 12px; background-color: #ecfdf5; color: #065f46;">
+            <i class="bi bi-check-circle-fill fs-5 text-success"></i>
             <div class="fw-medium">@globalSuccessMessage</div>
             <button type="button" class="btn-close ms-auto" @onclick="() => globalSuccessMessage = null"></button>
         </div>
@@ -39,8 +38,8 @@
 
     @if (!string.IsNullOrWhiteSpace(globalErrorMessage))
     {
-        <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm d-flex align-items-center gap-2 mb-4" role="alert" style="border-radius: 14px;">
-            <span style="font-size: 1.25rem;">⚠</span>
+        <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm d-flex align-items-center gap-2 mb-4" role="alert" style="border-radius: 12px;">
+            <i class="bi bi-exclamation-triangle-fill fs-5 text-danger"></i>
             <div class="fw-medium">@globalErrorMessage</div>
             <button type="button" class="btn-close ms-auto" @onclick="() => globalErrorMessage = null"></button>
         </div>
@@ -48,8 +47,8 @@
 
     @if (isLoadingProfile)
     {
-        <div class="card border-0 shadow-sm p-5 text-center my-4" style="border-radius: 18px;">
-            <div class="spinner-border text-success mx-auto mb-3" style="width: 3rem; height: 3rem;" role="status">
+        <div class="card emp-card p-5 text-center my-4">
+            <div class="spinner-border text-primary mx-auto mb-3" style="width: 3rem; height: 3rem;" role="status">
                 <span class="visually-hidden">Đang tải hồ sơ...</span>
             </div>
             <h5 class="text-secondary fw-semibold">Đang tải đầy đủ hồ sơ nhân viên...</h5>
@@ -58,9 +57,12 @@
     }
     else if (profile is null)
     {
-        <div class="card border-0 shadow-sm p-4 text-center text-muted" style="border-radius: 18px;">
-            <p class="mb-2 fs-5">Không tìm thấy thông tin hồ sơ nhân viên.</p>
-            <button class="btn btn-success btn-sm mx-auto rounded-pill px-4" @onclick="LoadProfileAsync">Thử tải lại</button>
+        <div class="card emp-card p-5 text-center text-muted">
+            <i class="bi bi-person-x fs-1 text-muted d-block mb-3"></i>
+            <p class="mb-3 fs-5">Không tìm thấy thông tin hồ sơ nhân viên.</p>
+            <button class="btn emp-btn-primary mx-auto px-4" @onclick="LoadProfileAsync">
+                <i class="bi bi-arrow-clockwise me-1"></i> Thử tải lại
+            </button>
         </div>
     }
     else
@@ -68,10 +70,10 @@
         <div class="row g-4">
             <!-- Cột trái: Thẻ định danh & Tóm tắt nhân sự -->
             <div class="col-12 col-xl-4">
-                <div class="card border-0 shadow-sm text-center p-4 mb-4" style="border-radius: 18px;">
+                <div class="card emp-card text-center p-4 mb-4">
                     <div class="card-body p-2 d-flex flex-column align-items-center">
-                        <div class="mb-3 d-grid place-items-center rounded-circle text-white fw-bold shadow position-relative"
-                             style="width: 6rem; height: 6rem; font-size: 2.4rem; background: linear-gradient(135deg, #10b981 0%, #047857 100%);">
+                        <div class="mb-3 d-grid place-items-center rounded-circle text-white fw-bold shadow-sm position-relative"
+                             style="width: 5.5rem; height: 5.5rem; font-size: 2.2rem; background: linear-gradient(135deg, var(--emp-primary) 0%, var(--emp-primary-hover) 100%);">
                             @GetInitial(profile.FullName)
                             <span class="position-absolute bottom-0 end-0 p-2 bg-success border border-white rounded-circle" title="Tài khoản đang hoạt động">
                                 <span class="visually-hidden">Online</span>
@@ -81,33 +83,33 @@
                         <h4 class="fw-bold text-dark mb-1">@profile.FullName</h4>
                         <div class="text-muted font-monospace small mb-2">@profile.EmployeeCode</div>
 
-                        <div class="d-flex flex-wrap gap-1 justify-content-center mb-3">
-                            <span class="badge bg-light text-dark border px-3 py-1 rounded-pill">
-                                🏢 @profile.DepartmentName
+                        <div class="d-flex flex-wrap gap-2 justify-content-center mb-3">
+                            <span class="emp-badge emp-badge-neutral">
+                                <i class="bi bi-building me-1"></i> @profile.DepartmentName
                             </span>
                             @if (!string.IsNullOrWhiteSpace(profile.PositionName))
                             {
-                                <span class="badge bg-light text-dark border px-3 py-1 rounded-pill">
-                                    💼 @profile.PositionName
+                                <span class="emp-badge emp-badge-neutral">
+                                    <i class="bi bi-briefcase me-1"></i> @profile.PositionName
                                 </span>
                             }
                         </div>
 
                         @if (string.Equals(profile.Status, "ACTIVE", StringComparison.OrdinalIgnoreCase))
                         {
-                            <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill mb-4" style="font-size: 0.85rem;">
+                            <span class="emp-badge emp-badge-success mb-4">
                                 ● Đang làm việc (Active)
                             </span>
                         }
                         else if (string.Equals(profile.Status, "RESIGNED", StringComparison.OrdinalIgnoreCase))
                         {
-                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-2 rounded-pill mb-4" style="font-size: 0.85rem;">
+                            <span class="emp-badge emp-badge-danger mb-4">
                                 ● Đã thôi việc (Resigned)
                             </span>
                         }
                         else
                         {
-                            <span class="badge bg-secondary-subtle text-secondary border px-3 py-2 rounded-pill mb-4" style="font-size: 0.85rem;">
+                            <span class="emp-badge emp-badge-neutral mb-4">
                                 ● @profile.Status
                             </span>
                         }
@@ -123,27 +125,29 @@
                             </div>
                             <div class="d-flex justify-content-between py-2 border-bottom">
                                 <span class="text-muted small">Vai trò hệ thống:</span>
-                                <span class="badge text-white px-2 py-1" style="background-color: #059669;">@profile.RoleName</span>
+                                <span class="emp-badge emp-badge-neutral font-monospace">@profile.RoleName</span>
                             </div>
                             <div class="d-flex justify-content-between py-2 border-bottom">
                                 <span class="text-muted small">Thâm niên công tác:</span>
-                                <strong class="text-dark">@CalculateTenure(profile.JoinDate)</strong>
+                                <strong class="text-dark">@CalculateTenure(profile.HireDate)</strong>
                             </div>
                             <div class="d-flex justify-content-between py-2">
                                 <span class="text-muted small">Ngày lập hồ sơ:</span>
-                                <span class="text-secondary small">@profile.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+                                <span class="text-secondary small tabular-nums">@profile.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Thẻ lương & Đãi ngộ -->
-                <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius: 18px; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-left: 5px solid #10b981 !important;">
+                <div class="card emp-kpi-card p-4 mb-4" style="border-left: 4px solid var(--emp-primary) !important;">
                     <div class="d-flex align-items-center justify-content-between mb-2">
-                        <span class="text-uppercase fw-bold text-success" style="font-size: 0.8rem; letter-spacing: 0.5px;">💰 CHẾ ĐỘ ĐÃI NGỘ</span>
-                        <span class="badge bg-success text-white">Chính thức</span>
+                        <span class="emp-kpi-label d-flex align-items-center gap-2">
+                            <i class="bi bi-cash-stack text-primary"></i> CHẾ ĐỘ ĐÃI NGỘ
+                        </span>
+                        <span class="emp-badge emp-badge-success">Chính thức</span>
                     </div>
-                    <div class="fs-4 fw-bold text-dark mb-1">
+                    <div class="fs-4 fw-bold text-dark mb-1 tabular-nums">
                         @profile.BaseSalary.ToString("#,##0 VNĐ")
                     </div>
                     <small class="text-muted d-block">Mức lương cơ bản thỏa thuận theo hợp đồng lao động.</small>
@@ -155,21 +159,24 @@
                 <div class="d-flex flex-column gap-4">
 
                     <!-- Khối 1: Hiển thị toàn bộ các trường thông tin trong bảng employee -->
-                    <div class="card border-0 shadow-sm" style="border-radius: 18px;">
+                    <div class="card emp-card">
                         <div class="card-header bg-white border-bottom border-light py-3 px-4 d-flex align-items-center justify-content-between">
-                            <div>
-                                <strong class="text-dark fs-5">CHI TIẾT HỒ SƠ NHÂN SỰ TOÀN DIỆN</strong>
-                                <div class="text-muted small">Toàn bộ các trường thông tin được lưu trữ trong bảng dữ liệu nhân viên</div>
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-file-earmark-person text-primary fs-5"></i>
+                                <div>
+                                    <strong class="text-dark fs-6 text-uppercase fw-bold" style="letter-spacing: 0.5px;">Chi Tiết Hồ Sơ Nhân Sự Toàn Diện</strong>
+                                    <div class="text-muted small">Toàn bộ các trường thông tin được lưu trữ trong bảng dữ liệu nhân viên</div>
+                                </div>
                             </div>
-                            <span class="badge border px-3 py-1 rounded-pill" style="background-color: #ecfdf5; color: #047857; border-color: #a7f3d0 !important;">
+                            <span class="emp-badge emp-badge-neutral">
                                 16 Trường dữ liệu
                             </span>
                         </div>
                         <div class="card-body p-4">
                             <!-- Nhóm A: Thông tin công việc & Tổ chức -->
                             <div class="mb-4">
-                                <h6 class="fw-bold text-success text-uppercase mb-3 d-flex align-items-center gap-2" style="font-size: 0.85rem; letter-spacing: 0.5px;">
-                                    <span>🏢</span> THÔNG TIN CÔNG VIỆC &amp; TỔ CHỨC
+                                <h6 class="fw-bold text-primary text-uppercase mb-3 d-flex align-items-center gap-2" style="font-size: 0.85rem; letter-spacing: 0.5px;">
+                                    <i class="bi bi-buildings"></i> THÔNG TIN CÔNG VIỆC &amp; TỔ CHỨC
                                 </h6>
                                 <div class="row g-3">
                                     <div class="col-md-6 col-lg-4">
@@ -198,14 +205,8 @@
                                     </div>
                                     <div class="col-md-6 col-lg-4">
                                         <div class="p-3 bg-light rounded-3 h-100 border">
-                                            <div class="text-muted small mb-1">Ngày tuyển dụng (hire_date)</div>
-                                            <div class="fw-bold text-dark">@(profile.HireDate?.ToString("dd/MM/yyyy") ?? "Chưa cập nhật")</div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6 col-lg-4">
-                                        <div class="p-3 bg-light rounded-3 h-100 border">
-                                            <div class="text-muted small mb-1">Ngày vào làm (join_date)</div>
-                                            <div class="fw-bold text-dark">@(profile.JoinDate?.ToString("dd/MM/yyyy") ?? "Chưa cập nhật")</div>
+                                            <div class="text-muted small mb-1">Ngày tuyển dụng / Bắt đầu (hire_date)</div>
+                                            <div class="fw-bold text-dark tabular-nums">@(profile.HireDate?.ToString("dd/MM/yyyy") ?? "Chưa cập nhật")</div>
                                         </div>
                                     </div>
                                 </div>
@@ -215,14 +216,14 @@
 
                             <!-- Nhóm B: Thông tin cá nhân & Nhân thân -->
                             <div class="mb-4">
-                                <h6 class="fw-bold text-success text-uppercase mb-3 d-flex align-items-center gap-2" style="font-size: 0.85rem; letter-spacing: 0.5px;">
-                                    <span>👤</span> THÔNG TIN CÁ NHÂN &amp; NHÂN THÂN
+                                <h6 class="fw-bold text-primary text-uppercase mb-3 d-flex align-items-center gap-2" style="font-size: 0.85rem; letter-spacing: 0.5px;">
+                                    <i class="bi bi-person-vcard"></i> THÔNG TIN CÁ NHÂN &amp; NHÂN THÂN
                                 </h6>
                                 <div class="row g-3">
                                     <div class="col-md-6 col-lg-4">
                                         <div class="p-3 bg-light rounded-3 h-100 border">
                                             <div class="text-muted small mb-1">Ngày sinh (dob)</div>
-                                            <div class="fw-bold text-dark">@(profile.DateOfBirth?.ToString("dd/MM/yyyy") ?? "Chưa cập nhật")</div>
+                                            <div class="fw-bold text-dark tabular-nums">@(profile.DateOfBirth?.ToString("dd/MM/yyyy") ?? "Chưa cập nhật")</div>
                                         </div>
                                     </div>
                                     <div class="col-md-6 col-lg-4">
@@ -234,7 +235,7 @@
                                     <div class="col-md-6 col-lg-4">
                                         <div class="p-3 bg-light rounded-3 h-100 border">
                                             <div class="text-muted small mb-1">Trình độ học vấn (education_level)</div>
-                                            <div class="fw-bold text-dark">@(profile.EducationLevel ?? "Chưa cập nhật")</div>
+                                            <div class="fw-bold text-dark">@(EducationLevelCatalog.ToDisplayName(profile.EducationLevel))</div>
                                         </div>
                                     </div>
                                 </div>
@@ -244,14 +245,14 @@
 
                             <!-- Nhóm C: Thông tin liên hệ -->
                             <div>
-                                <h6 class="fw-bold text-success text-uppercase mb-3 d-flex align-items-center gap-2" style="font-size: 0.85rem; letter-spacing: 0.5px;">
-                                    <span>📞</span> THÔNG TIN LIÊN HỆ
+                                <h6 class="fw-bold text-primary text-uppercase mb-3 d-flex align-items-center gap-2" style="font-size: 0.85rem; letter-spacing: 0.5px;">
+                                    <i class="bi bi-telephone"></i> THÔNG TIN LIÊN HỆ
                                 </h6>
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <div class="p-3 bg-light rounded-3 h-100 border">
                                             <div class="text-muted small mb-1">Số điện thoại (phone)</div>
-                                            <div class="fw-bold text-dark">@(profile.Phone ?? "Chưa cập nhật")</div>
+                                            <div class="fw-bold text-dark tabular-nums">@(profile.Phone ?? "Chưa cập nhật")</div>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
@@ -272,9 +273,10 @@
                     </div>
 
                     <!-- Khối 2: Form cập nhật thông tin cá nhân -->
-                    <div class="card border-0 shadow-sm" style="border-radius: 18px;">
-                        <div class="card-header bg-white border-bottom border-light py-3 px-4">
-                            <strong class="text-dark fs-5">CHỈNH SỬA &amp; CẬP NHẬT THÔNG TIN LIÊN HỆ</strong>
+                    <div class="card emp-card">
+                        <div class="card-header bg-white border-bottom border-light py-3 px-4 d-flex align-items-center gap-2">
+                            <i class="bi bi-pencil-square text-primary fs-5"></i>
+                            <strong class="text-dark fs-6 text-uppercase fw-bold" style="letter-spacing: 0.5px;">Chỉnh Sửa &amp; Cập Nhật Thông Tin Liên Hệ</strong>
                         </div>
                         <div class="card-body p-4">
                             <EditForm Model="profileModel" OnValidSubmit="HandleUpdateProfileAsync">
@@ -314,8 +316,7 @@
                                     <InputTextArea id="addressInput" class="form-control" rows="2" @bind-Value="profileModel.Address" placeholder="Nhập số nhà, tên đường, phường/xã, quận/huyện..." />
                                 </div>
 
-                                <button type="submit" class="btn text-white fw-bold px-4 py-2 rounded-pill shadow-sm"
-                                        style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);"
+                                <button type="submit" class="btn emp-btn-primary px-4 py-2"
                                         disabled="@isUpdatingProfile">
                                     @if (isUpdatingProfile)
                                     {
@@ -324,7 +325,7 @@
                                     }
                                     else
                                     {
-                                        <span>💾 Lưu thay đổi thông tin cá nhân</span>
+                                        <span><i class="bi bi-floppy me-2"></i> Lưu thay đổi thông tin cá nhân</span>
                                     }
                                 </button>
                             </EditForm>
@@ -332,9 +333,10 @@
                     </div>
 
                     <!-- Khối 3: Đổi mật khẩu bảo mật -->
-                    <div class="card border-0 shadow-sm" style="border-radius: 18px;">
-                        <div class="card-header bg-white border-bottom border-light py-3 px-4">
-                            <strong class="text-dark fs-5">BẢO MẬT &amp; ĐỔI MẬT KHẨU ĐĂNG NHẬP</strong>
+                    <div class="card emp-card">
+                        <div class="card-header bg-white border-bottom border-light py-3 px-4 d-flex align-items-center gap-2">
+                            <i class="bi bi-shield-lock text-primary fs-5"></i>
+                            <strong class="text-dark fs-6 text-uppercase fw-bold" style="letter-spacing: 0.5px;">Bảo Mật &amp; Đổi Mật Khẩu Đăng Nhập</strong>
                         </div>
                         <div class="card-body p-4">
                             <EditForm Model="passwordModel" OnValidSubmit="HandleChangePasswordAsync">
@@ -354,7 +356,7 @@
                                     </div>
                                 </div>
 
-                                <button type="submit" class="btn btn-outline-success fw-bold px-4 py-2 rounded-pill shadow-sm"
+                                <button type="submit" class="btn emp-btn-primary px-4 py-2"
                                         disabled="@isChangingPassword">
                                     @if (isChangingPassword)
                                     {
@@ -363,7 +365,7 @@
                                     }
                                     else
                                     {
-                                        <span>🔑 Cập nhật mật khẩu mới</span>
+                                        <span><i class="bi bi-key me-2"></i> Cập nhật mật khẩu mới</span>
                                     }
                                 </button>
                             </EditForm>
@@ -532,13 +534,13 @@
         _ => gender ?? "Chưa xác định"
     };
 
-    private static string CalculateTenure(DateOnly? joinDate)
+    private static string CalculateTenure(DateOnly? hireDate)
     {
-        if (joinDate is null) return "Chưa cập nhật";
+        if (hireDate is null) return "Chưa cập nhật";
         var today = DateOnly.FromDateTime(DateTime.Today);
-        if (today < joinDate.Value) return "Mới gia nhập";
+        if (today < hireDate.Value) return "Mới gia nhập";
 
-        var months = (today.Year - joinDate.Value.Year) * 12 + today.Month - joinDate.Value.Month;
+        var months = (today.Year - hireDate.Value.Year) * 12 + today.Month - hireDate.Value.Month;
         if (months < 1) return "Dưới 1 tháng";
         if (months < 12) return $"{months} tháng";
 

@@ -31,14 +31,15 @@
                             @foreach (var item in items)
                             {
                                 <NavLink class="emp-nav-link" href="@item.Href" Match="@item.Match">
-                                    <span>@item.Icon</span>@item.Title
+                                    <span class="emp-nav-icon"><i class="@item.Icon"></i></span>
+                                    <span>@item.Title</span>
                                 </NavLink>
                             }
                         }
                     }
                     @if (!anyItems)
                     {
-                        <div class="px-3 py-2 text-muted small text-center" style="color: #6ee7b7 !important;">
+                        <div class="px-3 py-2 text-muted small text-center" style="color: var(--emp-sidebar-text) !important;">
                             Chưa được phân quyền chức năng
                         </div>
                     }
@@ -46,22 +47,23 @@
             </AuthorizeView>
         </nav>
         <button class="emp-logout" @onclick="LogoutAsync">
-            <span>↪</span>Đăng xuất
+            <span class="emp-nav-icon"><i class="bi bi-box-arrow-right"></i></span>
+            <span>Đăng xuất</span>
         </button>
     </aside>
     <main class="emp-main">
         <header class="emp-topbar">
             <div>
                 <span class="emp-topbar-kicker">HRM SYSTEM</span>
-                <strong class="text-dark">Cổng thông tin &amp; Chấm công Nhân viên</strong>
+                <strong style="color: var(--emp-heading); font-size: 1rem;">Cổng thông tin &amp; Chấm công Nhân viên</strong>
             </div>
             <AuthorizeView>
                 <Authorized Context="authContext">
                     <a class="emp-user text-decoration-none" href="employee/profile" title="Bấm vào đây để xem và chỉnh sửa thông tin cá nhân">
                         <span class="emp-avatar">@GetInitial(authContext.User.FindFirst("full_name")?.Value)</span>
                         <span>
-                            <strong class="text-dark">@authContext.User.FindFirst("full_name")?.Value</strong>
-                            <small class="badge bg-success-subtle text-success border border-success-subtle">Nhân viên ✎</small>
+                            <strong style="color: var(--emp-heading);">@authContext.User.FindFirst("full_name")?.Value</strong>
+                            <small class="emp-badge-success">Nhân viên ✎</small>
                         </span>
                     </a>
                 </Authorized>
@@ -136,19 +138,19 @@
     private static readonly IReadOnlyList<EmployeeNavItem> AvailableNavItems =
     [
         // Phân hệ Cá nhân (Self-Service)
-        new("Chấm công", "employee/attendance", "⏱", PermissionCodes.AttendanceSelfWrite, "Nghiệp vụ cá nhân", NavLinkMatch.All),
-        new("Đơn xin nghỉ phép", "employee/leave", "📝", PermissionCodes.LeaveSelfCreate, "Nghiệp vụ cá nhân", NavLinkMatch.All),
-        new("Phiếu lương của tôi", "employee/payslips", "💰", PermissionCodes.PayrollSelfRead, "Nghiệp vụ cá nhân"),
-        new("Hồ sơ của tôi", "employee/profile", "👤", null, "Nghiệp vụ cá nhân"),
+        new("Chấm công", "employee/attendance", "bi bi-clock-history", PermissionCodes.AttendanceSelfWrite, "Nghiệp vụ cá nhân", NavLinkMatch.All),
+        new("Đơn xin nghỉ phép", "employee/leave", "bi bi-calendar2-check", PermissionCodes.LeaveSelfCreate, "Nghiệp vụ cá nhân", NavLinkMatch.All),
+        new("Phiếu lương của tôi", "employee/payslips", "bi bi-wallet2", PermissionCodes.PayrollSelfRead, "Nghiệp vụ cá nhân"),
+        new("Hồ sơ của tôi", "employee/profile", "bi bi-person-badge", null, "Nghiệp vụ cá nhân"),
 
         // Quản lý & Phê duyệt (Management)
-        new("Duyệt đơn nghỉ phép", "employee/leave/approvals", "✍️", PermissionCodes.LeaveApprove, "Quản lý & Duyệt"),
-        new("Tính & Chốt bảng lương", "employee/payslips", "💵", PermissionCodes.PayrollRun, "Quản lý & Duyệt"),
+        new("Duyệt đơn nghỉ phép", "employee/leave/approvals", "bi bi-clipboard-check", PermissionCodes.LeaveApprove, "Quản lý & Duyệt"),
+        new("Tính & Chốt bảng lương", "employee/payroll-management", "bi bi-calculator", PermissionCodes.PayrollRun, "Quản lý & Duyệt"),
 
         // Phân hệ Chuyên môn & Vận hành (khi Admin cấp quyền)
-        new("Tra cứu Nhân sự", "employees", "👥", PermissionCodes.EmployeeRead, "Chuyên môn & Vận hành"),
-        new("Báo cáo & Thống kê", "reports", "📊", PermissionCodes.ReportRead, "Chuyên môn & Vận hành"),
-        new("Nhật ký kiểm toán", "employee/audit", "📜", PermissionCodes.AuditRead, "Hệ thống")
+        new("Tra cứu Nhân sự", "employees", "bi bi-people", PermissionCodes.EmployeeRead, "Chuyên môn & Vận hành"),
+        new("Báo cáo & Thống kê", "reports", "bi bi-bar-chart-line", PermissionCodes.ReportRead, "Chuyên môn & Vận hành"),
+        new("Nhật ký kiểm toán", "employee/audit", "bi bi-shield-check", PermissionCodes.AuditRead, "Hệ thống")
     ];
 
     private static IEnumerable<IGrouping<string, EmployeeNavItem>> GetVisibleNavGroups(System.Security.Claims.ClaimsPrincipal user)
@@ -165,11 +167,11 @@
             {
                 if (hasWrite)
                 {
-                    list.Add(new("Quản lý & Thêm Nhân sự", "employees", "👥", null, "Chuyên môn & Vận hành"));
+                    list.Add(new("Quản lý & Thêm Nhân sự", "employees", "bi bi-people-fill", null, "Chuyên môn & Vận hành"));
                 }
                 else if (hasRead)
                 {
-                    list.Add(new("Tra cứu Danh bạ", "employees", "📖", null, "Chuyên môn & Vận hành"));
+                    list.Add(new("Tra cứu Danh bạ", "employees", "bi bi-journal-text", null, "Chuyên môn & Vận hành"));
                 }
                 continue;
             }

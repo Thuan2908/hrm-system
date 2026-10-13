@@ -47,7 +47,6 @@ public sealed record EmployeeProfileDto(
     string? Address,
     string? EducationLevel,
     decimal BaseSalary,
-    DateOnly? JoinDate,
     DateOnly? HireDate,
     string Status,
     DateTimeOffset CreatedAt);

@@ -57,6 +57,7 @@ public sealed class EmployeeService(
         var query = dbContext.Employees
             .Include(e => e.Department)
             .Include(e => e.Position)
+            .Include(e => e.SalaryProfiles)
             .AsNoTracking()
             .AsQueryable();
 
@@ -99,6 +100,7 @@ public sealed class EmployeeService(
         var employee = await dbContext.Employees
             .Include(e => e.Department)
             .Include(e => e.Position)
+            .Include(e => e.SalaryProfiles)
             .AsNoTracking()
             .FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
 
@@ -191,6 +193,9 @@ public sealed class EmployeeService(
                 : request.Code.Trim();
 
             var now = timeProvider.GetUtcNow();
+            var hireDate = request.HireDate ?? DateOnly.FromDateTime(DateTime.Today);
+            var normalizedEdu = EducationLevelCatalog.Normalize(request.EducationLevel);
+
             var employee = new Employee
             {
                 Id = nextEmpId,
@@ -203,15 +208,28 @@ public sealed class EmployeeService(
                 Phone = string.IsNullOrWhiteSpace(request.Phone) ? null : request.Phone.Trim(),
                 Email = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim(),
                 Address = string.IsNullOrWhiteSpace(request.Address) ? null : request.Address.Trim(),
-                EducationLevel = string.IsNullOrWhiteSpace(request.EducationLevel) ? null : request.EducationLevel.Trim(),
-                BaseSalary = request.BaseSalary,
-                JoinDate = request.JoinDate ?? DateOnly.FromDateTime(DateTime.Today),
-                HireDate = request.HireDate ?? request.JoinDate ?? DateOnly.FromDateTime(DateTime.Today),
+                EducationLevel = normalizedEdu,
+                HireDate = hireDate,
                 Status = "ACTIVE",
                 CreatedAt = now
             };
 
             dbContext.Employees.Add(employee);
+
+            // Ghi nhận hồ sơ lương ban đầu (chuẩn 3NF & lưu vết lịch sử lương)
+            var initialSalaryProfile = new EmployeeSalaryProfile
+            {
+                EmployeeId = employee.Id,
+                BaseSalary = request.BaseSalary,
+                PositionAllowance = 0m,
+                OtherAllowance = 0m,
+                EffectiveDate = hireDate,
+                IsCurrent = true,
+                CreatedAt = now,
+                Note = "Khởi tạo cùng hồ sơ nhân sự"
+            };
+            dbContext.SalaryProfiles.Add(initialSalaryProfile);
+
             await dbContext.SaveChangesAsync(cancellationToken);
 
             var hasCreatedAccount = false;
@@ -253,7 +271,7 @@ public sealed class EmployeeService(
                     employee.Code,
                     employee.FullName,
                     employee.DepartmentId,
-                    employee.BaseSalary,
+                    BaseSalary = request.BaseSalary,
                     CreatedAccount = hasCreatedAccount
                 }),
                 CreatedAt = now
@@ -266,6 +284,7 @@ public sealed class EmployeeService(
             var saved = await dbContext.Employees
                 .Include(e => e.Department)
                 .Include(e => e.Position)
+                .Include(e => e.SalaryProfiles)
                 .FirstAsync(e => e.Id == employee.Id, cancellationToken);
 
             return MapToDto(saved, hasCreatedAccount);
@@ -282,6 +301,7 @@ public sealed class EmployeeService(
         var employee = await dbContext.Employees
             .Include(e => e.Department)
             .Include(e => e.Position)
+            .Include(e => e.SalaryProfiles)
             .FirstOrDefaultAsync(e => e.Id == id, cancellationToken)
             ?? throw new DomainException("EMPLOYEE_NOT_FOUND", "Không tìm thấy nhân viên.");
 
@@ -337,6 +357,40 @@ public sealed class EmployeeService(
         }
 
         var now = timeProvider.GetUtcNow();
+        var normalizedEdu = EducationLevelCatalog.Normalize(request.EducationLevel);
+        var effectiveHireDate = request.HireDate ?? employee.HireDate ?? DateOnly.FromDateTime(DateTime.Today);
+
+        // Lưu vết lịch sử biến động lương nếu mức lương thay đổi (chuẩn 3NF)
+        var currentSalaryProfile = await dbContext.SalaryProfiles
+            .Where(sp => sp.EmployeeId == employee.Id && sp.IsCurrent)
+            .OrderByDescending(sp => sp.EffectiveDate)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (currentSalaryProfile is null || currentSalaryProfile.BaseSalary != request.BaseSalary)
+        {
+            var activeProfiles = await dbContext.SalaryProfiles
+                .Where(sp => sp.EmployeeId == employee.Id && sp.IsCurrent)
+                .ToListAsync(cancellationToken);
+
+            var todayDate = DateOnly.FromDateTime(DateTime.Today);
+            foreach (var p in activeProfiles)
+            {
+                p.IsCurrent = false;
+                p.ExpiryDate = todayDate;
+            }
+
+            dbContext.SalaryProfiles.Add(new EmployeeSalaryProfile
+            {
+                EmployeeId = employee.Id,
+                BaseSalary = request.BaseSalary,
+                PositionAllowance = currentSalaryProfile?.PositionAllowance ?? 0m,
+                OtherAllowance = currentSalaryProfile?.OtherAllowance ?? 0m,
+                EffectiveDate = todayDate,
+                IsCurrent = true,
+                CreatedAt = now,
+                Note = "Cập nhật qua chỉnh sửa hồ sơ nhân sự"
+            });
+        }
 
         employee.FullName = request.FullName.Trim();
         employee.DepartmentId = request.DepartmentId;
@@ -346,10 +400,8 @@ public sealed class EmployeeService(
         employee.Phone = string.IsNullOrWhiteSpace(request.Phone) ? null : request.Phone.Trim();
         employee.Email = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim();
         employee.Address = string.IsNullOrWhiteSpace(request.Address) ? null : request.Address.Trim();
-        employee.EducationLevel = string.IsNullOrWhiteSpace(request.EducationLevel) ? null : request.EducationLevel.Trim();
-        employee.BaseSalary = request.BaseSalary;
-        employee.JoinDate = request.JoinDate;
-        employee.HireDate = request.HireDate;
+        employee.EducationLevel = normalizedEdu;
+        employee.HireDate = effectiveHireDate;
         if (!string.Equals(previousStatus, "RESIGNED", StringComparison.OrdinalIgnoreCase))
         {
             employee.Status = string.IsNullOrWhiteSpace(request.Status) ? "ACTIVE" : request.Status.Trim().ToUpperInvariant();
@@ -366,7 +418,7 @@ public sealed class EmployeeService(
             {
                 employee.FullName,
                 employee.DepartmentId,
-                employee.BaseSalary,
+                BaseSalary = request.BaseSalary,
                 employee.Status
             }),
             CreatedAt = now
@@ -390,6 +442,7 @@ public sealed class EmployeeService(
         var employee = await dbContext.Employees
             .Include(e => e.Department)
             .Include(e => e.Position)
+            .Include(e => e.SalaryProfiles)
             .FirstOrDefaultAsync(e => e.Id == id, cancellationToken)
             ?? throw new DomainException("EMPLOYEE_NOT_FOUND", "Không tìm thấy nhân viên.");
 
@@ -476,12 +529,14 @@ public sealed class EmployeeService(
         return await dbContext.Positions
             .AsNoTracking()
             .OrderBy(p => p.Code)
-            .Select(p => new PositionDto(p.Id, p.Code, p.Name, p.Title, p.AllowanceRate))
+            .Select(p => new PositionDto(p.Id, p.Code, p.Name))
             .ToListAsync(cancellationToken);
     }
 
-    private static EmployeeDto MapToDto(Employee e, bool hasAccount, bool includeSensitiveInfo = true) =>
-        new(
+    private static EmployeeDto MapToDto(Employee e, bool hasAccount, bool includeSensitiveInfo = true)
+    {
+        var currentSalary = e.SalaryProfiles.FirstOrDefault(sp => sp.IsCurrent)?.BaseSalary ?? 0m;
+        return new(
             Id: e.Id,
             Code: e.Code,
             FullName: e.FullName,
@@ -495,10 +550,10 @@ public sealed class EmployeeService(
             Email: e.Email,
             Address: includeSensitiveInfo ? e.Address : null,
             EducationLevel: includeSensitiveInfo ? e.EducationLevel : null,
-            BaseSalary: includeSensitiveInfo ? e.BaseSalary : 0,
-            JoinDate: e.JoinDate,
+            BaseSalary: includeSensitiveInfo ? currentSalary : 0,
             HireDate: includeSensitiveInfo ? e.HireDate : null,
             Status: e.Status,
             HasAccount: includeSensitiveInfo && hasAccount,
             CreatedAt: e.CreatedAt);
+    }
 }

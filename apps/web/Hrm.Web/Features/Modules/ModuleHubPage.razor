@@ -10,55 +10,61 @@
 
 <div class="container-fluid px-0">
     <!-- Header Hero Banner -->
-    <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #052e22 0%, #065f46 50%, #047857 100%); color: white; border-radius: 18px; box-shadow: 0 12px 30px rgba(5, 46, 34, 0.25) !important;">
-        <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-            <div>
-                <span class="badge text-white mb-2 px-3 py-1" style="background-color: #10b981; font-size: 0.85rem; border-radius: 20px; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);">
-                    @moduleIcon PHÂN HỆ ĐÃ ĐƯỢC CẤP QUYỀN
-                </span>
-                <h1 class="h3 fw-bold mb-1 text-white">@moduleTitle</h1>
-                <p class="mb-0 text-white-50">@moduleDescription</p>
+    <div class="emp-page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+        <div>
+            <div class="emp-page-header-subtitle d-flex align-items-center gap-2">
+                <i class="bi @moduleIconClass text-primary"></i>
+                <span>PHÂN HỆ BÁO CÁO &amp; ĐIỀU HÀNH</span>
             </div>
-            <div class="d-flex align-items-center gap-2">
-                <a class="btn btn-outline-light rounded-pill px-4 py-2" href="employee/attendance">
-                    ← Về trang Chấm công
-                </a>
-            </div>
+            <h1 class="emp-page-header-title">@moduleTitle</h1>
+            <p class="emp-page-header-desc">@moduleDescription</p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <a class="btn emp-btn-secondary" href="employee/attendance">
+                <i class="bi bi-arrow-left me-1"></i> Về trang Chấm công
+            </a>
         </div>
     </div>
 
     @if (moduleType == ModuleType.Employees)
     {
         <!-- Danh bạ nhân viên -->
-        <div class="card border-0 shadow-sm mb-4" style="border-radius: 16px;">
+        <div class="card emp-card mb-4">
             <div class="card-header bg-white border-bottom border-light py-3 px-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-                <div>
-                    <strong class="text-dark fs-5">DANH BẠ NHÂN SỰ NỘI BỘ</strong>
-                    <div class="text-muted small">Tra cứu thông tin nhân viên theo phân quyền truy cập</div>
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-journal-text text-primary fs-5"></i>
+                    <div>
+                        <strong class="text-dark fs-6 text-uppercase fw-bold" style="letter-spacing: 0.5px;">Danh Bạ Nhân Sự Nội Bộ</strong>
+                        <div class="text-muted small">Tra cứu thông tin nhân viên theo phân quyền truy cập</div>
+                    </div>
                 </div>
                 <div class="w-auto">
-                    <input type="text" class="form-control form-control-sm rounded-pill px-3" placeholder="🔍 Tìm tên hoặc mã nhân viên..."
-                           @bind="searchKeyword" @bind:event="oninput" style="min-width: 250px;" />
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control border-start-0 ps-0 shadow-none" placeholder="Tìm tên hoặc mã..."
+                               @bind="searchKeyword" @bind:event="oninput" style="min-width: 220px;" />
+                    </div>
                 </div>
             </div>
             <div class="card-body p-0">
                 @if (isLoadingEmployees)
                 {
                     <div class="text-center py-5">
-                        <div class="spinner-border text-success" role="status"></div>
+                        <div class="spinner-border text-primary" role="status"></div>
                         <div class="text-muted small mt-2">Đang tải danh sách nhân sự...</div>
                     </div>
                 }
                 else if (filteredEmployees.Count == 0)
                 {
                     <div class="text-center py-5 text-muted">
+                        <i class="bi bi-person-x fs-1 text-muted d-block mb-2"></i>
                         <p class="mb-0">Không tìm thấy nhân viên nào phù hợp.</p>
                     </div>
                 }
                 else
                 {
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
+                        <table class="table emp-table align-middle mb-0">
                             <thead class="table-light text-secondary small text-uppercase">
                                 <tr>
                                     <th class="ps-4">Mã NV</th>
@@ -76,16 +82,16 @@
                                             <div class="fw-bold text-dark">@emp.FullName</div>
                                         </td>
                                         <td>
-                                            <span class="badge bg-light text-dark border">@emp.Department</span>
+                                            <span class="emp-badge emp-badge-neutral">@emp.Department</span>
                                         </td>
                                         <td>
                                             @if (emp.HasAccount)
                                             {
-                                                <span class="badge bg-success-subtle text-success border border-success-subtle">Đã có tài khoản</span>
+                                                <span class="emp-badge emp-badge-success">Đã có tài khoản</span>
                                             }
                                             else
                                             {
-                                                <span class="badge bg-secondary-subtle text-secondary">Chưa kích hoạt</span>
+                                                <span class="emp-badge emp-badge-neutral">Chưa kích hoạt</span>
                                             }
                                         </td>
                                     </tr>
@@ -103,7 +109,7 @@
         @if (isLoadingReports)
         {
             <div class="text-center py-5">
-                <div class="spinner-border text-success" role="status"></div>
+                <div class="spinner-border text-primary" role="status"></div>
                 <div class="text-muted small mt-2">Đang tổng hợp dữ liệu báo cáo nhân sự...</div>
             </div>
         }
@@ -112,43 +118,43 @@
             <!-- KPI Summary Cards -->
             <div class="row g-3 mb-4">
                 <div class="col-12 col-sm-6 col-xl-3">
-                    <div class="card border-0 shadow-sm p-3 h-100" style="border-radius: 14px; border-left: 4px solid #10b981 !important;">
-                        <div class="text-muted small fw-semibold">TỔNG NHÂN SỰ</div>
+                    <div class="card emp-kpi-card p-3 h-100" style="border-left: 4px solid var(--emp-primary) !important;">
+                        <div class="emp-kpi-label">TỔNG NHÂN SỰ</div>
                         <div class="d-flex align-items-baseline gap-2 mt-1">
-                            <span class="fs-2 fw-bold text-dark">@(summary?.TotalEmployees ?? 0)</span>
-                            <span class="text-success small fw-semibold">(@(summary?.ActiveEmployees ?? 0) đang làm)</span>
+                            <span class="emp-kpi-value tabular-nums">@(summary?.TotalEmployees ?? 0)</span>
+                            <span class="text-success small fw-semibold tabular-nums">(@(summary?.ActiveEmployees ?? 0) đang làm)</span>
                         </div>
-                        <div class="text-muted small mt-1">@(summary?.ResignedEmployees ?? 0) đã thôi việc</div>
+                        <div class="text-muted small mt-1 tabular-nums">@(summary?.ResignedEmployees ?? 0) đã thôi việc</div>
                     </div>
                 </div>
                 <div class="col-12 col-sm-6 col-xl-3">
-                    <div class="card border-0 shadow-sm p-3 h-100" style="border-radius: 14px; border-left: 4px solid #3b82f6 !important;">
-                        <div class="text-muted small fw-semibold">PHÒNG BAN &amp; TỔ CHỨC</div>
+                    <div class="card emp-kpi-card p-3 h-100">
+                        <div class="emp-kpi-label">PHÒNG BAN &amp; TỔ CHỨC</div>
                         <div class="d-flex align-items-baseline gap-2 mt-1">
-                            <span class="fs-2 fw-bold text-dark">@(summary?.TotalDepartments ?? 0)</span>
+                            <span class="emp-kpi-value tabular-nums">@(summary?.TotalDepartments ?? 0)</span>
                             <span class="text-muted small">phòng ban</span>
                         </div>
-                        <div class="text-muted small mt-1">Thâm niên TB: @(tenureReport?.AverageTenureYears ?? 0) năm</div>
+                        <div class="text-muted small mt-1 tabular-nums">Thâm niên TB: @(tenureReport?.AverageTenureYears ?? 0) năm</div>
                     </div>
                 </div>
                 <div class="col-12 col-sm-6 col-xl-3">
-                    <div class="card border-0 shadow-sm p-3 h-100" style="border-radius: 14px; border-left: 4px solid #f59e0b !important;">
-                        <div class="text-muted small fw-semibold">QUỸ LƯƠNG THÁNG NÀY</div>
+                    <div class="card emp-kpi-card p-3 h-100">
+                        <div class="emp-kpi-label">QUỸ LƯƠNG THÁNG NÀY</div>
                         <div class="d-flex align-items-baseline gap-2 mt-1">
-                            <span class="fs-4 fw-bold text-dark">@((summary?.TotalMonthlyPayroll ?? 0).ToString("N0"))</span>
+                            <span class="fs-4 fw-bold text-dark font-monospace tabular-nums">@((summary?.TotalMonthlyPayroll ?? 0).ToString("N0"))</span>
                             <span class="text-muted small">VNĐ</span>
                         </div>
                         <div class="text-muted small mt-1">Theo dữ liệu bảng lương</div>
                     </div>
                 </div>
                 <div class="col-12 col-sm-6 col-xl-3">
-                    <div class="card border-0 shadow-sm p-3 h-100" style="border-radius: 14px; border-left: 4px solid #8b5cf6 !important;">
-                        <div class="text-muted small fw-semibold">CHẤM CÔNG &amp; PHÉP</div>
+                    <div class="card emp-kpi-card p-3 h-100">
+                        <div class="emp-kpi-label">CHẤM CÔNG &amp; PHÉP</div>
                         <div class="d-flex align-items-baseline gap-2 mt-1">
-                            <span class="fs-2 fw-bold text-dark">@(summary?.TodayAttendanceCount ?? 0)</span>
+                            <span class="emp-kpi-value tabular-nums">@(summary?.TodayAttendanceCount ?? 0)</span>
                             <span class="text-muted small">lượt công hôm nay</span>
                         </div>
-                        <div class="text-muted small mt-1">@(summary?.PendingLeaveRequests ?? 0) đơn phép chờ duyệt</div>
+                        <div class="text-muted small mt-1 tabular-nums">@(summary?.PendingLeaveRequests ?? 0) đơn phép chờ duyệt</div>
                     </div>
                 </div>
             </div>
@@ -284,7 +290,7 @@
     private ModuleType moduleType = ModuleType.Generic;
     private string moduleTitle = "Phân hệ Nhân sự";
     private string moduleDescription = "Tính năng được kích hoạt theo phân quyền của Quản trị viên.";
-    private string moduleIcon = "👥";
+    private string moduleIconClass = "bi-journal-text";
 
     private IReadOnlyCollection<EmployeeAccountOptionDto> employees = [];
     private bool isLoadingEmployees = false;
@@ -339,14 +345,14 @@
             moduleType = ModuleType.Employees;
             moduleTitle = "Tra cứu & Quản lý Danh bạ Nhân sự";
             moduleDescription = "Danh sách nhân viên, phòng ban và trạng thái tài khoản trong hệ thống HRM.";
-            moduleIcon = "👥";
+            moduleIconClass = "bi-people";
         }
         else if (path.Contains("reports"))
         {
             moduleType = ModuleType.Reports;
             moduleTitle = "Trung tâm Báo cáo & Thống kê Nhân sự";
             moduleDescription = "Báo cáo biến động nhân sự, cơ cấu phòng ban, thâm niên và tổng quan quỹ lương.";
-            moduleIcon = "📊";
+            moduleIconClass = "bi-bar-chart-line";
         }
     }
 

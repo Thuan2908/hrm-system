@@ -9,37 +9,37 @@
 <PageTitle>Phiếu lương của tôi - Saigon Retail</PageTitle>
 
 <div class="container-fluid px-0">
-    <!-- Header Hero Banner (Hidden when printing) -->
-    <div class="card border-0 shadow-sm mb-4 d-print-none" style="background: linear-gradient(135deg, #052e22 0%, #065f46 50%, #047857 100%); color: white; border-radius: 18px; box-shadow: 0 12px 30px rgba(5, 46, 34, 0.25) !important;">
-        <div class="card-body p-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+    <!-- Minimal Header (Hidden when printing) -->
+    <div class="emp-page-header mb-4 d-print-none">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
             <div>
-                <span class="badge text-white mb-2 px-3 py-1" style="background-color: #10b981; font-size: 0.85rem; border-radius: 20px; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);">
-                    ● MINH BẠCH THU NHẬP
-                </span>
-                <h1 class="h3 fw-bold mb-1 text-white">Phiếu lương của tôi</h1>
-                <p class="mb-0 text-white-50">Tra cứu chi tiết thu nhập, ngày công và các khoản trích nộp bảo hiểm theo từng kỳ lương.</p>
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="emp-badge-tag">● MINH BẠCH THU NHẬP</span>
+                </div>
+                <h1 class="emp-page-title mb-1">Phiếu lương của tôi</h1>
+                <p class="emp-page-desc mb-0">Tra cứu chi tiết thu nhập, ngày công và các khoản trích nộp bảo hiểm theo từng kỳ lương.</p>
             </div>
             <div class="d-flex align-items-center gap-2">
-                <button class="btn btn-outline-light rounded-pill px-4 py-2" @onclick="LoadDataAsync" disabled="@isLoading">
-                    ↻ Làm mới
+                <button class="emp-btn-secondary" @onclick="LoadDataAsync" disabled="@isLoading">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Làm mới
                 </button>
             </div>
         </div>
     </div>
 
     <!-- View Mode Switch Tabs (Hidden when printing) -->
-    <div class="card border-0 shadow-sm p-2 mb-4 d-print-none" style="border-radius: 16px; background-color: #ffffff; border: 1px solid #eef2f6 !important;">
+    <div class="card border-0 shadow-sm p-2 mb-4 d-print-none" style="border-radius: 12px; background-color: var(--emp-surface); border: 1px solid var(--emp-border) !important;">
         <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
-            <div class="d-inline-flex p-1 rounded-pill" style="background-color: #f1f5f9;">
-                <button type="button" class="btn btn-sm rounded-pill px-3 py-2 fw-semibold @(!isYearlyView ? "btn-success text-white shadow-sm" : "btn-link text-secondary text-decoration-none")"
-                        style="@(!isYearlyView ? "background-color: #059669; border-color: #059669;" : "")"
+            <div class="d-inline-flex p-1 rounded-pill" style="background-color: var(--emp-surface-subtle); border: 1px solid var(--emp-border);">
+                <button type="button" class="btn btn-sm rounded-pill px-3 py-2 fw-semibold @(!isYearlyView ? "text-white shadow-sm" : "btn-link text-secondary text-decoration-none")"
+                        style="@(!isYearlyView ? "background-color: var(--emp-primary); border-color: var(--emp-primary);" : "")"
                         @onclick="() => SwitchView(false)">
-                    📅 Phiếu lương theo tháng
+                    <i class="bi bi-calendar3 me-1"></i> Phiếu lương theo tháng
                 </button>
-                <button type="button" class="btn btn-sm rounded-pill px-3 py-2 fw-semibold @(isYearlyView ? "btn-success text-white shadow-sm" : "btn-link text-secondary text-decoration-none")"
-                        style="@(isYearlyView ? "background-color: #059669; border-color: #059669;" : "")"
+                <button type="button" class="btn btn-sm rounded-pill px-3 py-2 fw-semibold @(isYearlyView ? "text-white shadow-sm" : "btn-link text-secondary text-decoration-none")"
+                        style="@(isYearlyView ? "background-color: var(--emp-primary); border-color: var(--emp-primary);" : "")"
                         @onclick="() => SwitchView(true)">
-                    📊 Bảng kê thu nhập cả năm
+                    <i class="bi bi-bar-chart-line me-1"></i> Bảng kê thu nhập cả năm
                 </button>
             </div>
 
@@ -48,16 +48,16 @@
                 <div class="d-flex align-items-center gap-2 flex-nowrap ms-auto">
                     <span class="small text-secondary fw-semibold text-nowrap">Chọn năm:</span>
                     <select class="form-select form-select-sm fw-bold rounded-pill bg-light border-0 shadow-none"
-                            style="width: 130px; height: 36px; padding-left: 14px; padding-right: 32px !important; cursor: pointer; color: #0f172a;"
+                            style="width: 130px; height: 36px; padding-left: 14px; padding-right: 32px !important; cursor: pointer; color: var(--emp-heading);"
                             value="@selectedYear" @onchange="OnYearChangedAsync">
                         <option value="2026">Năm 2026</option>
                         <option value="2025">Năm 2025</option>
                         <option value="2024">Năm 2024</option>
                     </select>
                     <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 fw-semibold shadow-sm text-nowrap d-inline-flex align-items-center gap-1"
-                            style="height: 36px;"
+                            style="height: 36px; color: var(--emp-primary); border-color: var(--emp-primary);"
                             @onclick="PrintPayslipAsync">
-                        <span>🖨️</span>
+                        <i class="bi bi-printer me-1"></i>
                         <span>In bảng lương năm</span>
                     </button>
                 </div>
@@ -67,7 +67,7 @@
 
     @if (!string.IsNullOrWhiteSpace(errorMessage))
     {
-        <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm d-flex align-items-center gap-2 mb-4 d-print-none" role="alert" style="border-radius: 12px;">
+        <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm d-flex align-items-center gap-2 mb-4 d-print-none" role="alert" style="border-radius: 12px; background: var(--emp-danger-bg); color: var(--emp-danger);">
             <span style="font-size: 1.25rem;">⚠</span>
             <div>@errorMessage</div>
             <button type="button" class="btn-close ms-auto" @onclick="() => errorMessage = null"></button>
@@ -79,15 +79,15 @@
         @if (isLoading && payslips.Count == 0)
         {
             <div class="py-5 text-center text-muted">
-                <div class="spinner-border text-success mb-3" role="status"></div>
+                <div class="spinner-border mb-3" style="color: var(--emp-primary);" role="status"></div>
                 <p>Đang tải thông tin bảng lương...</p>
             </div>
         }
         else if (payslips.Count == 0)
         {
-            <div class="card border-0 shadow-sm p-5 text-center text-muted" style="border-radius: 16px;">
+            <div class="card border-0 shadow-sm p-5 text-center text-muted" style="border-radius: 14px;">
                 <div class="display-5 text-secondary mb-3">📄</div>
-                <h5 class="fw-bold text-dark">Chưa có phiếu lương nào</h5>
+                <h5 class="fw-bold" style="color: var(--emp-heading);">Chưa có phiếu lương nào</h5>
                 <p class="mb-0">Phiếu lương sẽ được phát hành sau khi phòng Nhân sự &amp; Kế toán hoàn tất chốt bảng công hàng tháng.</p>
             </div>
         }
@@ -96,24 +96,24 @@
             <!-- Latest Period Highlight Card (Hidden when printing) -->
             @if (selectedPayslip is not null)
             {
-                <div class="card border-0 shadow-sm mb-4 d-print-none" style="border-radius: 16px; background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%); border-left: 6px solid #10b981 !important;">
+                <div class="card border-0 shadow-sm mb-4 d-print-none" style="border-radius: 14px; background: var(--emp-surface); border: 1px solid var(--emp-border) !important; border-left: 5px solid var(--emp-primary) !important;">
                     <div class="card-body p-4">
                         <div class="row g-4 align-items-center">
                             <div class="col-12 col-md-4">
-                                <span class="text-uppercase small text-muted fw-bold d-block mb-1">KỲ LƯƠNG ĐANG XEM</span>
-                                <h4 class="fw-bold text-dark mb-1">Tháng @selectedPayslip.MonthPeriod/@selectedPayslip.YearPeriod</h4>
-                                <span class="badge bg-success-subtle text-success border border-success px-3 py-1 rounded-pill">
+                                <span class="emp-kpi-label d-block mb-1">KỲ LƯƠNG ĐANG XEM</span>
+                                <h4 class="fw-bold mb-1" style="color: var(--emp-heading);">Tháng @selectedPayslip.MonthPeriod/@selectedPayslip.YearPeriod</h4>
+                                <span class="emp-badge-success">
                                     ✓ Đã quyết toán
                                 </span>
                             </div>
                             <div class="col-6 col-md-4 text-md-center">
-                                <span class="text-uppercase small text-muted fw-bold d-block mb-1">NGÀY CÔNG THỰC TẾ</span>
-                                <span class="fs-3 fw-bold text-dark">@selectedPayslip.ActualDays</span>
+                                <span class="emp-kpi-label d-block mb-1">NGÀY CÔNG THỰC TẾ</span>
+                                <span class="fs-3 fw-bold tabular-nums" style="color: var(--emp-heading);">@selectedPayslip.ActualDays</span>
                                 <small class="text-muted d-block">ngày làm việc ghi nhận</small>
                             </div>
                             <div class="col-6 col-md-4 text-md-end">
-                                <span class="text-uppercase small text-muted fw-bold d-block mb-1">THỰC LĨNH (NET)</span>
-                                <span class="fs-2 fw-bold text-success font-monospace">@FormatVnd(selectedPayslip.NetSalary)</span>
+                                <span class="emp-kpi-label d-block mb-1">THỰC LĨNH (NET)</span>
+                                <span class="fs-2 fw-bold font-monospace tabular-nums" style="color: var(--emp-primary);">@FormatVnd(selectedPayslip.NetSalary)</span>
                                 <small class="text-muted d-block">Đã thanh toán chuyển khoản</small>
                             </div>
                         </div>
@@ -124,23 +124,24 @@
             <div class="row g-4">
                 <!-- Left Column: Period List (Hidden when printing) -->
                 <div class="col-12 col-lg-4 d-print-none">
-                    <div class="card border-0 shadow-sm h-100" style="border-radius: 16px;">
+                    <div class="card border-0 shadow-sm h-100" style="border-radius: 14px;">
                         <div class="card-header bg-white border-bottom border-light py-3 px-4">
-                            <strong class="text-dark">DANH SÁCH KỲ LƯƠNG</strong>
+                            <strong style="color: var(--emp-heading); font-size: 0.88rem; text-transform: uppercase; letter-spacing: 0.05em;">DANH SÁCH KỲ LƯƠNG</strong>
                         </div>
                         <div class="list-group list-group-flush p-2">
                             @foreach (var item in payslips)
                             {
                                 var isCurrent = selectedPayslip?.Id == item.Id;
                                 <button type="button"
-                                        class="list-group-item list-group-item-action p-3 rounded-3 mb-2 border-0 d-flex justify-content-between align-items-center @(isCurrent ? "bg-success-subtle text-success fw-bold border border-success-subtle" : "")"
+                                        class="list-group-item list-group-item-action p-3 rounded-3 mb-2 border-0 d-flex justify-content-between align-items-center"
+                                        style="@(isCurrent ? "background: var(--emp-primary-subtle); color: var(--emp-primary); font-weight: 700; border: 1px solid var(--emp-primary-light) !important;" : "")"
                                         @onclick="() => SelectPayslipAsync(item.Id)">
                                     <div>
                                         <div class="fw-bold fs-6">Tháng @item.MonthPeriod/@item.YearPeriod</div>
                                         <div class="small text-muted">@item.ActualDays ngày công</div>
                                     </div>
                                     <div class="text-end">
-                                        <div class="fw-bold text-success font-monospace">@FormatVnd(item.NetSalary)</div>
+                                        <div class="fw-bold font-monospace tabular-nums" style="color: var(--emp-primary);">@FormatVnd(item.NetSalary)</div>
                                         <small class="text-muted">Chi tiết →</small>
                                     </div>
                                 </button>
@@ -169,7 +170,7 @@
                             <div class="d-flex align-items-center gap-2">
                                 <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 fw-semibold shadow-sm"
                                         @onclick="PrintPayslipAsync">
-                                    🖨️ In phiếu lương
+                                    <i class="bi bi-printer me-1"></i> In phiếu lương
                                 </button>
                                 <span class="badge bg-light text-secondary border px-3 py-2 rounded-pill font-monospace">
                                     ID: #@selectedPayslip.Id

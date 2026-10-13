@@ -17,6 +17,7 @@ public sealed class AuthDbContext(DbContextOptions<AuthDbContext> options) : DbC
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<AuditLogEntry> AuditLogs => Set<AuditLogEntry>();
     public DbSet<UserActiveSession> ActiveSessions => Set<UserActiveSession>();
+    public DbSet<EmployeeSalaryProfile> SalaryProfiles => Set<EmployeeSalaryProfile>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -53,8 +54,6 @@ public sealed class AuthDbContext(DbContextOptions<AuthDbContext> options) : DbC
             entity.Property(position => position.Id).HasColumnName("position_id").ValueGeneratedNever();
             entity.Property(position => position.Code).HasColumnName("position_code");
             entity.Property(position => position.Name).HasColumnName("position_name");
-            entity.Property(position => position.Title).HasColumnName("title");
-            entity.Property(position => position.AllowanceRate).HasColumnName("allowance_rate");
         });
 
         builder.Entity<Employee>(entity =>
@@ -72,13 +71,29 @@ public sealed class AuthDbContext(DbContextOptions<AuthDbContext> options) : DbC
             entity.Property(employee => employee.Email).HasColumnName("email");
             entity.Property(employee => employee.Address).HasColumnName("address");
             entity.Property(employee => employee.EducationLevel).HasColumnName("education_level");
-            entity.Property(employee => employee.BaseSalary).HasColumnName("base_salary");
-            entity.Property(employee => employee.JoinDate).HasColumnName("join_date");
             entity.Property(employee => employee.HireDate).HasColumnName("hire_date");
             entity.Property(employee => employee.Status).HasColumnName("status");
             entity.Property(employee => employee.CreatedAt).HasColumnName("created_at");
             entity.HasOne(employee => employee.Department).WithMany().HasForeignKey(employee => employee.DepartmentId);
             entity.HasOne(employee => employee.Position).WithMany().HasForeignKey(employee => employee.PositionId).IsRequired(false);
+            entity.HasMany(employee => employee.SalaryProfiles).WithOne(sp => sp.Employee).HasForeignKey(sp => sp.EmployeeId);
+        });
+
+        builder.Entity<EmployeeSalaryProfile>(entity =>
+        {
+            entity.ToTable("employee_salary_profiles");
+            entity.HasKey(sp => sp.Id);
+            entity.Property(sp => sp.Id).HasColumnName("profile_id").ValueGeneratedOnAdd();
+            entity.Property(sp => sp.EmployeeId).HasColumnName("emp_id");
+            entity.Property(sp => sp.BaseSalary).HasColumnName("base_salary").HasPrecision(15, 2);
+            entity.Property(sp => sp.PositionAllowance).HasColumnName("position_allowance").HasPrecision(15, 2);
+            entity.Property(sp => sp.OtherAllowance).HasColumnName("other_allowance").HasPrecision(15, 2);
+            entity.Property(sp => sp.InsuranceSalary).HasColumnName("insurance_salary").HasPrecision(15, 2);
+            entity.Property(sp => sp.EffectiveDate).HasColumnName("effective_date");
+            entity.Property(sp => sp.ExpiryDate).HasColumnName("expiry_date");
+            entity.Property(sp => sp.IsCurrent).HasColumnName("is_current");
+            entity.Property(sp => sp.Note).HasColumnName("note");
+            entity.Property(sp => sp.CreatedAt).HasColumnName("created_at");
         });
 
         builder.Entity<Department>(entity =>

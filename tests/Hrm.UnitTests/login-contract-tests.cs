@@ -84,7 +84,6 @@ public sealed class LoginContractTests
             Address: "456 Nguyễn Huệ",
             EducationLevel: "Đại học",
             BaseSalary: 25000000m,
-            JoinDate: new DateOnly(2022, 1, 10),
             HireDate: new DateOnly(2021, 11, 1),
             Status: "ACTIVE",
             CreatedAt: now);

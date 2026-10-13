@@ -27,8 +27,6 @@ public sealed class Position
     public long Id { get; set; }
     public string? Code { get; set; }
     public required string Name { get; set; }
-    public string? Title { get; set; }
-    public decimal AllowanceRate { get; set; }
 }
 
 public sealed class Employee
@@ -44,14 +42,30 @@ public sealed class Employee
     public string? Email { get; set; }
     public string? Address { get; set; }
     public string? EducationLevel { get; set; }
-    public decimal BaseSalary { get; set; }
-    public DateOnly? JoinDate { get; set; }
     public DateOnly? HireDate { get; set; }
     public string Status { get; set; } = "ACTIVE";
     public DateTimeOffset CreatedAt { get; set; }
 
     public Department Department { get; set; } = null!;
     public Position? Position { get; set; }
+    public List<EmployeeSalaryProfile> SalaryProfiles { get; set; } = [];
+}
+
+public sealed class EmployeeSalaryProfile
+{
+    public long Id { get; set; }
+    public long EmployeeId { get; set; }
+    public decimal BaseSalary { get; set; }
+    public decimal PositionAllowance { get; set; }
+    public decimal OtherAllowance { get; set; }
+    public decimal? InsuranceSalary { get; set; }
+    public DateOnly EffectiveDate { get; set; }
+    public DateOnly? ExpiryDate { get; set; }
+    public bool IsCurrent { get; set; } = true;
+    public string? Note { get; set; }
+    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+
+    public Employee Employee { get; set; } = null!;
 }
 
 public sealed class Department
