@@ -1,5 +1,7 @@
 # Epic 04 — Attendance & Leave
 
+Approval workflow update (ADR-015, 2026-10-14): the direct manager with `leave.approve` performs the final decision. LEV-002/LEV-003's original two-stage workflow is superseded. Explicit `self_approved` permits automatic approval of ordinary leave only. Resignations still require the direct manager.
+
 ## ATT-001 — Check-in
 **Mục tiêu:** Ghi nhận giờ vào.
 

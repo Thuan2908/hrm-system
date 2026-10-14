@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text.Json;
 using Hrm.Contracts;
 using Hrm.Modules.Auth.Contracts;
@@ -138,6 +138,7 @@ public sealed class EmployeeService(
         long actorUserId,
         CancellationToken cancellationToken = default)
     {
+        await ValidateManagerAsync(request.ManagerId, null, cancellationToken);
         if (string.IsNullOrWhiteSpace(request.FullName))
         {
             throw new DomainException("INVALID_FULL_NAME", "Họ và tên nhân viên không được để trống.");
@@ -220,6 +221,7 @@ public sealed class EmployeeService(
                 Code = empCode,
                 FullName = request.FullName.Trim(),
                 DepartmentId = request.DepartmentId,
+                ManagerId = request.ManagerId,
                 PositionId = request.PositionId > 0 ? request.PositionId : null,
                 DateOfBirth = request.DateOfBirth,
                 Gender = normalizedGender,
@@ -318,6 +320,7 @@ public sealed class EmployeeService(
                     employee.Code,
                     employee.FullName,
                     employee.DepartmentId,
+                    employee.ManagerId,
                     BaseSalary = request.BaseSalary,
                     CreatedAccount = hasCreatedAccount
                 }),
@@ -394,6 +397,8 @@ public sealed class EmployeeService(
         }
 
         var previousStatus = employee.Status;
+        await ValidateManagerAsync(request.ManagerId, employee.Id, cancellationToken);
+        var previousManagerId = employee.ManagerId;
         // Chặn chuyển trạng thái sang RESIGNED từ form sửa thông thường
         if (!string.Equals(previousStatus, "RESIGNED", StringComparison.OrdinalIgnoreCase) &&
             string.Equals(request.Status, "RESIGNED", StringComparison.OrdinalIgnoreCase))
@@ -485,6 +490,7 @@ public sealed class EmployeeService(
 
         employee.FullName = request.FullName.Trim();
         employee.DepartmentId = request.DepartmentId;
+        employee.ManagerId = request.ManagerId;
         employee.PositionId = newPositionId;
         employee.DateOfBirth = request.DateOfBirth;
         employee.Gender = normalizedGender;
@@ -509,9 +515,11 @@ public sealed class EmployeeService(
             Action = "employee.updated",
             EntityType = "Employee",
             EntityId = employee.Id.ToString(CultureInfo.InvariantCulture),
+            BeforeJson = JsonSerializer.Serialize(new { ManagerId = previousManagerId }),
             AfterJson = JsonSerializer.Serialize(new
             {
                 employee.FullName,
+                employee.ManagerId,
                 employee.DepartmentId,
                 BaseSalary = request.BaseSalary,
                 PositionAllowance = targetPosAllowance,
@@ -1165,6 +1173,23 @@ public sealed class EmployeeService(
         return !string.IsNullOrWhiteSpace(user.Employee?.FullName) ? user.Employee.FullName : user.UserName;
     }
 
+    private async Task ValidateManagerAsync(long? managerId, long? employeeId, CancellationToken cancellationToken)
+    {
+        if (managerId is null) return;
+        var visited = new HashSet<long>();
+        var currentId = managerId;
+        while (currentId is not null)
+        {
+            if (currentId == employeeId || !visited.Add(currentId.Value))
+                throw new DomainException("INVALID_MANAGER", "Không thể chọn chính nhân viên hoặc tạo vòng lặp quản lý.");
+            var manager = await dbContext.Employees.AsNoTracking()
+                .SingleOrDefaultAsync(e => e.Id == currentId.Value, cancellationToken)
+                ?? throw new DomainException("MANAGER_NOT_FOUND", "Không tìm thấy quản lý.");
+            if (currentId == managerId && manager.Status != "ACTIVE")
+                throw new DomainException("MANAGER_INACTIVE", "Quản lý phải là nhân viên đang hoạt động.");
+            currentId = manager.ManagerId;
+        }
+    }
     private static EmployeeDto MapToDto(Employee e, bool hasAccount, bool includeSensitiveInfo = true)
     {
         var currentProfile = e.SalaryProfiles.FirstOrDefault(sp => sp.IsCurrent);
@@ -1195,8 +1220,9 @@ public sealed class EmployeeService(
             PositionAllowance: includeSensitiveInfo ? posAllowance : 0m,
             OtherAllowance: includeSensitiveInfo ? otherAllowance : 0m,
             InsuranceSalary: includeSensitiveInfo ? insSalary : null,
-            DependentCount: e.DependentCount,
-            BankName: e.BankName,
-            BankAccountNumber: e.BankAccountNumber);
+            DependentCount: includeSensitiveInfo ? e.DependentCount : 0,
+            BankName: includeSensitiveInfo ? e.BankName : null,
+            BankAccountNumber: includeSensitiveInfo ? e.BankAccountNumber : null,
+            ManagerId: e.ManagerId);
     }
 }

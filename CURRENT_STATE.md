@@ -19,7 +19,7 @@
 - API v1 baseline: response envelope, exception handler, OpenAPI, CORS, liveness/readiness health checks và OpenTelemetry.
 - PostgreSQL/Supabase persistence baseline bằng EF Core + Npgsql + snake_case.
 - Auth persistence tương thích schema Supabase hiện có (`bigint`, BCrypt, một role/user), JWT access token, refresh-token rotation, logout và session restoration.
-- Startup Development bổ sung idempotent các bảng hỗ trợ `refresh_tokens`, `user_security_states`, `user_account_metadata`, `audit_logs`, `file_attachments`, `employee_salary_profiles`; không chạy migration Identity lên schema legacy.
+- Từ 2026-10-14, schema và dữ liệu baseline trên Supabase được quản lý thủ công (ADR-016). Đã xóa toàn bộ schema initializer/seed và bước khởi tạo database khi API startup. Cloud schema tests chỉ đọc; workflow tests dùng database test riêng khi cấu hình `HRM_TEST_POSTGRES_CONNECTION`.
 - RBAC backend default-deny, permission guard, role-permission administration và ADMIN override có kiểm soát.
 - Blazor Admin & Employee Portal: login/logout, dashboard báo cáo trực quan, tra cứu nhân sự, chấm công, nghỉ phép, phiếu lương, phân quyền vai trò và audit log.
 - Unit, architecture, API integration và Blazor component tests đã chạy thành công (42 passed, 1 skipped).

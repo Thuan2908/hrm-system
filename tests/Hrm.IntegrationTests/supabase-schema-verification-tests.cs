@@ -85,18 +85,7 @@ public sealed class SupabaseSchemaVerificationTests
             Assert.True(currentCount > 0, "Phải có ít nhất 1 hồ sơ lương is_current = true đã được khởi tạo.");
         }
 
-        // 4. Thực thi dọn dẹp triệt để các thuộc tính dư thừa chuẩn 3NF trên Supabase
-        await using (var cmd = new NpgsqlCommand("""
-            ALTER TABLE employees DROP COLUMN IF EXISTS join_date;
-            ALTER TABLE employees DROP COLUMN IF EXISTS base_salary;
-            ALTER TABLE positions DROP COLUMN IF EXISTS title;
-            ALTER TABLE positions DROP COLUMN IF EXISTS allowance_rate;
-            """, connection))
-        {
-            await cmd.ExecuteNonQueryAsync(ct);
-        }
-
-        // 5. Kiểm tra các thuộc tính dư thừa đã hoàn toàn bị xóa khỏi schema Supabase
+        // Chỉ kiểm tra schema; mọi thay đổi trên Supabase phải thực hiện thủ công.
         var droppedColumns = new (string Table, string Column)[]
         {
             ("employees", "join_date"),

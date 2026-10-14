@@ -12,6 +12,7 @@ public static class PermissionCodes
     public const string LeaveSelfCreate = "leave.self.create";
     public const string LeaveApprove = "leave.approve";
     public const string SelfApproved = "self_approved";
+    public const string LeaveSelfApproved = SelfApproved;
     public const string PayrollRun = "payroll.run";
     public const string PayrollFinalize = "payroll.finalize";
     public const string PayrollSelfRead = "payroll.self.read";
@@ -24,7 +25,7 @@ public static class PermissionCodes
 
     public static IReadOnlyList<string> All { get; } =
     [
-        EmployeeRead, EmployeeWrite, EmployeeTransfer, EmployeeOffboard, EmployeePromote,
+        EmployeeRead, EmployeeWrite, EmployeeTransfer, EmployeePromote, EmployeeOffboard,
         AttendanceSelfWrite, AttendanceTeamRead,
         LeaveSelfCreate, LeaveApprove, SelfApproved,
         PayrollRun, PayrollFinalize, PayrollSelfRead, ReportRead,

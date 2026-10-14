@@ -26,8 +26,8 @@ public static class AuthModule
                 .UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure(3))
                 .UseSnakeCaseNamingConvention());
 
-        services.AddScoped<IAuthDatabaseInitializer, AuthDatabaseInitializer>();
         services.AddScoped<IEmployeeAccessRevoker, EmployeeAccessRevoker>();
+        services.AddScoped<IEmployeeLeaveAccess, EmployeeLeaveAccess>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IAdminService, AdminService>();
 

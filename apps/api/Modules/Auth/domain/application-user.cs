@@ -38,6 +38,7 @@ public sealed class Position
 
 public sealed class Employee
 {
+    public long? ManagerId { get; set; }
     public long Id { get; set; }
     public long DepartmentId { get; set; }
     public long? PositionId { get; set; }

@@ -23,7 +23,6 @@ public static class PayrollModule
                 .UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure(3))
                 .UseSnakeCaseNamingConvention());
 
-        services.AddScoped<IPayrollDatabaseInitializer, PayrollDatabaseInitializer>();
         services.AddScoped<IPayrollService, PayrollService>();
 
         return services;

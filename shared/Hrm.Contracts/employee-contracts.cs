@@ -24,7 +24,8 @@ public sealed record EmployeeDto(
     decimal? InsuranceSalary = null,
     int DependentCount = 0,
     string? BankName = null,
-    string? BankAccountNumber = null);
+    string? BankAccountNumber = null,
+    long? ManagerId = null);
 
 public sealed record CreateEmployeeRequest(
     string FullName,
@@ -48,7 +49,8 @@ public sealed record CreateEmployeeRequest(
     decimal? InsuranceSalary = null,
     int DependentCount = 0,
     string? BankName = null,
-    string? BankAccountNumber = null);
+    string? BankAccountNumber = null,
+    long? ManagerId = null);
 
 public sealed record UpdateEmployeeRequest(
     string FullName,
@@ -69,7 +71,8 @@ public sealed record UpdateEmployeeRequest(
     int DependentCount = 0,
     string? BankName = null,
     string? BankAccountNumber = null,
-    string? SalaryChangeNote = null);
+    string? SalaryChangeNote = null,
+    long? ManagerId = null);
 
 public sealed record DepartmentDto(
     long Id,
