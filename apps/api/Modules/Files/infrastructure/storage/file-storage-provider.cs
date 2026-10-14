@@ -1,5 +1,6 @@
 using System.Globalization;
-using Microsoft.Extensions.Configuration;
+using Hrm.Modules.Files.Application;
+using Microsoft.Extensions.Options;
 
 namespace Hrm.Modules.Files.Infrastructure.Storage;
 
@@ -14,9 +15,9 @@ public sealed class PhysicalFileStorageProvider : IFileStorageProvider
 {
     private readonly string _baseStoragePath;
 
-    public PhysicalFileStorageProvider(IConfiguration configuration)
+    public PhysicalFileStorageProvider(IOptions<FileStorageOptions> options)
     {
-        var configuredPath = configuration["FileStorage:BasePath"];
+        var configuredPath = options.Value.BasePath;
         if (string.IsNullOrWhiteSpace(configuredPath))
         {
             _baseStoragePath = Path.Combine(AppContext.BaseDirectory, "App_Data", "uploads");

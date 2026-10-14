@@ -4,6 +4,7 @@
 @layout EmployeeLayout
 @attribute [Authorize]
 @inject IAttendanceApiClient AttendanceApiClient
+@inject AuthenticationStateProvider AuthStateProvider
 @implements IDisposable
 
 <PageTitle>Điểm danh &amp; Chấm công - Saigon Retail</PageTitle>
@@ -483,7 +484,7 @@
     <!-- Team Attendance Monitor for Managers & HR -->
     <AuthorizeView>
         <Authorized Context="authCtx">
-            @if (authCtx.User.IsInRole("ADMIN") || authCtx.User.HasClaim("permission", "ATT_APPROVE"))
+            @if (authCtx.User.IsInRole("ADMIN") || authCtx.User.HasClaim("permission", PermissionCodes.AttendanceTeamRead) || authCtx.User.HasClaim("permission", "ATT_APPROVE"))
             {
                 <div class="card border-0 shadow-sm mt-4" style="border-radius: 18px;">
                     <div class="card-header bg-white border-bottom border-light py-3 px-4 d-flex justify-content-between align-items-center">
@@ -732,7 +733,15 @@
         }, null, 1000, 1000);
 
         await LoadDataAsync();
-        _ = LoadTeamDataAsync();
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var canReadTeam = user.IsInRole("ADMIN") ||
+                          user.HasClaim("permission", PermissionCodes.AttendanceTeamRead) ||
+                          user.HasClaim("permission", "ATT_APPROVE");
+        if (canReadTeam)
+        {
+            _ = LoadTeamDataAsync();
+        }
     }
 
     private async Task LoadTeamDataAsync()

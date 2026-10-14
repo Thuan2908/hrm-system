@@ -18,6 +18,7 @@ public sealed class AuthDbContext(DbContextOptions<AuthDbContext> options) : DbC
     public DbSet<AuditLogEntry> AuditLogs => Set<AuditLogEntry>();
     public DbSet<UserActiveSession> ActiveSessions => Set<UserActiveSession>();
     public DbSet<EmployeeSalaryProfile> SalaryProfiles => Set<EmployeeSalaryProfile>();
+    public DbSet<EmployeeTimelineEvent> EmployeeTimelineEvents => Set<EmployeeTimelineEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -26,7 +27,7 @@ public sealed class AuthDbContext(DbContextOptions<AuthDbContext> options) : DbC
         {
             entity.ToTable("users");
             entity.HasKey(user => user.Id);
-            entity.Property(user => user.Id).HasColumnName("user_id").ValueGeneratedNever();
+            entity.Property(user => user.Id).HasColumnName("user_id").ValueGeneratedOnAdd().UseIdentityByDefaultColumn();
             entity.Property(user => user.EmployeeId).HasColumnName("emp_id");
             entity.Property(user => user.RoleId).HasColumnName("role_id");
             entity.Property(user => user.UserName).HasColumnName("username");
@@ -42,7 +43,7 @@ public sealed class AuthDbContext(DbContextOptions<AuthDbContext> options) : DbC
         {
             entity.ToTable("roles");
             entity.HasKey(role => role.Id);
-            entity.Property(role => role.Id).HasColumnName("role_id").ValueGeneratedNever();
+            entity.Property(role => role.Id).HasColumnName("role_id").ValueGeneratedOnAdd().UseIdentityByDefaultColumn();
             entity.Property(role => role.Name).HasColumnName("role_name");
             entity.Property(role => role.Description).HasColumnName("description");
         });
@@ -51,16 +52,20 @@ public sealed class AuthDbContext(DbContextOptions<AuthDbContext> options) : DbC
         {
             entity.ToTable("positions");
             entity.HasKey(position => position.Id);
-            entity.Property(position => position.Id).HasColumnName("position_id").ValueGeneratedNever();
+            entity.Property(position => position.Id).HasColumnName("position_id").ValueGeneratedOnAdd().UseIdentityByDefaultColumn();
             entity.Property(position => position.Code).HasColumnName("position_code");
             entity.Property(position => position.Name).HasColumnName("position_name");
+            entity.Property(position => position.DepartmentId).HasColumnName("dept_id");
+            entity.Property(position => position.DefaultPositionAllowance).HasColumnName("default_position_allowance").HasPrecision(15, 2);
+            entity.Property(position => position.IsActive).HasColumnName("is_active");
+            entity.HasOne(position => position.Department).WithMany().HasForeignKey(position => position.DepartmentId).IsRequired(false);
         });
 
         builder.Entity<Employee>(entity =>
         {
             entity.ToTable("employees");
             entity.HasKey(employee => employee.Id);
-            entity.Property(employee => employee.Id).HasColumnName("emp_id").ValueGeneratedNever();
+            entity.Property(employee => employee.Id).HasColumnName("emp_id").ValueGeneratedOnAdd().UseIdentityByDefaultColumn();
             entity.Property(employee => employee.DepartmentId).HasColumnName("dept_id");
             entity.Property(employee => employee.PositionId).HasColumnName("position_id");
             entity.Property(employee => employee.Code).HasColumnName("emp_code");
@@ -73,6 +78,9 @@ public sealed class AuthDbContext(DbContextOptions<AuthDbContext> options) : DbC
             entity.Property(employee => employee.EducationLevel).HasColumnName("education_level");
             entity.Property(employee => employee.HireDate).HasColumnName("hire_date");
             entity.Property(employee => employee.Status).HasColumnName("status");
+            entity.Property(employee => employee.DependentCount).HasColumnName("dependent_count");
+            entity.Property(employee => employee.BankName).HasColumnName("bank_name");
+            entity.Property(employee => employee.BankAccountNumber).HasColumnName("bank_account_number");
             entity.Property(employee => employee.CreatedAt).HasColumnName("created_at");
             entity.HasOne(employee => employee.Department).WithMany().HasForeignKey(employee => employee.DepartmentId);
             entity.HasOne(employee => employee.Position).WithMany().HasForeignKey(employee => employee.PositionId).IsRequired(false);
@@ -100,16 +108,32 @@ public sealed class AuthDbContext(DbContextOptions<AuthDbContext> options) : DbC
         {
             entity.ToTable("departments");
             entity.HasKey(department => department.Id);
-            entity.Property(department => department.Id).HasColumnName("dept_id").ValueGeneratedNever();
+            entity.Property(department => department.Id).HasColumnName("dept_id").ValueGeneratedOnAdd().UseIdentityByDefaultColumn();
             entity.Property(department => department.Code).HasColumnName("dept_code");
             entity.Property(department => department.Name).HasColumnName("dept_name");
+            entity.Property(department => department.Description).HasColumnName("description");
+            entity.Property(department => department.IsActive).HasColumnName("is_active");
+        });
+
+        builder.Entity<EmployeeTimelineEvent>(entity =>
+        {
+            entity.ToTable("employee_timeline_events");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id").ValueGeneratedOnAdd().UseIdentityByDefaultColumn();
+            entity.Property(e => e.EmployeeId).HasColumnName("emp_id");
+            entity.Property(e => e.EventType).HasColumnName("event_type").HasMaxLength(100);
+            entity.Property(e => e.Title).HasColumnName("title").HasMaxLength(255);
+            entity.Property(e => e.Description).HasColumnName("description");
+            entity.Property(e => e.Timestamp).HasColumnName("timestamp");
+            entity.Property(e => e.CreatedByUserId).HasColumnName("created_by_user_id");
+            entity.Property(e => e.CreatedByName).HasColumnName("created_by_name").HasMaxLength(255);
         });
 
         builder.Entity<PermissionDefinition>(entity =>
         {
             entity.ToTable("permissions");
             entity.HasKey(permission => permission.Id);
-            entity.Property(permission => permission.Id).HasColumnName("perm_id").ValueGeneratedNever();
+            entity.Property(permission => permission.Id).HasColumnName("perm_id").ValueGeneratedOnAdd().UseIdentityByDefaultColumn();
             entity.Property(permission => permission.Code).HasColumnName("permission_code");
             entity.Property(permission => permission.Description).HasColumnName("description");
         });

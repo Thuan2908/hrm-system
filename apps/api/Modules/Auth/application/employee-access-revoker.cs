@@ -4,12 +4,14 @@ using Hrm.Modules.Auth.Contracts;
 using Hrm.Modules.Auth.Domain;
 using Hrm.Modules.Auth.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Hrm.Modules.Auth.Application;
 
 public sealed class EmployeeAccessRevoker(
     AuthDbContext dbContext,
-    TimeProvider timeProvider) : IEmployeeAccessRevoker
+    TimeProvider timeProvider,
+    IOptions<SecurityOptions> securityOptions) : IEmployeeAccessRevoker
 {
     public async Task RevokeAsync(
         long employeeId,
@@ -34,7 +36,7 @@ public sealed class EmployeeAccessRevoker(
         var before = new { user.IsActive, user.SecurityState?.LockoutEnd };
         user.IsActive = false;
         user.SecurityState ??= new UserSecurityState { UserId = user.Id };
-        user.SecurityState.LockoutEnd = now.AddYears(10);
+        user.SecurityState.LockoutEnd = now.AddYears(securityOptions.Value.AdminLockYears);
         user.SecurityState.FailedAccessCount = 0;
 
         var tokens = await dbContext.RefreshTokens

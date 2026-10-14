@@ -1,0 +1,52 @@
+@inherits LayoutComponentBase
+@implements IDisposable
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+
+@if (isAdminLayout)
+{
+    <LayoutView Layout="@typeof(AdminLayout)">
+        @Body
+    </LayoutView>
+}
+else
+{
+    <LayoutView Layout="@typeof(EmployeeLayout)">
+        @Body
+    </LayoutView>
+}
+
+@code {
+    private bool isAdminLayout;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await DetermineLayoutAsync();
+        Navigation.LocationChanged += OnLocationChanged;
+    }
+
+    private async void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        await DetermineLayoutAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task DetermineLayoutAsync()
+    {
+        var relativePath = Navigation.ToBaseRelativePath(Navigation.Uri).TrimStart('/');
+        if (relativePath.StartsWith("admin/", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(relativePath, "admin", StringComparison.OrdinalIgnoreCase))
+        {
+            isAdminLayout = true;
+            return;
+        }
+
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        isAdminLayout = authState.User.IsInRole("ADMIN");
+    }
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= OnLocationChanged;
+    }
+}

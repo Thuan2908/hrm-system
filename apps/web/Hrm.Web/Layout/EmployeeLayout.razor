@@ -78,47 +78,65 @@
 @code {
     private System.Threading.Timer? statusScannerTimer;
     private bool isHandlingKickOut = false;
+    private bool isCheckingStatus = false;
 
     protected override void OnInitialized()
     {
-        // Cơ chế quét tức thời: kiểm tra trạng thái tài khoản/thôi việc mỗi 3 giây
-        // Nếu Admin bấm Khóa hoặc Thôi việc, lập tức hủy phiên và đá về login
+        Navigation.LocationChanged += OnLocationChanged;
+
+        // Cơ chế quét định kỳ: kiểm tra trạng thái tài khoản mỗi 45 giây
         statusScannerTimer = new System.Threading.Timer(async _ =>
         {
-            if (isHandlingKickOut) return;
+            await CheckStatusAsync();
+        }, null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(45));
+    }
 
-            try
+    private async void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        await CheckStatusAsync();
+    }
+
+    private async Task CheckStatusAsync()
+    {
+        if (isHandlingKickOut || isCheckingStatus) return;
+        isCheckingStatus = true;
+
+        try
+        {
+            var status = await AuthApiClient.CheckAccountStatusAsync();
+            if (!status.CanAccess && !isHandlingKickOut)
             {
-                var status = await AuthApiClient.CheckAccountStatusAsync();
-                if (!status.CanAccess && !isHandlingKickOut)
+                isHandlingKickOut = true;
+                statusScannerTimer?.Dispose();
+                await SessionStore.ClearAsync();
+                try
                 {
-                    isHandlingKickOut = true;
-                    statusScannerTimer?.Dispose();
-                    await SessionStore.ClearAsync();
-                    try
-                    {
-                        await AuthApiClient.LogoutAsync();
-                    }
-                    catch
-                    {
-                        // Silent
-                    }
-
-                    await InvokeAsync(() =>
-                    {
-                        Navigation.NavigateTo($"employee-login?reason={status.Reason}", forceLoad: true);
-                    });
+                    await AuthApiClient.LogoutAsync();
                 }
+                catch
+                {
+                    // Silent
+                }
+
+                await InvokeAsync(() =>
+                {
+                    Navigation.NavigateTo($"employee-login?reason={status.Reason}", forceLoad: true);
+                });
             }
-            catch
-            {
-                // Silent
-            }
-        }, null, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(3));
+        }
+        catch
+        {
+            // Silent
+        }
+        finally
+        {
+            isCheckingStatus = false;
+        }
     }
 
     private async Task LogoutAsync()
     {
+        Navigation.LocationChanged -= OnLocationChanged;
         statusScannerTimer?.Dispose();
         await AuthApiClient.LogoutAsync();
         Navigation.NavigateTo("employee-login", true);
@@ -193,6 +211,7 @@
 
     public void Dispose()
     {
+        Navigation.LocationChanged -= OnLocationChanged;
         statusScannerTimer?.Dispose();
     }
 }

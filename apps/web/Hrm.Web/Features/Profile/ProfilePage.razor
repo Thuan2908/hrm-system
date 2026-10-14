@@ -141,16 +141,52 @@
 
                 <!-- Thẻ lương & Đãi ngộ -->
                 <div class="card emp-kpi-card p-4 mb-4" style="border-left: 4px solid var(--emp-primary) !important;">
-                    <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
                         <span class="emp-kpi-label d-flex align-items-center gap-2">
-                            <i class="bi bi-cash-stack text-primary"></i> CHẾ ĐỘ ĐÃI NGỘ
+                            <i class="bi bi-cash-stack text-primary"></i> CHẾ ĐỘ ĐÃI NGỘ &amp; LƯƠNG
                         </span>
                         <span class="emp-badge emp-badge-success">Chính thức</span>
                     </div>
-                    <div class="fs-4 fw-bold text-dark mb-1 tabular-nums">
-                        @profile.BaseSalary.ToString("#,##0 VNĐ")
+
+                    <div class="mb-3">
+                        <div class="text-muted small mb-1">Lương cơ bản hợp đồng:</div>
+                        <div class="fs-4 fw-bold text-dark tabular-nums">
+                            @profile.BaseSalary.ToString("#,##0 VNĐ")
+                        </div>
                     </div>
-                    <small class="text-muted d-block">Mức lương cơ bản thỏa thuận theo hợp đồng lao động.</small>
+
+                    <div class="border-top pt-2">
+                        <div class="d-flex justify-content-between py-1 small">
+                            <span class="text-muted">Phụ cấp chức vụ:</span>
+                            <strong class="text-dark tabular-nums">@profile.PositionAllowance.ToString("#,##0 VNĐ")</strong>
+                        </div>
+                        <div class="d-flex justify-content-between py-1 small">
+                            <span class="text-muted">Phụ cấp khác:</span>
+                            <strong class="text-dark tabular-nums">@profile.OtherAllowance.ToString("#,##0 VNĐ")</strong>
+                        </div>
+                        <div class="d-flex justify-content-between py-1 small">
+                            <span class="text-muted">Lương đóng BHXH:</span>
+                            <strong class="text-dark tabular-nums">@((profile.InsuranceSalary ?? profile.BaseSalary).ToString("#,##0 VNĐ"))</strong>
+                        </div>
+                        <div class="d-flex justify-content-between py-1 small">
+                            <span class="text-muted">Số người phụ thuộc:</span>
+                            <strong class="text-dark">@profile.DependentCount người</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Thẻ thông tin tài khoản ngân hàng -->
+                <div class="card emp-card p-4 mb-4">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <i class="bi bi-credit-card-2-front text-primary fs-5"></i>
+                        <strong class="text-dark fw-bold">Tài Khoản Chi Trả Lương</strong>
+                    </div>
+                    <div class="p-3 bg-light rounded-3 border">
+                        <div class="text-muted small mb-1">Ngân hàng thụ hưởng</div>
+                        <div class="fw-bold text-dark mb-2">@(profile.BankName ?? "Chưa cập nhật ngân hàng")</div>
+                        <div class="text-muted small mb-1">Số tài khoản</div>
+                        <div class="fw-bold font-monospace text-primary fs-6">@(profile.BankAccountNumber ?? "Chưa cập nhật số tài khoản")</div>
+                    </div>
                 </div>
             </div>
 
@@ -169,7 +205,7 @@
                                 </div>
                             </div>
                             <span class="emp-badge emp-badge-neutral">
-                                16 Trường dữ liệu
+                                Đầy đủ trường dữ liệu
                             </span>
                         </div>
                         <div class="card-body p-4">
@@ -229,7 +265,7 @@
                                     <div class="col-md-6 col-lg-4">
                                         <div class="p-3 bg-light rounded-3 h-100 border">
                                             <div class="text-muted small mb-1">Giới tính (gender)</div>
-                                            <div class="fw-bold text-dark">@(TranslateGender(profile.Gender))</div>
+                                            <div class="fw-bold text-dark">@(GenderCatalog.ToDisplayName(profile.Gender))</div>
                                         </div>
                                     </div>
                                     <div class="col-md-6 col-lg-4">
@@ -272,11 +308,11 @@
                         </div>
                     </div>
 
-                    <!-- Khối 2: Form cập nhật thông tin cá nhân -->
+                    <!-- Khối 2: Form cập nhật thông tin cá nhân & Tài khoản ngân hàng -->
                     <div class="card emp-card">
                         <div class="card-header bg-white border-bottom border-light py-3 px-4 d-flex align-items-center gap-2">
                             <i class="bi bi-pencil-square text-primary fs-5"></i>
-                            <strong class="text-dark fs-6 text-uppercase fw-bold" style="letter-spacing: 0.5px;">Chỉnh Sửa &amp; Cập Nhật Thông Tin Liên Hệ</strong>
+                            <strong class="text-dark fs-6 text-uppercase fw-bold" style="letter-spacing: 0.5px;">Chỉnh Sửa Thông Tin Liên Hệ &amp; Ngân Hàng</strong>
                         </div>
                         <div class="card-body p-4">
                             <EditForm Model="profileModel" OnValidSubmit="HandleUpdateProfileAsync">
@@ -300,14 +336,25 @@
                                         <label class="form-label fw-semibold text-secondary" for="genderInput">Giới tính</label>
                                         <InputSelect id="genderInput" class="form-select" @bind-Value="profileModel.Gender">
                                             <option value="">-- Chọn --</option>
-                                            <option value="Male">Nam</option>
-                                            <option value="Female">Nữ</option>
-                                            <option value="Other">Khác</option>
+                                            <option value="@GenderCatalog.Male">Nam</option>
+                                            <option value="@GenderCatalog.Female">Nữ</option>
+                                            <option value="@GenderCatalog.Other">Khác</option>
                                         </InputSelect>
                                     </div>
                                     <div class="col-12 col-md-3">
                                         <label class="form-label fw-semibold text-secondary" for="dobInput">Ngày sinh</label>
                                         <InputDate id="dobInput" class="form-control" @bind-Value="profileModel.DateOfBirth" />
+                                    </div>
+                                </div>
+
+                                <div class="row g-3 mb-3">
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label fw-semibold text-secondary" for="bankNameInput">Tên Ngân hàng</label>
+                                        <InputText id="bankNameInput" class="form-control" @bind-Value="profileModel.BankName" placeholder="Ví dụ: Vietcombank, Techcombank, MB Bank..." />
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label fw-semibold text-secondary" for="bankAccountInput">Số tài khoản ngân hàng</label>
+                                        <InputText id="bankAccountInput" class="form-control" @bind-Value="profileModel.BankAccountNumber" placeholder="Nhập số tài khoản nhận lương..." />
                                     </div>
                                 </div>
 
@@ -413,7 +460,9 @@
                     Email = profile.Email,
                     Address = profile.Address,
                     Gender = profile.Gender,
-                    DateOfBirth = profile.DateOfBirth
+                    DateOfBirth = profile.DateOfBirth,
+                    BankName = profile.BankName,
+                    BankAccountNumber = profile.BankAccountNumber
                 };
             }
             else
@@ -451,7 +500,9 @@
                 Email: profileModel.Email?.Trim(),
                 Address: profileModel.Address?.Trim(),
                 DateOfBirth: profileModel.DateOfBirth,
-                Gender: profileModel.Gender);
+                Gender: profileModel.Gender,
+                BankName: profileModel.BankName?.Trim(),
+                BankAccountNumber: profileModel.BankAccountNumber?.Trim());
 
             var err = await AuthApiClient.UpdateProfileAsync(request);
             if (err is not null)
@@ -482,9 +533,9 @@
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(passwordModel.NewPassword) || passwordModel.NewPassword.Length < 3)
+        if (string.IsNullOrWhiteSpace(passwordModel.NewPassword) || passwordModel.NewPassword.Length < PasswordPolicy.MinLength)
         {
-            globalErrorMessage = "Mật khẩu mới phải có tối thiểu 3 ký tự.";
+            globalErrorMessage = $"Mật khẩu mới phải có ít nhất {PasswordPolicy.MinLength} ký tự.";
             return;
         }
 
@@ -526,14 +577,6 @@
     private static string GetInitial(string? fullName) =>
         string.IsNullOrWhiteSpace(fullName) ? "N" : fullName.Trim()[0].ToString().ToUpperInvariant();
 
-    private static string TranslateGender(string? gender) => gender switch
-    {
-        "Male" => "Nam",
-        "Female" => "Nữ",
-        "Other" => "Khác",
-        _ => gender ?? "Chưa xác định"
-    };
-
     private static string CalculateTenure(DateOnly? hireDate)
     {
         if (hireDate is null) return "Chưa cập nhật";
@@ -557,6 +600,8 @@
         public string? Address { get; set; }
         public string? Gender { get; set; }
         public DateOnly? DateOfBirth { get; set; }
+        public string? BankName { get; set; }
+        public string? BankAccountNumber { get; set; }
     }
 
     private sealed class PasswordFormModel

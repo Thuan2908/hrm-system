@@ -211,7 +211,7 @@
     {
         [Range(1, long.MaxValue, ErrorMessage = "Vui lòng chọn nhân viên.")] public long EmployeeId { get; set; }
         [Required] public string UserName { get; set; } = string.Empty;
-        [Required, MinLength(12)] public string Password { get; set; } = string.Empty;
+        [Required, MinLength(PasswordPolicy.MinLength, ErrorMessage = "Mật khẩu phải có ít nhất 8 ký tự.")] public string Password { get; set; } = string.Empty;
         public string Role { get; set; } = string.Empty;
         public void Reset() { EmployeeId = 0; UserName = string.Empty; Password = string.Empty; Role = string.Empty; }
     }

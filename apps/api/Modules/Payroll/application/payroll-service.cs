@@ -180,7 +180,6 @@ public sealed class PayrollService(
 
         if (employees.Count == 0) return 0;
 
-        var maxId = await dbContext.Payrolls.MaxAsync(p => (long?)p.Id, cancellationToken) ?? 0;
         var processedCount = 0;
         var periodStart = new DateOnly(year, month, 1);
         var periodEnd = new DateOnly(year, month, DateTime.DaysInMonth(year, month));
@@ -223,10 +222,8 @@ public sealed class PayrollService(
             }
             else
             {
-                maxId++;
                 dbContext.Payrolls.Add(new PayrollRecord
                 {
-                    Id = maxId,
                     EmployeeId = emp.Id,
                     MonthPeriod = month,
                     YearPeriod = year,

@@ -6,6 +6,7 @@ using Hrm.Modules.Auth.Domain;
 using Hrm.Modules.Auth.Infrastructure.Persistence;
 using Hrm.SharedKernel;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Hrm.Modules.Auth.Application;
 
@@ -27,8 +28,12 @@ public interface IAdminService
     Task<PagedResult<AuditLogDto>> SearchAuditAsync(string? action, int page, int pageSize, CancellationToken cancellationToken);
 }
 
-public sealed class AdminService(AuthDbContext dbContext, TimeProvider timeProvider) : IAdminService
+public sealed class AdminService(
+    AuthDbContext dbContext,
+    TimeProvider timeProvider,
+    IOptions<SecurityOptions> securityOptions) : IAdminService
 {
+    private readonly SecurityOptions secOptions = securityOptions.Value;
     public async Task<PagedResult<AdminUserDto>> SearchUsersAsync(
         string? keyword, string? department, string? role, string? status, string sortBy, bool descending,
         int page, int pageSize, CancellationToken cancellationToken)
@@ -106,21 +111,23 @@ public sealed class AdminService(AuthDbContext dbContext, TimeProvider timeProvi
         {
             await using var transaction = await dbContext.Database.BeginTransactionAsync(
                 IsolationLevel.Serializable, cancellationToken);
-            await dbContext.Database.ExecuteSqlRawAsync("LOCK TABLE users IN EXCLUSIVE MODE", cancellationToken);
             var user = new ApplicationUser
             {
-                Id = (await dbContext.Users.MaxAsync(item => (long?)item.Id, cancellationToken) ?? 0) + 1,
                 EmployeeId = employee.Id,
                 RoleId = role.Id,
                 UserName = request.UserName.Trim(),
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password, 12),
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password, secOptions.BcryptWorkFactor),
                 IsActive = true,
                 Employee = employee,
                 Role = role
             };
             dbContext.Users.Add(user);
-            user.Metadata = new UserAccountMetadata { UserId = user.Id, CreatedAt = timeProvider.GetUtcNow() };
             await dbContext.SaveChangesAsync(cancellationToken);
+
+            user.Metadata = new UserAccountMetadata { UserId = user.Id, User = user, CreatedAt = timeProvider.GetUtcNow() };
+            dbContext.UserAccountMetadata.Add(user.Metadata);
+            await dbContext.SaveChangesAsync(cancellationToken);
+
             await AddAuditAsync(actorUserId, "admin.user.created", "User", IdText(user.Id), null,
                 new { user.UserName, user.EmployeeId, Role = role.Name }, cancellationToken);
             await transaction.CommitAsync(cancellationToken);
@@ -162,7 +169,7 @@ public sealed class AdminService(AuthDbContext dbContext, TimeProvider timeProvi
         var user = await FindUserAsync(userId, cancellationToken);
         user.SecurityState ??= new UserSecurityState { UserId = user.Id };
         var before = user.SecurityState.LockoutEnd;
-        user.SecurityState.LockoutEnd = isLocked ? timeProvider.GetUtcNow().AddYears(10) : null;
+        user.SecurityState.LockoutEnd = isLocked ? timeProvider.GetUtcNow().AddYears(secOptions.AdminLockYears) : null;
         user.SecurityState.FailedAccessCount = 0;
         if (isLocked) await RevokeUserTokensAsync(user.Id, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -186,7 +193,7 @@ public sealed class AdminService(AuthDbContext dbContext, TimeProvider timeProvi
     {
         EnsurePassword(newPassword);
         var user = await FindUserAsync(userId, cancellationToken);
-        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword, 12);
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword, secOptions.BcryptWorkFactor);
         await RevokeUserTokensAsync(user.Id, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
         await AddAuditAsync(actorUserId, "admin.user.password-reset", "User", IdText(user.Id), null,
@@ -226,17 +233,17 @@ public sealed class AdminService(AuthDbContext dbContext, TimeProvider timeProvi
         {
             await using var transaction = await dbContext.Database.BeginTransactionAsync(
                 IsolationLevel.Serializable, cancellationToken);
-            await dbContext.Database.ExecuteSqlRawAsync("LOCK TABLE roles IN EXCLUSIVE MODE", cancellationToken);
             if (await dbContext.Roles.AnyAsync(role => EF.Functions.ILike(role.Name, name), cancellationToken))
                 throw new DomainException("ROLE_EXISTS", $"Vai trò '{name}' đã tồn tại.");
 
             var role = new ApplicationRole
             {
-                Id = (await dbContext.Roles.MaxAsync(item => (long?)item.Id, cancellationToken) ?? 0) + 1,
                 Name = name,
                 Description = description
             };
             dbContext.Roles.Add(role);
+            await dbContext.SaveChangesAsync(cancellationToken);
+
             dbContext.RolePermissions.AddRange(definitions.Select(permission => new RolePermissionGrant
             {
                 Role = role,
@@ -261,7 +268,6 @@ public sealed class AdminService(AuthDbContext dbContext, TimeProvider timeProvi
         {
             await using var transaction = await dbContext.Database.BeginTransactionAsync(
                 IsolationLevel.Serializable, cancellationToken);
-            await dbContext.Database.ExecuteSqlRawAsync("LOCK TABLE roles IN EXCLUSIVE MODE", cancellationToken);
 
             var role = await dbContext.Roles.SingleOrDefaultAsync(item => item.Id == roleId, cancellationToken)
                 ?? throw new DomainException("ROLE_NOT_FOUND", "Không tìm thấy vai trò.");
@@ -368,8 +374,8 @@ public sealed class AdminService(AuthDbContext dbContext, TimeProvider timeProvi
 
     private static void EnsurePassword(string password)
     {
-        if (password.Length < 3)
-            throw new DomainException("PASSWORD_WEAK", "Mật khẩu cần ít nhất 3 ký tự.");
+        if (!PasswordPolicy.IsValid(password, out var errorMessage))
+            throw new DomainException("PASSWORD_WEAK", errorMessage);
     }
 
     private static (int Page, int PageSize) NormalizePaging(int page, int pageSize) =>
