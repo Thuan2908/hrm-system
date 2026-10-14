@@ -1,6 +1,5 @@
 @page "/employees"
 @page "/employee/directory"
-@page "/admin/employees"
 @layout EmployeeLayout
 @attribute [Authorize]
 @inject IEmployeeApiClient EmployeeApiClient
@@ -1011,9 +1010,9 @@
                 errorMessage = "Vui lòng nhập tên đăng nhập.";
                 return;
             }
-            if (string.IsNullOrWhiteSpace(formPassword) || formPassword.Length < 6)
+            if (string.IsNullOrWhiteSpace(formPassword))
             {
-                errorMessage = "Mật khẩu tạm phải có ít nhất 6 ký tự.";
+                errorMessage = "Vui lòng nhập mật khẩu tạm.";
                 return;
             }
         }

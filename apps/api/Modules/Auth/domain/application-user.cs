@@ -9,6 +9,9 @@ public sealed class ApplicationUser
     public required string PasswordHash { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime? LastLoginAt { get; set; }
+
+    /// <summary>Thời điểm Admin xóa (mềm) tài khoản. Null nghĩa là tài khoản chưa bị xóa.</summary>
+    public DateTimeOffset? DeletedAt { get; set; }
     public ApplicationRole Role { get; set; } = null!;
     public Employee Employee { get; set; } = null!;
     public UserSecurityState? SecurityState { get; set; }

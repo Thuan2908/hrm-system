@@ -171,14 +171,14 @@ public sealed class EmployeeService(
                 throw new DomainException("INVALID_USERNAME", "Vui lòng nhập tên đăng nhập cho tài khoản nhân viên.");
             }
 
-            if (await dbContext.Users.AnyAsync(u => EF.Functions.ILike(u.UserName, request.UserName.Trim()), cancellationToken))
+            if (await dbContext.Users.IgnoreQueryFilters().AnyAsync(u => EF.Functions.ILike(u.UserName, request.UserName.Trim()), cancellationToken))
             {
                 throw new DomainException("USERNAME_EXISTS", $"Tên đăng nhập '{request.UserName.Trim()}' đã tồn tại.");
             }
 
-            if (string.IsNullOrWhiteSpace(request.Password) || request.Password.Length < 6)
+            if (string.IsNullOrWhiteSpace(request.Password))
             {
-                throw new DomainException("WEAK_PASSWORD", "Mật khẩu tạm phải có ít nhất 6 ký tự.");
+                throw new DomainException("PASSWORD_REQUIRED", "Vui lòng nhập mật khẩu cho tài khoản nhân viên.");
             }
         }
 
@@ -240,7 +240,7 @@ public sealed class EmployeeService(
                     ?? await dbContext.Roles.FirstOrDefaultAsync(r => r.Name == "EMPLOYEE", cancellationToken)
                     ?? throw new DomainException("ROLE_NOT_FOUND", "Không tìm thấy vai trò hệ thống hợp lệ.");
 
-                var nextUserId = (await dbContext.Users.MaxAsync(u => (long?)u.Id, cancellationToken) ?? 0) + 1;
+                var nextUserId = (await dbContext.Users.IgnoreQueryFilters().MaxAsync(u => (long?)u.Id, cancellationToken) ?? 0) + 1;
                 var user = new ApplicationUser
                 {
                     Id = nextUserId,

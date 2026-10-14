@@ -6,9 +6,11 @@ public static class PermissionCodes
     public const string EmployeeWrite = "employee.write";
     public const string EmployeeTransfer = "employee.transfer";
     public const string EmployeeOffboard = "employee.offboard";
+    public const string EmployeePromote = "employee.promote";
     public const string AttendanceSelfWrite = "attendance.self.write";
     public const string LeaveSelfCreate = "leave.self.create";
     public const string LeaveApprove = "leave.approve";
+    public const string SelfApproved = "self_approved";
     public const string PayrollRun = "payroll.run";
     public const string PayrollFinalize = "payroll.finalize";
     public const string PayrollSelfRead = "payroll.self.read";
@@ -21,9 +23,9 @@ public static class PermissionCodes
 
     public static IReadOnlyList<string> All { get; } =
     [
-        EmployeeRead, EmployeeWrite, EmployeeTransfer, EmployeeOffboard,
+        EmployeeRead, EmployeeWrite, EmployeeTransfer, EmployeeOffboard, EmployeePromote,
         AttendanceSelfWrite,
-        LeaveSelfCreate, LeaveApprove,
+        LeaveSelfCreate, LeaveApprove, SelfApproved,
         PayrollRun, PayrollFinalize, PayrollSelfRead, ReportRead,
         AdminUserRead, AdminUserSearch, AdminUserManage, AdminRbacManage, AuditRead
     ];
@@ -33,17 +35,19 @@ public static class PermissionCodes
         new(AttendanceSelfWrite, "Chấm công vào/ra cá nhân", "Chấm công", "Cho phép nhân viên tự điểm danh vào/ra ca làm việc hàng ngày", ["ATT_CHECKIN", "attendance.write"]),
         new(LeaveSelfCreate, "Tạo đơn xin nghỉ phép", "Nghỉ phép", "Tạo và gửi yêu cầu xin nghỉ phép, nghỉ ốm, nghỉ bù", ["LEAVE_REQUEST", "leave.create"]),
         new(LeaveApprove, "Duyệt đơn nghỉ phép", "Nghỉ phép", "Trưởng nhóm / Quản lý / HR xét duyệt đơn nghỉ của nhân viên", ["LEAVE_APPROVE", "leave.team.approve", "leave.hr.approve"]),
+        new(SelfApproved, "Tự động duyệt đơn cá nhân", "Nghỉ phép", "Tự động phê duyệt các yêu cầu/đơn từ do chính mình tạo mà không cần cấp trên duyệt", ["LEAVE_SELF_APPROVE", "self.approve"]),
         new(PayrollSelfRead, "Xem phiếu lương cá nhân", "Tiền lương", "Xem chi tiết bảng lương, các khoản phụ cấp và khấu trừ cá nhân", ["PAYROLL_VIEW", "payroll.read"]),
         new(PayrollRun, "Tính & Chốt bảng lương", "Tiền lương", "Tổng hợp công và tính lương cho nhân viên toàn đơn vị", ["PAYROLL_MANAGE"]),
         new(PayrollFinalize, "Duyệt chi lương chính thức", "Tiền lương", "Khóa sổ bảng lương và xuất phiếu chi trả", ["PAYROLL_FINALIZE"]),
         new(EmployeeRead, "Tra cứu Danh bạ Nhân sự", "Nhân sự", "Chỉ xem danh bạ và tra cứu thông tin nhân sự công ty (Read-only)", ["EMP_VIEW"]),
-        new(EmployeeWrite, "Quản lý & Thêm mới Nhân sự", "Nhân sự", "Tiếp nhận nhân sự mới (Onboarding) và chỉnh sửa thông tin hồ sơ", ["EMP_EDIT"]),
+        new(EmployeeWrite, "Cập nhật Hồ sơ Nhân sự", "Nhân sự", "Tiếp nhận nhân sự mới (Onboarding) và chỉnh sửa thông tin hồ sơ", ["EMP_EDIT"]),
         new(EmployeeTransfer, "Điều chuyển phòng ban", "Nhân sự", "Thực hiện điều chuyển công tác, chuyển phòng ban cho nhân sự", ["EMP_TRANSFER"]),
         new(EmployeeOffboard, "Thực hiện thôi việc", "Nhân sự", "Quyết định thôi việc và khóa quyền truy cập của nhân sự", ["EMP_OFFBOARD"]),
+        new(EmployeePromote, "Bổ nhiệm & Thăng chức", "Nhân sự", "Thực hiện bổ nhiệm chức vụ, thăng chức cho nhân sự", ["EMP_PROMOTE"]),
         new(ReportRead, "Báo cáo & Thống kê Nhân sự", "Báo cáo", "Xem các chỉ số KPI, biến động nhân sự, thâm niên và quỹ lương", ["REPORT_VIEW"]),
         new(AdminUserRead, "Xem danh sách tài khoản", "Quản trị", "Xem danh sách tài khoản người dùng hệ thống", ["admin.users.read"]),
         new(AdminUserSearch, "Tìm kiếm nâng cao tài khoản", "Quản trị", "Tìm kiếm, lọc tài khoản theo tiêu chí chi tiết", ["admin.users.search"]),
-        new(AdminUserManage, "Quản lý tài khoản", "Quản trị", "Tạo tài khoản, khóa, mở khóa, đổi mật khẩu", ["USER_MANAGE"]),
+        new(AdminUserManage, "Quản lý tài khoản", "Quản trị", "Tạo, xóa, khóa, mở khóa tài khoản, đổi mật khẩu", ["USER_MANAGE"]),
         new(AdminRbacManage, "Quản trị vai trò & quyền", "Quản trị", "Tạo vai trò và phân bổ quyền hạn (RBAC)", ["RBAC_MANAGE"]),
         new(AuditRead, "Nhật ký kiểm toán", "Hệ thống", "Tra cứu lịch sử thao tác và vết hệ thống", ["AUDIT_VIEW"])
     ];
