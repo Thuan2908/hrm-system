@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../shared/Hrm.Contracts/Hrm.Contracts.csproj" />
+    <ProjectReference Include="../../apps/api/Modules/Leave/Hrm.Modules.Leave.csproj" />
   </ItemGroup>
 
 </Project>

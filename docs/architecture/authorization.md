@@ -11,6 +11,8 @@ Permission code gợi ý:
 - attendance.self.write
 - attendance.team.approve
 - leave.self.create
+- self_approved (ordinary leave auto-approved on submission; excludes resignations)
+- leave.approve (only for the assigned direct manager; checked from current DB grants)
 - leave.team.approve
 - leave.hr.approve
 - payroll.run

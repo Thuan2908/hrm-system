@@ -67,7 +67,10 @@ public sealed record LeaveRequestDto(
     Guid? AttachmentFileId,
     string? AttachmentFileName,
     DateTimeOffset CreatedAt,
-    DateTimeOffset? UpdatedAt
+    DateTimeOffset? UpdatedAt,
+    long? ApprovedByUserId = null,
+    DateTimeOffset? ApprovedAt = null,
+    bool IsAutoApproved = false
 );
 
 public sealed record LeaveBalanceSummaryDto(

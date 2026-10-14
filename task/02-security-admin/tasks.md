@@ -24,7 +24,7 @@
 **Mục tiêu:** Role-Permission backend.
 
 **Acceptance Criteria:**
-- Seed role baseline
+- Role baseline được operator provision thủ công trên Supabase (ADR-016), không seed script
 - Guard permission hoạt động
 - Default deny
 

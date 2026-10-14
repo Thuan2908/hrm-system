@@ -14,10 +14,11 @@
 
 ## Leave
 - BR-LEAVE-001: Employee nộp đơn online.
-- BR-LEAVE-002: Luồng duyệt baseline 2 cấp: Leader -> HR Manager.
-- BR-LEAVE-003: Người dùng không được tự duyệt đơn của chính mình.
+- BR-LEAVE-002: Quản lý trực tiếp theo `employees.manager_id` duyệt đơn; quản lý phải có quyền `leave.approve`. Quyết định này thay thế baseline 2 cấp (ADR-015).
+- BR-LEAVE-003: Người dùng không được tự duyệt thủ công đơn của chính mình. Quyền `self_approved` cho phép hệ thống tự động duyệt đơn nghỉ thông thường khi gửi; đơn thôi việc luôn cần quản lý duyệt.
 - BR-LEAVE-004: Approve/reject phải lưu người duyệt, thời điểm và ghi chú.
 - BR-LEAVE-005: Các loại baseline: phép năm, ốm, thai sản, thôi việc.
+- BR-LEAVE-006: Queue và thao tác approve/reject chỉ áp dụng cho nhân viên được quản lý trực tiếp, kể cả Admin. Quyền được kiểm tra lại từ database; không gán `self_approved` mặc định.
 
 ## Payroll
 - BR-PAY-001: Payroll theo tháng/năm cho từng employee.

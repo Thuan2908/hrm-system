@@ -1,6 +1,5 @@
 using Hrm.Contracts;
 using Hrm.Modules.Auth.Contracts;
-using Hrm.Modules.Auth.Infrastructure.Persistence;
 using Hrm.Modules.Leave.Domain;
 using Hrm.Modules.Leave.Infrastructure.Persistence;
 using Hrm.SharedKernel;
@@ -15,14 +14,14 @@ public interface ILeaveService
     Task<LeaveRequestDto> UpdateLeaveRequestAsync(long userId, Guid requestId, UpdateLeaveRequestDto request, CancellationToken cancellationToken);
     Task<IReadOnlyList<LeaveRequestDto>> GetMyRequestsAsync(long userId, CancellationToken cancellationToken);
     Task CancelLeaveRequestAsync(long userId, Guid requestId, CancellationToken cancellationToken);
-    Task<IReadOnlyList<PendingLeaveApprovalDto>> GetPendingRequestsAsync(CancellationToken cancellationToken);
+    Task<IReadOnlyList<PendingLeaveApprovalDto>> GetPendingRequestsAsync(long actorUserId, CancellationToken cancellationToken);
     Task ApproveLeaveRequestAsync(Guid requestId, long actorUserId, CancellationToken cancellationToken);
     Task RejectLeaveRequestAsync(Guid requestId, string? reason, long actorUserId, CancellationToken cancellationToken);
 }
 
 public sealed class LeaveService(
     LeaveDbContext dbContext,
-    AuthDbContext authDbContext,
+    IEmployeeLeaveAccess employeeAccess,
     IEmployeeAccessRevoker accessRevoker,
     TimeProvider timeProvider) : ILeaveService
 {
@@ -97,6 +96,8 @@ public sealed class LeaveService(
         }
 
         var now = timeProvider.GetUtcNow();
+        var actor = await employeeAccess.GetUserAsync(userId, cancellationToken);
+        var automatic = LeaveApprovalPolicy.CanAutoApprove(actor, leaveType);
         var entity = new LeaveRequest
         {
             Id = Guid.NewGuid(),
@@ -106,7 +107,10 @@ public sealed class LeaveService(
             EndDate = request.EndDate,
             DaysCount = daysCount,
             Reason = request.Reason.Trim(),
-            Status = LeaveStatuses.Pending,
+            Status = automatic ? LeaveStatuses.Approved : LeaveStatuses.Pending,
+            IsAutoApproved = automatic,
+            ApprovedByUserId = automatic ? userId : null,
+            ApprovedAt = automatic ? now : null,
             AttachmentFileId = request.AttachmentFileId,
             AttachmentFileName = request.AttachmentFileName,
             CreatedAt = now
@@ -114,6 +118,9 @@ public sealed class LeaveService(
 
         dbContext.LeaveRequests.Add(entity);
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        if (automatic)
+            await employeeAccess.AuditDecisionAsync(entity.Id, employeeId, userId, entity.Status, true, null, cancellationToken);
 
         return MapToDto(entity);
     }
@@ -229,14 +236,8 @@ public sealed class LeaveService(
 
     private async Task<long> GetEmployeeIdAsync(long userId, CancellationToken cancellationToken)
     {
-        var user = await authDbContext.Users.AsNoTracking()
-            .FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
-
-        if (user is null)
-        {
-            throw new DomainException("AUTH_USER_NOT_FOUND", "Không tìm thấy thông tin tài khoản.");
-        }
-
+        var user = await employeeAccess.GetUserAsync(userId, cancellationToken);
+        if (!user.IsActive) throw new UnauthorizedAccessException("Tài khoản không hoạt động.");
         return user.EmployeeId;
     }
 
@@ -269,21 +270,22 @@ public sealed class LeaveService(
         AttachmentFileId: e.AttachmentFileId,
         AttachmentFileName: e.AttachmentFileName,
         CreatedAt: e.CreatedAt,
-        UpdatedAt: e.UpdatedAt
+        UpdatedAt: e.UpdatedAt,
+        ApprovedByUserId: e.ApprovedByUserId,
+        ApprovedAt: e.ApprovedAt,
+        IsAutoApproved: e.IsAutoApproved
     );
 
-    public async Task<IReadOnlyList<PendingLeaveApprovalDto>> GetPendingRequestsAsync(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<PendingLeaveApprovalDto>> GetPendingRequestsAsync(long actorUserId, CancellationToken cancellationToken)
     {
+        var actor = await GetReviewerAsync(actorUserId, cancellationToken);
+        var directReports = await employeeAccess.GetEmployeesAsync(actor.EmployeeId, cancellationToken);
+        var employees = directReports.Where(e => e.Id != actor.EmployeeId).ToDictionary(e => e.Id);
+        var employeeIds = employees.Keys.ToArray();
         var pending = await dbContext.LeaveRequests.AsNoTracking()
-            .Where(r => r.Status == LeaveStatuses.Pending)
+            .Where(r => r.Status == LeaveStatuses.Pending && employeeIds.Contains(r.EmployeeId))
             .OrderByDescending(r => r.CreatedAt)
             .ToListAsync(cancellationToken);
-
-        var employeeIds = pending.Select(p => p.EmployeeId).Distinct().ToList();
-        var employees = await authDbContext.Employees.AsNoTracking()
-            .Include(e => e.Department)
-            .Where(e => employeeIds.Contains(e.Id))
-            .ToDictionaryAsync(e => e.Id, cancellationToken);
 
         return pending.Select(r =>
         {
@@ -293,7 +295,7 @@ public sealed class LeaveService(
                 r.EmployeeId,
                 emp?.Code ?? "--",
                 emp?.FullName ?? "Nhân viên #" + r.EmployeeId,
-                emp?.Department?.Name ?? "N/A",
+                emp?.DepartmentName ?? "N/A",
                 r.LeaveType,
                 LeaveTypes.GetDisplayName(r.LeaveType),
                 r.StartDate,
@@ -315,18 +317,11 @@ public sealed class LeaveService(
             .FirstOrDefaultAsync(r => r.Id == requestId, cancellationToken)
             ?? throw new DomainException("LEAVE_REQUEST_NOT_FOUND", "Không tìm thấy đơn xin nghỉ phép.");
 
+        await EnsureCanReviewAsync(request.EmployeeId, actorUserId, cancellationToken);
+
         if (request.Status != LeaveStatuses.Pending)
         {
             throw new DomainException("LEAVE_ALREADY_PROCESSED", "Đơn xin nghỉ phép đã được xử lý trước đó.");
-        }
-
-        if (actorUserId > 0)
-        {
-            var actorEmployeeId = await GetEmployeeIdAsync(actorUserId, cancellationToken);
-            if (request.EmployeeId == actorEmployeeId)
-            {
-                throw new DomainException("CANNOT_APPROVE_SELF", "Bạn không được tự phê duyệt đơn của chính mình.");
-            }
         }
 
         var now = timeProvider.GetUtcNow();
@@ -337,17 +332,12 @@ public sealed class LeaveService(
 
         if (string.Equals(request.LeaveType, LeaveTypes.Resignation, StringComparison.OrdinalIgnoreCase))
         {
-            var emp = await authDbContext.Employees.FirstOrDefaultAsync(e => e.Id == request.EmployeeId, cancellationToken);
-            if (emp is not null)
-            {
-                emp.Status = "RESIGNED";
-                await authDbContext.SaveChangesAsync(cancellationToken);
-            }
-
+            await employeeAccess.MarkResignedAsync(request.EmployeeId, cancellationToken);
             await accessRevoker.RevokeAsync(request.EmployeeId, actorUserId, cancellationToken);
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
+        await employeeAccess.AuditDecisionAsync(request.Id, request.EmployeeId, actorUserId, request.Status, false, null, cancellationToken);
     }
 
     public async Task RejectLeaveRequestAsync(Guid requestId, string? reason, long actorUserId, CancellationToken cancellationToken)
@@ -355,6 +345,8 @@ public sealed class LeaveService(
         var request = await dbContext.LeaveRequests
             .FirstOrDefaultAsync(r => r.Id == requestId, cancellationToken)
             ?? throw new DomainException("LEAVE_REQUEST_NOT_FOUND", "Không tìm thấy đơn xin nghỉ phép.");
+
+        await EnsureCanReviewAsync(request.EmployeeId, actorUserId, cancellationToken);
 
         if (request.Status != LeaveStatuses.Pending)
         {
@@ -368,5 +360,23 @@ public sealed class LeaveService(
         request.ApprovedAt = now;
         request.UpdatedAt = now;
         await dbContext.SaveChangesAsync(cancellationToken);
+        await employeeAccess.AuditDecisionAsync(request.Id, request.EmployeeId, actorUserId, request.Status, false, request.RejectionReason, cancellationToken);
+    }
+
+    private async Task<LeaveUserAccess> GetReviewerAsync(long actorUserId, CancellationToken cancellationToken)
+    {
+        var actor = await employeeAccess.GetUserAsync(actorUserId, cancellationToken);
+        if (!LeaveApprovalPolicy.HasPermission(actor, PermissionCodes.LeaveApprove))
+            throw new UnauthorizedAccessException("Bạn không có quyền duyệt đơn nghỉ phép.");
+        return actor;
+    }
+
+    private async Task EnsureCanReviewAsync(long employeeId, long actorUserId, CancellationToken cancellationToken)
+    {
+        var actor = await GetReviewerAsync(actorUserId, cancellationToken);
+        var reports = await employeeAccess.GetEmployeesAsync(actor.EmployeeId, cancellationToken);
+        var employee = reports.FirstOrDefault(e => e.Id == employeeId);
+        if (employee is null || !LeaveApprovalPolicy.CanReview(actor, employeeId, employee.ManagerId))
+            throw new UnauthorizedAccessException("Chỉ quản lý trực tiếp có quyền duyệt mới được xử lý đơn này.");
     }
 }

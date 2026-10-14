@@ -281,7 +281,7 @@
                                         else if (r.Status == LeaveStatuses.Approved)
                                         {
                                             <span class="badge bg-success-subtle text-success border border-success px-2.5 py-1 rounded-pill">
-                                                ✓ Đã duyệt
+                                                @(r.IsAutoApproved ? "✓ Tự động duyệt" : "✓ Đã duyệt")
                                             </span>
                                         }
                                         else if (r.Status == LeaveStatuses.Rejected)
@@ -632,8 +632,10 @@
                 AttachmentFileName: formModel.AttachmentFileName
             );
 
-            await LeaveApiClient.CreateRequestAsync(dto);
-            successMessage = $"Gửi đơn {LeaveTypes.GetDisplayName(formModel.LeaveType)} thành công! Đơn của bạn đang chờ phê duyệt.";
+            var created = await LeaveApiClient.CreateRequestAsync(dto);
+            successMessage = created?.IsAutoApproved == true
+                ? "Đơn của bạn đã được tự động phê duyệt."
+                : "Gửi đơn thành công! Đơn của bạn đang chờ quản lý trực tiếp phê duyệt.";
 
             // Reset form
             formModel.Reason = string.Empty;

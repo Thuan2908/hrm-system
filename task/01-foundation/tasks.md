@@ -24,8 +24,8 @@
 **Mục tiêu:** Khởi tạo PostgreSQL (Supabase) + Entity Framework Core (Npgsql) schema cơ sở.
 
 **Acceptance Criteria:**
-- Có migration đầu tiên
-- Có seed role/permission baseline
+- Schema baseline được operator provision thủ công trên Supabase (ADR-016)
+- Role/permission baseline được operator provision thủ công, không seed script
 - Có naming convention
 
 **Definition of Done:** theo `task/00-governance/definition-of-done.md`.
@@ -67,7 +67,7 @@
 - EF Core dùng Npgsql.
 - DB connection string lấy từ secret/env.
 - Anon key không được dùng làm DB credential.
-- EF Core migration chạy được.
+- EF Core mappings khớp schema Supabase được quản lý thủ công; không chạy migration tự động.
 - Database health check hoạt động.
 
 ## FND-008 — Blazor Frontend Baseline

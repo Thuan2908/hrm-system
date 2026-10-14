@@ -15,6 +15,7 @@ public sealed class LeaveRequest
     public string? AttachmentFileName { get; set; }
     public long? ApprovedByUserId { get; set; }
     public DateTimeOffset? ApprovedAt { get; set; }
+    public bool IsAutoApproved { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? UpdatedAt { get; set; }
 }

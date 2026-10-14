@@ -59,7 +59,13 @@ public sealed class LeaveController(ILeaveService leaveService) : ControllerBase
     [Authorize(Policy = PermissionCodes.LeaveApprove)]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<PendingLeaveApprovalDto>>>> GetPending(CancellationToken cancellationToken)
     {
-        var result = await leaveService.GetPendingRequestsAsync(cancellationToken);
+        var hasAccess = User.IsInRole("ADMIN")
+            || User.HasClaim("permission", PermissionCodes.LeaveApprove)
+            || User.HasClaim("permission", "LEAVE_APPROVE");
+
+        if (!hasAccess) return Forbid();
+
+        var result = await leaveService.GetPendingRequestsAsync(GetUserId(), cancellationToken);
         return Ok(ApiResponse.Ok(result));
     }
 

@@ -19,6 +19,7 @@ public sealed record EmployeeDto(
     string Status,
     bool HasAccount,
     DateTimeOffset CreatedAt,
+    long? ManagerId = null,
     decimal PositionAllowance = 0m,
     decimal OtherAllowance = 0m,
     decimal? InsuranceSalary = null,
@@ -42,13 +43,7 @@ public sealed record CreateEmployeeRequest(
     bool CreateAccount = false,
     string? UserName = null,
     string? Password = null,
-    string? Role = null,
-    decimal PositionAllowance = 0m,
-    decimal OtherAllowance = 0m,
-    decimal? InsuranceSalary = null,
-    int DependentCount = 0,
-    string? BankName = null,
-    string? BankAccountNumber = null);
+    string? Role = null);
 
 public sealed record UpdateEmployeeRequest(
     string FullName,
@@ -62,14 +57,7 @@ public sealed record UpdateEmployeeRequest(
     string? EducationLevel,
     decimal BaseSalary,
     DateOnly? HireDate,
-    string Status,
-    decimal PositionAllowance = 0m,
-    decimal OtherAllowance = 0m,
-    decimal? InsuranceSalary = null,
-    int DependentCount = 0,
-    string? BankName = null,
-    string? BankAccountNumber = null,
-    string? SalaryChangeNote = null);
+    string Status);
 
 public sealed record DepartmentDto(
     long Id,

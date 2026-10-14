@@ -23,7 +23,6 @@ public static class AttendanceModule
                 .UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure(3))
                 .UseSnakeCaseNamingConvention());
 
-        services.AddScoped<IAttendanceDatabaseInitializer, AttendanceDatabaseInitializer>();
         services.AddScoped<IAttendanceService, AttendanceService>();
 
         return services;

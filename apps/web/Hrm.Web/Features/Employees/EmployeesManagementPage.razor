@@ -1,4 +1,4 @@
-@page "/employees"
+﻿@page "/employees"
 @page "/employee/directory"
 @layout EmployeeLayout
 @attribute [Authorize]
@@ -523,6 +523,18 @@
                                         <option value="@p.Id">@p.Name (Phụ cấp: @FormatSalaryNumber(p.DefaultPositionAllowance) đ)</option>
                                     }
                                 </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Quản lý trực tiếp</label>
+                                <select class="form-select" @bind="formManagerId">
+                                    <option value="0">-- Chưa có quản lý --</option>
+                                    @foreach (var manager in managerOptions.Where(e => e.Id != editingEmployeeId && e.Status == "ACTIVE"))
+                                    {
+                                        <option value="@manager.Id">@manager.Code — @manager.FullName</option>
+                                    }
+                                </select>
+                                <div class="form-text">Quản lý cần quyền duyệt đơn nghỉ phép để xử lý đơn.</div>
                             </div>
 
                             <div class="col-md-6">
@@ -1419,6 +1431,8 @@
 
 @code {
     private IReadOnlyList<EmployeeDto> employees = [];
+    private IReadOnlyList<EmployeeDto> managerOptions = [];
+    private long formManagerId;
     private IReadOnlyList<DepartmentDto> departments = [];
     private IReadOnlyList<PositionDto> positions = [];
     private IReadOnlyList<string> availableRoles = ["EMPLOYEE", "HR_STAFF", "MANAGER", "ADMIN"];
@@ -1564,6 +1578,7 @@
         {
             departments = await EmployeeApiClient.GetDepartmentsAsync();
             positions = await EmployeeApiClient.GetPositionsAsync();
+            managerOptions = await EmployeeApiClient.GetEmployeesAsync();
             employees = await EmployeeApiClient.GetEmployeesAsync(
                 departmentId: selectedDepartmentId > 0 ? selectedDepartmentId : null,
                 status: !string.IsNullOrWhiteSpace(selectedStatus) ? selectedStatus : null);
@@ -1626,20 +1641,7 @@
         formEmail = string.Empty;
         formAddress = string.Empty;
         formDepartmentId = departments.FirstOrDefault()?.Id ?? 0;
-
-        var firstDept = departments.FirstOrDefault(d => d.Id == formDepartmentId);
-        var validPositions = formDepartmentId > 0
-            ? positions.Where(p => DepartmentPositionPolicy.IsCompatible(formDepartmentId, p.DepartmentId, firstDept?.Code, firstDept?.Name, p.Name, p.Code)).ToList()
-            : positions;
-        var defaultPos = validPositions.FirstOrDefault();
-        formPositionId = defaultPos?.Id ?? 0;
-        formPositionAllowance = defaultPos?.DefaultPositionAllowance ?? 0m;
-        formOtherAllowance = 0m;
-        formInsuranceSalary = null;
-        formBankName = string.Empty;
-        formBankAccountNumber = string.Empty;
-        formSalaryChangeNote = string.Empty;
-
+        formPositionId = positions.FirstOrDefault()?.Id ?? 0;
         formBaseSalary = 10000000m;
         formBaseSalaryDisplay = FormatSalaryNumber(formBaseSalary);
         formHireDate = DateOnly.FromDateTime(DateTime.Today);
@@ -1666,13 +1668,6 @@
         formEducationLevel = EducationLevelCatalog.Normalize(emp.EducationLevel);
         formDepartmentId = emp.DepartmentId;
         formPositionId = emp.PositionId ?? 0;
-        formPositionAllowance = emp.PositionAllowance;
-        formOtherAllowance = emp.OtherAllowance;
-        formInsuranceSalary = emp.InsuranceSalary;
-        formBankName = emp.BankName ?? string.Empty;
-        formBankAccountNumber = emp.BankAccountNumber ?? string.Empty;
-        formSalaryChangeNote = string.Empty;
-
         formBaseSalary = emp.BaseSalary;
         formBaseSalaryDisplay = FormatSalaryNumber(formBaseSalary);
         formHireDate = emp.HireDate;
@@ -1760,14 +1755,7 @@
                     EducationLevel: formEducationLevel,
                     BaseSalary: formBaseSalary,
                     HireDate: formHireDate,
-                    Status: formStatus,
-                    PositionAllowance: formPositionAllowance,
-                    OtherAllowance: formOtherAllowance,
-                    InsuranceSalary: formInsuranceSalary,
-                    DependentCount: formDependentCount,
-                    BankName: formBankName,
-                    BankAccountNumber: formBankAccountNumber,
-                    SalaryChangeNote: formSalaryChangeNote);
+                    Status: formStatus);
 
                 var res = await EmployeeApiClient.UpdateEmployeeAsync(editingEmployeeId, req);
                 if (res?.Success == true)
@@ -1799,13 +1787,7 @@
                     CreateAccount: formCreateAccount,
                     UserName: formCreateAccount ? formUserName : null,
                     Password: formCreateAccount ? formPassword : null,
-                    Role: formCreateAccount ? formRole : null,
-                    PositionAllowance: formPositionAllowance,
-                    OtherAllowance: formOtherAllowance,
-                    InsuranceSalary: formInsuranceSalary,
-                    DependentCount: formDependentCount,
-                    BankName: formBankName,
-                    BankAccountNumber: formBankAccountNumber);
+                    Role: formCreateAccount ? formRole : null);
 
                 var res = await EmployeeApiClient.CreateEmployeeAsync(req);
                 if (res?.Success == true)
