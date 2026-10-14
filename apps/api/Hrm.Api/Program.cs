@@ -142,46 +142,6 @@ builder.Services
 
 var app = builder.Build();
 
-if (app.Configuration.GetValue<bool>("Database:InitializeAuthSupportSchema", true))
-{
-    await using var scope = app.Services.CreateAsyncScope();
-    var authInitializer = scope.ServiceProvider.GetService<IAuthDatabaseInitializer>();
-    if (authInitializer is not null)
-    {
-        await authInitializer.InitializeAsync(CancellationToken.None);
-    }
-
-    var employeesInitializer = scope.ServiceProvider.GetService<Hrm.Modules.Employees.Infrastructure.Persistence.IEmployeesDatabaseInitializer>();
-    if (employeesInitializer is not null)
-    {
-        await employeesInitializer.InitializeAsync(CancellationToken.None);
-    }
-
-    var filesInitializer = scope.ServiceProvider.GetService<Hrm.Modules.Files.Infrastructure.Persistence.IFilesDatabaseInitializer>();
-    if (filesInitializer is not null)
-    {
-        await filesInitializer.InitializeAsync(CancellationToken.None);
-    }
-
-    var attendanceInitializer = scope.ServiceProvider.GetService<Hrm.Modules.Attendance.Infrastructure.Persistence.IAttendanceDatabaseInitializer>();
-    if (attendanceInitializer is not null)
-    {
-        await attendanceInitializer.InitializeAsync(CancellationToken.None);
-    }
-
-    var leaveInitializer = scope.ServiceProvider.GetService<Hrm.Modules.Leave.Infrastructure.Persistence.ILeaveDatabaseInitializer>();
-    if (leaveInitializer is not null)
-    {
-        await leaveInitializer.InitializeAsync(CancellationToken.None);
-    }
-
-    var payrollInitializer = scope.ServiceProvider.GetService<Hrm.Modules.Payroll.Infrastructure.Persistence.IPayrollDatabaseInitializer>();
-    if (payrollInitializer is not null)
-    {
-        await payrollInitializer.InitializeAsync(CancellationToken.None);
-    }
-}
-
 app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())

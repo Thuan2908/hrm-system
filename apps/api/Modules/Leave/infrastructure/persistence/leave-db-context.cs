@@ -26,6 +26,7 @@ public sealed class LeaveDbContext(DbContextOptions<LeaveDbContext> options) : D
             entity.Property(e => e.AttachmentFileName).HasColumnName("attachment_file_name");
             entity.Property(e => e.ApprovedByUserId).HasColumnName("approved_by_user_id");
             entity.Property(e => e.ApprovedAt).HasColumnName("approved_at");
+            entity.Property(e => e.IsAutoApproved).HasColumnName("is_auto_approved");
             entity.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
             entity.Property(e => e.UpdatedAt).HasColumnName("updated_at");
 

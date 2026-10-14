@@ -18,7 +18,8 @@ public sealed record EmployeeDto(
     DateOnly? HireDate,
     string Status,
     bool HasAccount,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    long? ManagerId = null);
 
 public sealed record CreateEmployeeRequest(
     string FullName,
@@ -36,7 +37,8 @@ public sealed record CreateEmployeeRequest(
     bool CreateAccount = false,
     string? UserName = null,
     string? Password = null,
-    string? Role = null);
+    string? Role = null,
+    long? ManagerId = null);
 
 public sealed record UpdateEmployeeRequest(
     string FullName,
@@ -50,7 +52,8 @@ public sealed record UpdateEmployeeRequest(
     string? EducationLevel,
     decimal BaseSalary,
     DateOnly? HireDate,
-    string Status);
+    string Status,
+    long? ManagerId = null);
 
 public sealed record DepartmentDto(
     long Id,

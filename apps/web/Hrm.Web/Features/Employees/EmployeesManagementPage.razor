@@ -1,4 +1,4 @@
-@page "/employees"
+﻿@page "/employees"
 @page "/employee/directory"
 @page "/admin/employees"
 @layout EmployeeLayout
@@ -260,6 +260,18 @@
                                         <option value="@p.Id">@p.Name</option>
                                     }
                                 </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Quản lý trực tiếp</label>
+                                <select class="form-select" @bind="formManagerId">
+                                    <option value="0">-- Chưa có quản lý --</option>
+                                    @foreach (var manager in managerOptions.Where(e => e.Id != editingEmployeeId && e.Status == "ACTIVE"))
+                                    {
+                                        <option value="@manager.Id">@manager.Code — @manager.FullName</option>
+                                    }
+                                </select>
+                                <div class="form-text">Quản lý cần quyền duyệt đơn nghỉ phép để xử lý đơn.</div>
                             </div>
 
                             <div class="col-md-6">
@@ -797,6 +809,8 @@
 
 @code {
     private IReadOnlyList<EmployeeDto> employees = [];
+    private IReadOnlyList<EmployeeDto> managerOptions = [];
+    private long formManagerId;
     private IReadOnlyList<DepartmentDto> departments = [];
     private IReadOnlyList<PositionDto> positions = [];
 
@@ -884,6 +898,7 @@
         {
             departments = await EmployeeApiClient.GetDepartmentsAsync();
             positions = await EmployeeApiClient.GetPositionsAsync();
+            managerOptions = await EmployeeApiClient.GetEmployeesAsync();
             employees = await EmployeeApiClient.GetEmployeesAsync(
                 departmentId: selectedDepartmentId > 0 ? selectedDepartmentId : null,
                 status: !string.IsNullOrWhiteSpace(selectedStatus) ? selectedStatus : null);
@@ -937,6 +952,7 @@
         formEducationLevel = EducationLevelCatalog.Bachelor;
         formDepartmentId = departments.FirstOrDefault()?.Id ?? 0;
         formPositionId = positions.FirstOrDefault()?.Id ?? 0;
+        formManagerId = 0;
         formBaseSalary = 10000000m;
         formBaseSalaryDisplay = FormatSalaryNumber(formBaseSalary);
         formHireDate = DateOnly.FromDateTime(DateTime.Today);
@@ -962,6 +978,7 @@
         formEducationLevel = EducationLevelCatalog.Normalize(emp.EducationLevel);
         formDepartmentId = emp.DepartmentId;
         formPositionId = emp.PositionId ?? 0;
+        formManagerId = emp.ManagerId ?? 0;
         formBaseSalary = emp.BaseSalary;
         formBaseSalaryDisplay = FormatSalaryNumber(formBaseSalary);
         formHireDate = emp.HireDate;
@@ -1038,7 +1055,8 @@
                     EducationLevel: formEducationLevel,
                     BaseSalary: formBaseSalary,
                     HireDate: formHireDate,
-                    Status: formStatus);
+                    Status: formStatus,
+                    ManagerId: formManagerId > 0 ? formManagerId : null);
 
                 var res = await EmployeeApiClient.UpdateEmployeeAsync(editingEmployeeId, req);
                 if (res?.Success == true)
@@ -1070,7 +1088,8 @@
                     CreateAccount: formCreateAccount,
                     UserName: formCreateAccount ? formUserName : null,
                     Password: formCreateAccount ? formPassword : null,
-                    Role: formCreateAccount ? formRole : null);
+                    Role: formCreateAccount ? formRole : null,
+                    ManagerId: formManagerId > 0 ? formManagerId : null);
 
                 var res = await EmployeeApiClient.CreateEmployeeAsync(req);
                 if (res?.Success == true)

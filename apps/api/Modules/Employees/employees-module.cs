@@ -23,7 +23,6 @@ public static class EmployeesModule
             .UseSnakeCaseNamingConvention());
         services.AddScoped<IEmployeeOffboardingService, EmployeeOffboardingService>();
         services.AddScoped<IEmployeeService, EmployeeService>();
-        services.AddScoped<IEmployeesDatabaseInitializer, EmployeesDatabaseInitializer>();
         return services;
     }
 }

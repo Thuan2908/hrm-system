@@ -108,5 +108,5 @@ Unique baseline:
 ## PostgreSQL / Supabase implementation notes
 - .NET `Guid` maps to PostgreSQL `uuid` through Npgsql.
 - EF Core provider is Npgsql.
-- Use PostgreSQL indexes/constraints via EF Core configuration and migrations.
+- Configure EF Core mappings to match the manually managed Supabase schema. The operator creates/changes PostgreSQL indexes and constraints manually (ADR-016); application startup and deployment do not run schema migrations or seed data.
 - Supabase API/Auth/Storage are optional platform capabilities and require explicit tasks/ADRs before adoption.

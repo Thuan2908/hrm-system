@@ -24,7 +24,6 @@ public static class FilesModule
                 .UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure(3))
                 .UseSnakeCaseNamingConvention());
 
-        services.AddScoped<IFilesDatabaseInitializer, FilesDatabaseInitializer>();
         services.AddSingleton<IFileStorageProvider, PhysicalFileStorageProvider>();
         services.AddScoped<IFileService, FileService>();
 

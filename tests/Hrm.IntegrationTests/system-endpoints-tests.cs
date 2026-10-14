@@ -15,9 +15,23 @@ public sealed class SystemEndpointsTests : IClassFixture<WebApplicationFactory<P
             builder.ConfigureAppConfiguration((_, configuration) =>
                 configuration.AddInMemoryCollection(new Dictionary<string, string?>
                 {
-                    ["Database:InitializeAuthSupportSchema"] = "false",
                     ["ConnectionStrings:DefaultConnection"] = string.Empty
                 })));
+    }
+
+    [Fact]
+    public async Task StartupDoesNotConnectToOrInitializeConfiguredDatabase()
+    {
+        await using var unreachableDatabaseFactory = factory.WithWebHostBuilder(builder =>
+            builder.ConfigureAppConfiguration((_, configuration) =>
+                configuration.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["ConnectionStrings:DefaultConnection"] = "Host=127.0.0.1;Port=1;Database=unavailable;Username=test;Password=test;Timeout=1"
+                })));
+        using var client = unreachableDatabaseFactory.CreateClient();
+        using var response = await client.GetAsync(
+            new Uri("/api/v1/system/info", UriKind.Relative), TestContext.Current.CancellationToken);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     [Fact]

@@ -64,7 +64,7 @@ public sealed class LeaveController(ILeaveService leaveService) : ControllerBase
 
         if (!hasAccess) return Forbid();
 
-        var result = await leaveService.GetPendingRequestsAsync(cancellationToken);
+        var result = await leaveService.GetPendingRequestsAsync(GetUserId(), cancellationToken);
         return Ok(ApiResponse.Ok(result));
     }
 

@@ -27,6 +27,8 @@ public sealed class ApiExceptionHandler(
     {
         var (statusCode, code, message) = exception switch
         {
+            UnauthorizedAccessException =>
+                (StatusCodes.Status403Forbidden, "PERMISSION_DENIED", "Bạn không có quyền thực hiện thao tác này."),
             DomainException domainException =>
                 (StatusCodes.Status422UnprocessableEntity, domainException.Code, domainException.Message),
             ArgumentException argumentException =>

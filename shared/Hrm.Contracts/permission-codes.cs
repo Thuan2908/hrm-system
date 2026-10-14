@@ -9,6 +9,7 @@ public static class PermissionCodes
     public const string AttendanceSelfWrite = "attendance.self.write";
     public const string LeaveSelfCreate = "leave.self.create";
     public const string LeaveApprove = "leave.approve";
+    public const string LeaveSelfApproved = "self_approved";
     public const string PayrollRun = "payroll.run";
     public const string PayrollFinalize = "payroll.finalize";
     public const string PayrollSelfRead = "payroll.self.read";
@@ -23,7 +24,7 @@ public static class PermissionCodes
     [
         EmployeeRead, EmployeeWrite, EmployeeTransfer, EmployeeOffboard,
         AttendanceSelfWrite,
-        LeaveSelfCreate, LeaveApprove,
+        LeaveSelfCreate, LeaveApprove, LeaveSelfApproved,
         PayrollRun, PayrollFinalize, PayrollSelfRead, ReportRead,
         AdminUserRead, AdminUserSearch, AdminUserManage, AdminRbacManage, AuditRead
     ];
@@ -32,6 +33,7 @@ public static class PermissionCodes
     [
         new(AttendanceSelfWrite, "Chấm công vào/ra cá nhân", "Chấm công", "Cho phép nhân viên tự điểm danh vào/ra ca làm việc hàng ngày", ["ATT_CHECKIN", "attendance.write"]),
         new(LeaveSelfCreate, "Tạo đơn xin nghỉ phép", "Nghỉ phép", "Tạo và gửi yêu cầu xin nghỉ phép, nghỉ ốm, nghỉ bù", ["LEAVE_REQUEST", "leave.create"]),
+        new(LeaveSelfApproved, "Tự động duyệt đơn cá nhân", "Nghỉ phép", "Đơn cá nhân được tự động duyệt khi gửi", []),
         new(LeaveApprove, "Duyệt đơn nghỉ phép", "Nghỉ phép", "Trưởng nhóm / Quản lý / HR xét duyệt đơn nghỉ của nhân viên", ["LEAVE_APPROVE", "leave.team.approve", "leave.hr.approve"]),
         new(PayrollSelfRead, "Xem phiếu lương cá nhân", "Tiền lương", "Xem chi tiết bảng lương, các khoản phụ cấp và khấu trừ cá nhân", ["PAYROLL_VIEW", "payroll.read"]),
         new(PayrollRun, "Tính & Chốt bảng lương", "Tiền lương", "Tổng hợp công và tính lương cho nhân viên toàn đơn vị", ["PAYROLL_MANAGE"]),

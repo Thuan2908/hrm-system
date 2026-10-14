@@ -61,6 +61,9 @@ public sealed class AuthDbContext(DbContextOptions<AuthDbContext> options) : DbC
             entity.ToTable("employees");
             entity.HasKey(employee => employee.Id);
             entity.Property(employee => employee.Id).HasColumnName("emp_id").ValueGeneratedNever();
+            entity.Property(employee => employee.ManagerId).HasColumnName("manager_id");
+            entity.HasIndex(employee => employee.ManagerId);
+            entity.HasOne<Employee>().WithMany().HasForeignKey(employee => employee.ManagerId).OnDelete(DeleteBehavior.Restrict);
             entity.Property(employee => employee.DepartmentId).HasColumnName("dept_id");
             entity.Property(employee => employee.PositionId).HasColumnName("position_id");
             entity.Property(employee => employee.Code).HasColumnName("emp_code");

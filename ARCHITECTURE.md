@@ -121,7 +121,9 @@ apps/web/
 ## 7. Persistence rules
 - PostgreSQL hosted on Supabase.
 - EF Core + Npgsql.
-- Schema changes use EF Core Migrations.
+- Cloud database schema and baseline data are changed manually by the operator in Supabase (ADR-016).
+- Versioned SQL migration files may document these changes for manual execution; they are never run by the application or deployment.
+- Application startup, deployment scripts and cloud verification tests must not create/alter/drop schema or seed baseline data. Do not run automatic EF migrations or `EnsureCreated` against Supabase.
 - Important history data must not be hard-deleted.
 - Indexes are reviewed for search/filter/report workloads.
 

@@ -23,7 +23,6 @@ public static class LeaveModule
                 .UseNpgsql(connectionString, npgsql => npgsql.EnableRetryOnFailure(3))
                 .UseSnakeCaseNamingConvention());
 
-        services.AddScoped<ILeaveDatabaseInitializer, LeaveDatabaseInitializer>();
         services.AddScoped<ILeaveService, LeaveService>();
 
         return services;

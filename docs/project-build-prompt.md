@@ -1,6 +1,6 @@
 # Master Prompt — Xây dựng Saigon Retail Management System
 
-> Sao chép toàn bộ nội dung tài liệu này làm prompt khởi tạo cho coding agent. Agent phải làm việc tuần tự, kiểm tra kết quả sau từng milestone và không được bỏ qua các quy tắc bảo mật, phân quyền, migration hoặc test.
+> Sao chép toàn bộ nội dung tài liệu này làm prompt khởi tạo cho coding agent. Agent phải làm việc tuần tự, kiểm tra kết quả sau từng milestone và không được bỏ qua các quy tắc bảo mật, phân quyền, quản lý schema thủ công (ADR-016) hoặc test.
 
 ## 1. Vai trò và mục tiêu
 
@@ -16,7 +16,7 @@ Mục tiêu cuối cùng:
 - Dùng Entity Framework Core và Npgsql để kết nối PostgreSQL do Supabase quản lý.
 - Triển khai modular monolith với boundary rõ ràng.
 - Hoàn thành Auth, RBAC, Admin, HRM, Attendance, Leave, Payroll, Reporting, ESS, Product, Supplier, Warehouse, Inventory, Procurement, Sales và Audit.
-- Có migrations, seed data tối thiểu, unit test, integration test và E2E test.
+- Schema và dữ liệu baseline trên Supabase do operator cấu hình thủ công (ADR-016); có unit test, integration test và E2E test. Có thể lưu SQL trong migration file để operator chạy thủ công; không tạo schema initializer hoặc seed script tự chạy.
 - Có cấu hình local/dev/test/staging/production, Docker, CI, health check, logging và observability.
 - Không làm lộ bất kỳ secret nào ở source code hoặc Blazor WebAssembly.
 
@@ -95,7 +95,7 @@ Không sửa ý nghĩa lịch sử của ADR Accepted cũ; tạo ADR superseding
 
 - PostgreSQL hosted on Supabase.
 - Entity Framework Core + Npgsql.
-- EF Core migrations là nguồn quản lý schema.
+- Supabase schema được operator quản lý thủ công theo ADR-016; EF Core chỉ ánh xạ schema hiện có.
 - Primary key ưu tiên `Guid` ánh xạ PostgreSQL `uuid`.
 - Timestamp lưu UTC; quy đổi múi giờ chỉ tại boundary/UI.
 - Monetary values dùng `decimal` với precision được cấu hình rõ.
@@ -234,13 +234,13 @@ Yêu cầu triển khai:
 - Bật SSL theo cấu hình Supabase; không hard-code password.
 - Có database health check.
 - Có retry hữu hạn cho lỗi transient phù hợp; không retry mù các command không idempotent.
-- Có command tạo migration và update database trong README/runbook.
+- README/runbook mô tả schema cần thiết và quy trình operator cập nhật thủ công trong Supabase.
 - Integration tests dùng PostgreSQL thật qua Testcontainers, không thay thế bằng EF InMemory.
-- Production migration chạy như bước deploy được kiểm soát, không tự động migrate thiếu kiểm soát khi API startup.
+- Không tự động migrate, tạo/sửa/xóa schema hoặc seed dữ liệu baseline khi startup/deploy, kể cả Development.
 
 ## 9. Database baseline
 
-Thiết kế entity và migration theo module. Tối thiểu cần:
+Thiết kế entity và mô tả schema để operator provision thủ công theo module. Tối thiểu cần:
 
 - Users, Roles, Permissions, UserRoles, RolePermissions, RefreshTokens.
 - Departments, Positions, Employees và lịch sử assignment/profile.
@@ -283,7 +283,7 @@ Yêu cầu:
 - User không được tự cấp quyền cho chính mình nếu không có policy đặc biệt.
 - Mọi thay đổi role/permission/status account phải audit before/after phù hợp.
 
-Seed role baseline:
+Các role baseline do operator provision thủ công (không seed tự động):
 
 - `ADMIN`
 - `HR_MANAGER`
@@ -295,7 +295,7 @@ Seed role baseline:
 - `SALES_MANAGER`
 - `SALES_STAFF`
 
-Seed permission codes theo `docs/architecture/authorization.md`. API và UI phải dùng cùng permission constants từ shared contracts khi phù hợp, nhưng backend vẫn là authority.
+Operator provision thủ công permission codes theo `docs/architecture/authorization.md`. API và UI phải dùng cùng permission constants từ shared contracts khi phù hợp, nhưng backend vẫn là authority. Catalog trong code không tự ghi permission vào database.
 
 ## 11. API conventions
 
@@ -505,7 +505,7 @@ Kiểm tra dependency direction và module boundaries đã mô tả.
 ### Integration tests
 
 - Dùng Testcontainers PostgreSQL.
-- Chạy migrations thật.
+- Fixture/schema test chỉ tạo trên database test riêng, không dùng connection Supabase của ứng dụng. Cloud schema verification chỉ đọc.
 - Test repository, constraints, transaction, concurrency và API.
 - Test 401 khác 403.
 - Test permission denied cho từng critical endpoint.
@@ -566,8 +566,8 @@ Trong giai đoạn chưa có lock file, dùng `dotnet restore`, tạo lock file 
 - Không bake secret vào image hoặc build args được lưu trong history.
 - Chạy container bằng non-root user khi khả thi.
 - Có healthcheck.
-- Migration là deployment step riêng có backup/rollback plan.
-- Staging phải có HTTPS, seed/test data an toàn và monitoring.
+- Operator áp dụng schema change thủ công trước deployment, có backup/rollback plan; deployment không tự sửa database.
+- Staging phải có HTTPS, dữ liệu test được provision thủ công an toàn và monitoring.
 - Production readiness cần security review, backup, observability và UAT sign-off.
 - Có cutover, rollback, smoke test và hypercare plan.
 
@@ -579,9 +579,9 @@ Thực hiện theo milestone, không làm đồng thời quá nhiều domain ch�
 2. Solution/monorepo, global SDK, central packages, build props và tool manifest.
 3. SharedKernel/Contracts tối thiểu và architecture tests.
 4. API baseline, error handling, validation, OpenAPI, health check.
-5. PostgreSQL connection, DbContext strategy, migration baseline và test container.
+5. PostgreSQL connection, DbContext strategy, schema baseline do operator provision thủ công và test container riêng.
 6. Blazor shell, typed client, auth state, layouts và error/loading foundation.
-7. Auth, refresh token, RBAC, seed và audit.
+7. Auth, refresh token, RBAC, baseline do operator provision thủ công và audit.
 8. Admin account/RBAC screens.
 9. Core HR.
 10. Attendance và Leave.
