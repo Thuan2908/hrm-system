@@ -13,7 +13,7 @@ public sealed class PayrollDbContext(DbContextOptions<PayrollDbContext> options)
         {
             entity.ToTable("payrolls");
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.Id).HasColumnName("payroll_id");
+            entity.Property(e => e.Id).HasColumnName("payroll_id").ValueGeneratedOnAdd().UseIdentityByDefaultColumn();
             entity.Property(e => e.EmployeeId).HasColumnName("emp_id").IsRequired();
             entity.Property(e => e.MonthPeriod).HasColumnName("month_period").IsRequired();
             entity.Property(e => e.YearPeriod).HasColumnName("year_period").IsRequired();

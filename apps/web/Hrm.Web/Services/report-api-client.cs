@@ -13,7 +13,7 @@ public interface IReportApiClient
     Task<PayrollReportDto?> GetPayrollReportAsync(int? month = null, int? year = null, CancellationToken cancellationToken = default);
 }
 
-public sealed class ReportApiClient(HttpClient httpClient, IAuthApiClient authApiClient) : IReportApiClient
+public sealed class ReportApiClient(HttpClient httpClient) : IReportApiClient
 {
     public async Task<HrDashboardSummaryDto?> GetSummaryAsync(CancellationToken cancellationToken = default)
     {
@@ -68,13 +68,6 @@ public sealed class ReportApiClient(HttpClient httpClient, IAuthApiClient authAp
         CancellationToken cancellationToken)
     {
         using var request = new HttpRequestMessage(method, uri);
-
-        var token = await authApiClient.GetAccessTokenAsync(cancellationToken);
-        if (!string.IsNullOrWhiteSpace(token))
-        {
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        }
-
         using var response = await httpClient.SendAsync(request, cancellationToken);
         return await response.Content.ReadFromJsonAsync<ApiResponse<T>>(cancellationToken);
     }

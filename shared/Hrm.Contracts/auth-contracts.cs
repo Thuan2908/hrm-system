@@ -27,7 +27,9 @@ public sealed record UpdateProfileRequest(
     string? Email = null,
     string? Address = null,
     DateOnly? DateOfBirth = null,
-    string? Gender = null);
+    string? Gender = null,
+    string? BankName = null,
+    string? BankAccountNumber = null);
 
 public sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 
@@ -49,7 +51,13 @@ public sealed record EmployeeProfileDto(
     decimal BaseSalary,
     DateOnly? HireDate,
     string Status,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    decimal PositionAllowance = 0m,
+    decimal OtherAllowance = 0m,
+    decimal? InsuranceSalary = null,
+    int DependentCount = 0,
+    string? BankName = null,
+    string? BankAccountNumber = null);
 
 public sealed record AccountStatusDto(
     bool IsActive,
@@ -58,3 +66,22 @@ public sealed record AccountStatusDto(
     bool CanAccess,
     string Reason,
     string Message);
+
+public static class PasswordPolicy
+{
+    public const int MinLength = 3;
+    public const int BcryptWorkFactor = 12;
+
+    public static bool IsValid(string? password, out string errorMessage)
+    {
+        if (string.IsNullOrWhiteSpace(password) || password.Length < MinLength)
+        {
+            errorMessage = "Mật khẩu phải có ít nhất 3 ký tự.";
+            return false;
+        }
+
+        errorMessage = string.Empty;
+        return true;
+    }
+}
+

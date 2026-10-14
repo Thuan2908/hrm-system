@@ -72,9 +72,28 @@ builder.Services.AddAuthorization(options =>
             if (context.User.IsInRole("ADMIN")) return true;
             if (expanded.Any(p => context.User.HasClaim("permission", p))) return true;
 
-            // Quyền Quản lý & Thêm mới (Write) mặc nhiên bao gồm quyền Đọc danh bạ (Read)
+            // Quyền Quản lý & Thêm mới (Write) hoặc Quản trị xem tài khoản (AdminUserRead) mặc nhiên bao gồm quyền Đọc danh bạ (Read)
             if (permission == PermissionCodes.EmployeeRead &&
-                (context.User.HasClaim("permission", PermissionCodes.EmployeeWrite) || context.User.HasClaim("permission", "EMP_EDIT")))
+                (context.User.HasClaim("permission", PermissionCodes.EmployeeWrite) ||
+                 context.User.HasClaim("permission", "EMP_EDIT") ||
+                 context.User.HasClaim("permission", PermissionCodes.AdminUserRead) ||
+                 context.User.HasClaim("permission", "admin.users.read")))
+            {
+                return true;
+            }
+
+            // Với PermissionCodes.PayrollRun: cho phép thêm nếu user có quyền PermissionCodes.PayrollFinalize
+            if (permission == PermissionCodes.PayrollRun &&
+                (context.User.HasClaim("permission", PermissionCodes.PayrollFinalize) ||
+                 context.User.HasClaim("permission", "PAYROLL_FINALIZE")))
+            {
+                return true;
+            }
+
+            if (permission == PermissionCodes.EmployeePromote &&
+                (context.User.HasClaim("permission", PermissionCodes.EmployeeWrite) ||
+                 context.User.HasClaim("permission", "EMP_EDIT") ||
+                 context.User.HasClaim("permission", PermissionCodes.EmployeeTransfer)))
             {
                 return true;
             }
@@ -142,9 +161,7 @@ builder.Services
 
 var app = builder.Build();
 
-// Tắt tự động khởi tạo/seed C# khi ứng dụng khởi động để tránh xung đột dữ liệu dùng chung trên Supabase.
-// Dữ liệu và schema được quản trị thủ công qua scripts/supabase_schema_and_seed.sql.
-if (app.Configuration.GetValue<bool>("Database:InitializeAuthSupportSchema", false))
+if (app.Configuration.GetValue<bool>("Database:InitializeAuthSupportSchema", app.Environment.IsDevelopment()))
 {
     await using var scope = app.Services.CreateAsyncScope();
     var authInitializer = scope.ServiceProvider.GetService<IAuthDatabaseInitializer>();

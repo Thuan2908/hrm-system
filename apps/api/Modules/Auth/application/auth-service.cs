@@ -29,9 +29,11 @@ public interface IAuthService
 public sealed class AuthService(
     AuthDbContext dbContext,
     IOptions<JwtOptions> jwtOptions,
+    IOptions<SecurityOptions> securityOptions,
     TimeProvider timeProvider) : IAuthService
 {
     private readonly JwtOptions options = jwtOptions.Value;
+    private readonly SecurityOptions secOptions = securityOptions.Value;
 
     public async Task<AuthTokenResponse> LoginAsync(
         LoginRequest request,
@@ -58,9 +60,9 @@ public sealed class AuthService(
             {
                 user.SecurityState ??= new UserSecurityState { UserId = user.Id };
                 user.SecurityState.FailedAccessCount++;
-                if (user.SecurityState.FailedAccessCount >= 5)
+                if (user.SecurityState.FailedAccessCount >= secOptions.MaxFailedAccessAttempts)
                 {
-                    user.SecurityState.LockoutEnd = now.AddMinutes(15);
+                    user.SecurityState.LockoutEnd = now.AddMinutes(secOptions.LockoutMinutes);
                     user.SecurityState.FailedAccessCount = 0;
                 }
 
@@ -88,8 +90,8 @@ public sealed class AuthService(
                 var isDifferentDevice = !string.IsNullOrWhiteSpace(request.DeviceId)
                     && !string.Equals(existingSession.DeviceId, request.DeviceId, StringComparison.Ordinal);
 
-                // Phiên coi là đang hoạt động nếu có heartbeat trong vòng 3 phút qua
-                var isSessionActive = existingSession.LastSeenAt > now.AddMinutes(-3);
+                // Phiên coi là đang hoạt động nếu có heartbeat trong vòng timeout cấu hình
+                var isSessionActive = existingSession.LastSeenAt > now.AddMinutes(-secOptions.ActiveSessionTimeoutMinutes);
 
                 if (isDifferentDevice && isSessionActive)
                 {
@@ -227,7 +229,12 @@ public sealed class AuthService(
             ?? throw new DomainException("AUTH_USER_NOT_FOUND", "Không tìm thấy tài khoản.");
 
         var emp = user.Employee;
-        var currentSalary = emp.SalaryProfiles.FirstOrDefault(sp => sp.IsCurrent)?.BaseSalary ?? 0m;
+        var currentProfile = emp.SalaryProfiles.FirstOrDefault(sp => sp.IsCurrent);
+        var currentSalary = currentProfile?.BaseSalary ?? 0m;
+        var positionAllowance = currentProfile?.PositionAllowance ?? 0m;
+        var otherAllowance = currentProfile?.OtherAllowance ?? 0m;
+        var insuranceSalary = currentProfile?.InsuranceSalary;
+
         return new EmployeeProfileDto(
             EmployeeId: emp.Id,
             EmployeeCode: emp.Code,
@@ -246,7 +253,13 @@ public sealed class AuthService(
             BaseSalary: currentSalary,
             HireDate: emp.HireDate,
             Status: emp.Status,
-            CreatedAt: emp.CreatedAt);
+            CreatedAt: emp.CreatedAt,
+            PositionAllowance: positionAllowance,
+            OtherAllowance: otherAllowance,
+            InsuranceSalary: insuranceSalary,
+            DependentCount: emp.DependentCount,
+            BankName: emp.BankName,
+            BankAccountNumber: emp.BankAccountNumber);
     }
 
     public async Task<AccountStatusDto> CheckAccountStatusAsync(long userId, CancellationToken cancellationToken)
@@ -308,10 +321,10 @@ public sealed class AuthService(
                 Message: "Tài khoản của bạn đã bị vô hiệu hóa.");
         }
 
-        // Cập nhật hoạt động cho phiên
+        // Cập nhật hoạt động cho phiên (giảm thiểu lệnh ghi: chỉ ghi nếu quá 1 phút)
         var session = await dbContext.ActiveSessions
             .SingleOrDefaultAsync(s => s.UserId == userId, cancellationToken);
-        if (session is not null)
+        if (session is not null && session.LastSeenAt < now.AddMinutes(-1))
         {
             session.LastSeenAt = now;
             await dbContext.SaveChangesAsync(cancellationToken);
@@ -362,7 +375,9 @@ public sealed class AuthService(
         if (request.Email is not null) user.Employee.Email = request.Email.Trim();
         if (request.Address is not null) user.Employee.Address = request.Address.Trim();
         if (request.DateOfBirth is not null) user.Employee.DateOfBirth = request.DateOfBirth;
-        if (request.Gender is not null) user.Employee.Gender = request.Gender.Trim();
+        if (request.Gender is not null) user.Employee.Gender = GenderCatalog.Normalize(request.Gender);
+        if (request.BankName is not null) user.Employee.BankName = string.IsNullOrWhiteSpace(request.BankName) ? null : request.BankName.Trim();
+        if (request.BankAccountNumber is not null) user.Employee.BankAccountNumber = string.IsNullOrWhiteSpace(request.BankAccountNumber) ? null : request.BankAccountNumber.Trim();
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -390,7 +405,7 @@ public sealed class AuthService(
             throw new DomainException("AUTH_INCORRECT_CURRENT_PASSWORD", "Mật khẩu hiện tại không chính xác.");
         }
 
-        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword.Trim());
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword.Trim(), secOptions.BcryptWorkFactor);
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 

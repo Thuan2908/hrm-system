@@ -6,6 +6,7 @@ using Hrm.Modules.Auth.Domain;
 using Hrm.Modules.Auth.Infrastructure.Persistence;
 using Hrm.SharedKernel;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Hrm.Modules.Auth.Application;
 
@@ -28,8 +29,12 @@ public interface IAdminService
     Task<PagedResult<AuditLogDto>> SearchAuditAsync(string? action, int page, int pageSize, CancellationToken cancellationToken);
 }
 
-public sealed class AdminService(AuthDbContext dbContext, TimeProvider timeProvider) : IAdminService
+public sealed class AdminService(
+    AuthDbContext dbContext,
+    TimeProvider timeProvider,
+    IOptions<SecurityOptions> securityOptions) : IAdminService
 {
+    private readonly SecurityOptions secOptions = securityOptions.Value;
     public async Task<PagedResult<AdminUserDto>> SearchUsersAsync(
         string? keyword, string? department, string? role, string? status, string sortBy, bool descending,
         int page, int pageSize, CancellationToken cancellationToken)
@@ -156,6 +161,7 @@ public sealed class AdminService(AuthDbContext dbContext, TimeProvider timeProvi
                 user.Metadata = new UserAccountMetadata { UserId = user.Id, CreatedAt = now };
             }
             await dbContext.SaveChangesAsync(cancellationToken);
+
             await AddAuditAsync(actorUserId, "admin.user.created", "User", IdText(user.Id), null,
                 new { user.UserName, user.EmployeeId, Role = role.Name, ReusedDeletedAccount = deletedAccount is not null },
                 cancellationToken);
@@ -209,7 +215,7 @@ public sealed class AdminService(AuthDbContext dbContext, TimeProvider timeProvi
         user.SecurityState ??= new UserSecurityState { UserId = user.Id };
         var beforeLock = user.SecurityState.LockoutEnd;
         var beforeActive = user.IsActive;
-        user.SecurityState.LockoutEnd = isLocked ? timeProvider.GetUtcNow().AddYears(10) : null;
+        user.SecurityState.LockoutEnd = isLocked ? timeProvider.GetUtcNow().AddYears(secOptions.AdminLockYears) : null;
         user.SecurityState.FailedAccessCount = 0;
         user.IsActive = !isLocked;
         if (isLocked) await RevokeUserTokensAsync(user.Id, cancellationToken);
@@ -240,7 +246,7 @@ public sealed class AdminService(AuthDbContext dbContext, TimeProvider timeProvi
     {
         EnsurePassword(newPassword);
         var user = await FindUserAsync(userId, cancellationToken);
-        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword, 12);
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword, secOptions.BcryptWorkFactor);
         await RevokeUserTokensAsync(user.Id, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
         await AddAuditAsync(actorUserId, "admin.user.password-reset", "User", IdText(user.Id), null,
@@ -304,17 +310,17 @@ public sealed class AdminService(AuthDbContext dbContext, TimeProvider timeProvi
         {
             await using var transaction = await dbContext.Database.BeginTransactionAsync(
                 IsolationLevel.Serializable, cancellationToken);
-            await dbContext.Database.ExecuteSqlRawAsync("LOCK TABLE roles IN EXCLUSIVE MODE", cancellationToken);
             if (await dbContext.Roles.AnyAsync(role => EF.Functions.ILike(role.Name, name), cancellationToken))
                 throw new DomainException("ROLE_EXISTS", $"Vai trò '{name}' đã tồn tại.");
 
             var role = new ApplicationRole
             {
-                Id = (await dbContext.Roles.MaxAsync(item => (long?)item.Id, cancellationToken) ?? 0) + 1,
                 Name = name,
                 Description = description
             };
             dbContext.Roles.Add(role);
+            await dbContext.SaveChangesAsync(cancellationToken);
+
             dbContext.RolePermissions.AddRange(definitions.Select(permission => new RolePermissionGrant
             {
                 Role = role,
@@ -339,7 +345,6 @@ public sealed class AdminService(AuthDbContext dbContext, TimeProvider timeProvi
         {
             await using var transaction = await dbContext.Database.BeginTransactionAsync(
                 IsolationLevel.Serializable, cancellationToken);
-            await dbContext.Database.ExecuteSqlRawAsync("LOCK TABLE roles IN EXCLUSIVE MODE", cancellationToken);
 
             var role = await dbContext.Roles.SingleOrDefaultAsync(item => item.Id == roleId, cancellationToken)
                 ?? throw new DomainException("ROLE_NOT_FOUND", "Không tìm thấy vai trò.");

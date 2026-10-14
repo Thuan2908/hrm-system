@@ -10,7 +10,16 @@ builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
 var apiBaseUrl = builder.Configuration["ApiBaseUrl"] ?? builder.HostEnvironment.BaseAddress;
-builder.Services.AddScoped(_ => new HttpClient { BaseAddress = new Uri(apiBaseUrl) });
+builder.Services.AddScoped<ApiAuthorizationMessageHandler>();
+builder.Services.AddScoped(sp =>
+{
+    var handler = sp.GetRequiredService<ApiAuthorizationMessageHandler>();
+    handler.InnerHandler = new HttpClientHandler();
+    return new HttpClient(handler)
+    {
+        BaseAddress = new Uri(apiBaseUrl)
+    };
+});
 builder.Services.AddScoped<ISystemApiClient, SystemApiClient>();
 builder.Services.AddAuthorizationCore();
 builder.Services.AddScoped<BrowserSessionStore>();

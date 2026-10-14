@@ -8,7 +8,7 @@ namespace Hrm.Api.Controllers;
 
 [ApiController]
 [Route("api/v1/payroll-management")]
-[Authorize]
+[Authorize(Policy = PermissionCodes.PayrollRun)]
 public sealed class PayrollManagementController(IPayrollService payrollService) : ControllerBase
 {
     [HttpGet("all")]
@@ -18,13 +18,6 @@ public sealed class PayrollManagementController(IPayrollService payrollService) 
         [FromQuery] short? year,
         CancellationToken cancellationToken)
     {
-        var hasAccess = User.IsInRole("ADMIN")
-            || User.HasClaim("permission", PermissionCodes.PayrollRun)
-            || User.HasClaim("permission", PermissionCodes.PayrollFinalize)
-            || User.HasClaim("permission", "PAYROLL_MANAGE");
-
-        if (!hasAccess) return Forbid();
-
         var result = await payrollService.GetAllPayslipsAsync(month, year, cancellationToken);
         return Ok(ApiResponse.Ok(result));
     }
@@ -34,12 +27,6 @@ public sealed class PayrollManagementController(IPayrollService payrollService) 
         [FromBody] CalculatePayrollRequest request,
         CancellationToken cancellationToken)
     {
-        var hasAccess = User.IsInRole("ADMIN")
-            || User.HasClaim("permission", PermissionCodes.PayrollRun)
-            || User.HasClaim("permission", "PAYROLL_MANAGE");
-
-        if (!hasAccess) return Forbid();
-
         var count = await payrollService.CalculatePeriodPayrollAsync(request.MonthPeriod, request.YearPeriod, GetUserId(), cancellationToken);
         return Ok(ApiResponse.Ok(count));
     }

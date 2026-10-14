@@ -13,7 +13,7 @@ public sealed class EmployeesDbContext(DbContextOptions<EmployeesDbContext> opti
         {
             entity.ToTable("employees");
             entity.HasKey(employee => employee.Id);
-            entity.Property(employee => employee.Id).HasColumnName("emp_id").ValueGeneratedNever();
+            entity.Property(employee => employee.Id).HasColumnName("emp_id").ValueGeneratedOnAdd().UseIdentityByDefaultColumn();
             entity.Property(employee => employee.Status).HasColumnName("status");
         });
     }
