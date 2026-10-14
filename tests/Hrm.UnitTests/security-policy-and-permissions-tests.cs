@@ -39,6 +39,17 @@ public sealed class SecurityPolicyAndPermissionsTests
     }
 
     [Fact]
+    public void EveryCatalogPermissionHasExactlyOneRegisteredPolicy()
+    {
+        var catalogCodes = PermissionCodes.Catalog.Select(permission => permission.Code).ToArray();
+        Assert.Equal(catalogCodes.Length, catalogCodes.Distinct(StringComparer.OrdinalIgnoreCase).Count());
+        Assert.Equal(PermissionCodes.All.Count, PermissionCodes.All.Distinct(StringComparer.OrdinalIgnoreCase).Count());
+        Assert.Equal(catalogCodes.Order(StringComparer.Ordinal), PermissionCodes.All.Order(StringComparer.Ordinal));
+        Assert.Contains(PermissionCodes.EmployeePromote, PermissionCodes.All);
+        Assert.Contains(PermissionCodes.LeaveSelfApproved, PermissionCodes.All);
+    }
+
+    [Fact]
     public void PermissionCodesShouldContainAttendanceTeamRead()
     {
         Assert.Equal("attendance.team.read", PermissionCodes.AttendanceTeamRead);

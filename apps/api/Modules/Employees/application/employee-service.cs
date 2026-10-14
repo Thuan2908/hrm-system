@@ -1216,6 +1216,13 @@ public sealed class EmployeeService(
             HireDate: includeSensitiveInfo ? e.HireDate : null,
             Status: e.Status,
             HasAccount: includeSensitiveInfo && hasAccount,
-            CreatedAt: e.CreatedAt);
+            CreatedAt: e.CreatedAt,
+            PositionAllowance: includeSensitiveInfo ? posAllowance : 0m,
+            OtherAllowance: includeSensitiveInfo ? otherAllowance : 0m,
+            InsuranceSalary: includeSensitiveInfo ? insSalary : null,
+            DependentCount: includeSensitiveInfo ? e.DependentCount : 0,
+            BankName: includeSensitiveInfo ? e.BankName : null,
+            BankAccountNumber: includeSensitiveInfo ? e.BankAccountNumber : null,
+            ManagerId: e.ManagerId);
     }
 }

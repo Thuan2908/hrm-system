@@ -1642,6 +1642,14 @@
         formAddress = string.Empty;
         formDepartmentId = departments.FirstOrDefault()?.Id ?? 0;
         formPositionId = positions.FirstOrDefault()?.Id ?? 0;
+        formManagerId = 0;
+        formEducationLevel = EducationLevelCatalog.Bachelor;
+        formPositionAllowance = 0m;
+        formOtherAllowance = 0m;
+        formInsuranceSalary = null;
+        formBankName = string.Empty;
+        formBankAccountNumber = string.Empty;
+        formSalaryChangeNote = string.Empty;
         formBaseSalary = 10000000m;
         formBaseSalaryDisplay = FormatSalaryNumber(formBaseSalary);
         formHireDate = DateOnly.FromDateTime(DateTime.Today);
@@ -1668,6 +1676,13 @@
         formEducationLevel = EducationLevelCatalog.Normalize(emp.EducationLevel);
         formDepartmentId = emp.DepartmentId;
         formPositionId = emp.PositionId ?? 0;
+        formManagerId = emp.ManagerId ?? 0;
+        formPositionAllowance = emp.PositionAllowance;
+        formOtherAllowance = emp.OtherAllowance;
+        formInsuranceSalary = emp.InsuranceSalary;
+        formBankName = emp.BankName ?? string.Empty;
+        formBankAccountNumber = emp.BankAccountNumber ?? string.Empty;
+        formSalaryChangeNote = string.Empty;
         formBaseSalary = emp.BaseSalary;
         formBaseSalaryDisplay = FormatSalaryNumber(formBaseSalary);
         formHireDate = emp.HireDate;
@@ -1755,7 +1770,15 @@
                     EducationLevel: formEducationLevel,
                     BaseSalary: formBaseSalary,
                     HireDate: formHireDate,
-                    Status: formStatus);
+                    Status: formStatus,
+                    PositionAllowance: formPositionAllowance,
+                    OtherAllowance: formOtherAllowance,
+                    InsuranceSalary: formInsuranceSalary,
+                    DependentCount: formDependentCount,
+                    BankName: formBankName,
+                    BankAccountNumber: formBankAccountNumber,
+                    SalaryChangeNote: formSalaryChangeNote,
+                    ManagerId: formManagerId > 0 ? formManagerId : null);
 
                 var res = await EmployeeApiClient.UpdateEmployeeAsync(editingEmployeeId, req);
                 if (res?.Success == true)
@@ -1787,7 +1810,14 @@
                     CreateAccount: formCreateAccount,
                     UserName: formCreateAccount ? formUserName : null,
                     Password: formCreateAccount ? formPassword : null,
-                    Role: formCreateAccount ? formRole : null);
+                    Role: formCreateAccount ? formRole : null,
+                    PositionAllowance: formPositionAllowance,
+                    OtherAllowance: formOtherAllowance,
+                    InsuranceSalary: formInsuranceSalary,
+                    DependentCount: formDependentCount,
+                    BankName: formBankName,
+                    BankAccountNumber: formBankAccountNumber,
+                    ManagerId: formManagerId > 0 ? formManagerId : null);
 
                 var res = await EmployeeApiClient.CreateEmployeeAsync(req);
                 if (res?.Success == true)

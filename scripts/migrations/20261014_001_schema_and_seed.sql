@@ -379,6 +379,7 @@ DECLARE permission_record record;
 BEGIN
     FOR permission_record IN SELECT * FROM (VALUES
         ('attendance.self.write', 'Chấm công vào/ra cá nhân'),
+        ('attendance.team.read', 'Xem & Theo dõi chấm công bộ phận'),
         ('leave.self.create', 'Tạo đơn xin nghỉ phép'),
         ('self_approved', 'Tự động duyệt đơn cá nhân'),
         ('leave.approve', 'Duyệt đơn nghỉ phép'),
@@ -388,6 +389,7 @@ BEGIN
         ('employee.read', 'Tra cứu Danh bạ Nhân sự'),
         ('employee.write', 'Quản lý & Thêm mới Nhân sự'),
         ('employee.transfer', 'Điều chuyển phòng ban'),
+        ('employee.promote', 'Bổ nhiệm & Thăng chức'),
         ('employee.offboard', 'Thực hiện thôi việc'),
         ('report.read', 'Báo cáo & Thống kê Nhân sự'),
         ('admin.user.read', 'Xem danh sách tài khoản'),
