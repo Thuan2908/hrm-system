@@ -6,9 +6,10 @@ public static class PermissionCodes
     public const string EmployeeWrite = "employee.write";
     public const string EmployeeTransfer = "employee.transfer";
     public const string EmployeePromote = "employee.promote";
-    public const string EmployeeOffboard = "employee.offboard";
     public const string EmployeePromote = "employee.promote";
+    public const string EmployeeOffboard = "employee.offboard";
     public const string AttendanceSelfWrite = "attendance.self.write";
+    public const string AttendanceTeamRead = "attendance.team.read";
     public const string AttendanceTeamRead = "attendance.team.read";
     public const string LeaveSelfCreate = "leave.self.create";
     public const string LeaveApprove = "leave.approve";
@@ -26,7 +27,7 @@ public static class PermissionCodes
     public static IReadOnlyList<string> All { get; } =
     [
         EmployeeRead, EmployeeWrite, EmployeeTransfer, EmployeeOffboard, EmployeePromote,
-        AttendanceSelfWrite,
+        AttendanceSelfWrite, AttendanceTeamRead,
         LeaveSelfCreate, LeaveApprove, SelfApproved,
         PayrollRun, PayrollFinalize, PayrollSelfRead, ReportRead,
         AdminUserRead, AdminUserSearch, AdminUserManage, AdminRbacManage, AuditRead
@@ -35,6 +36,7 @@ public static class PermissionCodes
     public static IReadOnlyList<PermissionDefinition> Catalog { get; } =
     [
         new(AttendanceSelfWrite, "Chấm công vào/ra cá nhân", "Chấm công", "Cho phép nhân viên tự điểm danh vào/ra ca làm việc hàng ngày", ["ATT_CHECKIN", "attendance.write"]),
+        new(AttendanceTeamRead, "Xem & Theo dõi chấm công bộ phận", "Chấm công", "Xem và theo dõi chấm công của nhân sự bộ phận/toàn công ty", ["ATT_APPROVE", "attendance.team.approve"]),
         new(AttendanceTeamRead, "Xem & Theo dõi chấm công bộ phận", "Chấm công", "Xem và theo dõi chấm công của nhân sự bộ phận/toàn công ty", ["ATT_APPROVE", "attendance.team.approve"]),
         new(LeaveSelfCreate, "Tạo đơn xin nghỉ phép", "Nghỉ phép", "Tạo và gửi yêu cầu xin nghỉ phép, nghỉ ốm, nghỉ bù", ["LEAVE_REQUEST", "leave.create"]),
         new(LeaveApprove, "Duyệt đơn nghỉ phép", "Nghỉ phép", "Trưởng nhóm / Quản lý / HR xét duyệt đơn nghỉ của nhân viên", ["LEAVE_APPROVE", "leave.team.approve", "leave.hr.approve"]),
@@ -46,8 +48,8 @@ public static class PermissionCodes
         new(EmployeeWrite, "Cập nhật Hồ sơ Nhân sự", "Nhân sự", "Tiếp nhận nhân sự mới (Onboarding) và chỉnh sửa thông tin hồ sơ", ["EMP_EDIT"]),
         new(EmployeeTransfer, "Điều chuyển phòng ban", "Nhân sự", "Thực hiện điều chuyển công tác, chuyển phòng ban cho nhân sự", ["EMP_TRANSFER"]),
         new(EmployeePromote, "Bổ nhiệm & Thăng chức", "Nhân sự", "Bổ nhiệm chức vụ, thăng chức và nâng quyền cho nhân sự theo thẩm quyền", ["EMP_PROMOTE"]),
+        new(EmployeePromote, "Bổ nhiệm & Thăng chức", "Nhân sự", "Bổ nhiệm chức vụ, thăng chức và nâng quyền cho nhân sự theo thẩm quyền", ["EMP_PROMOTE"]),
         new(EmployeeOffboard, "Thực hiện thôi việc", "Nhân sự", "Quyết định thôi việc và khóa quyền truy cập của nhân sự", ["EMP_OFFBOARD"]),
-        new(EmployeePromote, "Bổ nhiệm & Thăng chức", "Nhân sự", "Thực hiện bổ nhiệm chức vụ, thăng chức cho nhân sự", ["EMP_PROMOTE"]),
         new(ReportRead, "Báo cáo & Thống kê Nhân sự", "Báo cáo", "Xem các chỉ số KPI, biến động nhân sự, thâm niên và quỹ lương", ["REPORT_VIEW"]),
         new(AdminUserRead, "Xem danh sách tài khoản", "Quản trị", "Xem danh sách tài khoản người dùng hệ thống", ["admin.users.read"]),
         new(AdminUserSearch, "Tìm kiếm nâng cao tài khoản", "Quản trị", "Tìm kiếm, lọc tài khoản theo tiêu chí chi tiết", ["admin.users.search"]),
