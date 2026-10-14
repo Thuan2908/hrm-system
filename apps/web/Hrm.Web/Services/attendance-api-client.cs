@@ -13,7 +13,7 @@ public interface IAttendanceApiClient
     Task<IReadOnlyList<TeamAttendanceItemDto>> GetTeamSummaryAsync(CancellationToken cancellationToken = default);
 }
 
-public sealed class AttendanceApiClient(HttpClient httpClient, IAuthApiClient authApiClient) : IAttendanceApiClient
+public sealed class AttendanceApiClient(HttpClient httpClient) : IAttendanceApiClient
 {
     public async Task<IReadOnlyList<TeamAttendanceItemDto>> GetTeamSummaryAsync(CancellationToken cancellationToken = default)
     {
@@ -71,12 +71,6 @@ public sealed class AttendanceApiClient(HttpClient httpClient, IAuthApiClient au
         if (body is not null)
         {
             request.Content = JsonContent.Create(body);
-        }
-
-        var token = await authApiClient.GetAccessTokenAsync(cancellationToken);
-        if (!string.IsNullOrWhiteSpace(token))
-        {
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         }
 
         using var response = await httpClient.SendAsync(request, cancellationToken);

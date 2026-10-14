@@ -2,7 +2,9 @@ using Hrm.Contracts;
 using Hrm.Modules.Files.Domain;
 using Hrm.Modules.Files.Infrastructure.Persistence;
 using Hrm.Modules.Files.Infrastructure.Storage;
+using Hrm.SharedKernel;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Hrm.Modules.Files.Application;
 
@@ -20,10 +22,14 @@ public interface IFileService
 
     Task<(Stream Stream, string ContentType, string FileName)?> GetFileDownloadAsync(
         Guid fileId,
+        long requesterUserId,
+        bool hasPrivilegedAccess,
         CancellationToken cancellationToken);
 
     Task<StoredFileDto?> GetMetadataAsync(
         Guid fileId,
+        long requesterUserId,
+        bool hasPrivilegedAccess,
         CancellationToken cancellationToken);
 
     Task<IReadOnlyList<StoredFileDto>> GetByReferenceAsync(
@@ -40,16 +46,10 @@ public interface IFileService
 
 public sealed class FileService(
     FilesDbContext dbContext,
-    IFileStorageProvider storageProvider) : IFileService
+    IFileStorageProvider storageProvider,
+    IOptions<FileStorageOptions> options) : IFileService
 {
-    private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".csv",
-        ".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg",
-        ".zip", ".rar", ".txt"
-    };
-
-    private const long MaxFileSizeBytes = 15 * 1024 * 1024; // 15MB
+    private readonly FileStorageOptions storageOptions = options.Value;
 
     public async Task<UploadFileResponse> UploadAsync(
         Stream stream,
@@ -66,13 +66,14 @@ public sealed class FileService(
             throw new ArgumentException("Tệp tin không được rỗng.", nameof(stream));
         }
 
-        if (sizeBytes > MaxFileSizeBytes)
+        if (sizeBytes > storageOptions.MaxFileSizeBytes)
         {
-            throw new ArgumentException("Dung lượng tệp tin vượt quá giới hạn 15MB.", nameof(sizeBytes));
+            throw new ArgumentException($"Dung lượng tệp tin vượt quá giới hạn {storageOptions.MaxFileSizeBytes / (1024 * 1024)}MB.", nameof(sizeBytes));
         }
 
         var extension = Path.GetExtension(fileName);
-        if (string.IsNullOrWhiteSpace(extension) || !AllowedExtensions.Contains(extension))
+        var allowed = new HashSet<string>(storageOptions.AllowedExtensions, StringComparer.OrdinalIgnoreCase);
+        if (string.IsNullOrWhiteSpace(extension) || !allowed.Contains(extension))
         {
             throw new ArgumentException($"Định dạng tệp tin '{extension}' không được hỗ trợ để đảm bảo an toàn hệ thống.", nameof(fileName));
         }
@@ -108,6 +109,8 @@ public sealed class FileService(
 
     public async Task<(Stream Stream, string ContentType, string FileName)?> GetFileDownloadAsync(
         Guid fileId,
+        long requesterUserId,
+        bool hasPrivilegedAccess,
         CancellationToken cancellationToken)
     {
         var file = await dbContext.Files
@@ -117,6 +120,11 @@ public sealed class FileService(
         if (file is null)
         {
             return null;
+        }
+
+        if (!hasPrivilegedAccess && file.UploadedByUserId != requesterUserId)
+        {
+            throw new DomainException("FILE_ACCESS_DENIED", "Bạn không có quyền truy cập tệp tin này.");
         }
 
         var stream = await storageProvider.OpenReadAsync(file.StoragePath, cancellationToken);
@@ -130,6 +138,8 @@ public sealed class FileService(
 
     public async Task<StoredFileDto?> GetMetadataAsync(
         Guid fileId,
+        long requesterUserId,
+        bool hasPrivilegedAccess,
         CancellationToken cancellationToken)
     {
         var file = await dbContext.Files
@@ -139,6 +149,11 @@ public sealed class FileService(
         if (file is null)
         {
             return null;
+        }
+
+        if (!hasPrivilegedAccess && file.UploadedByUserId != requesterUserId)
+        {
+            throw new DomainException("FILE_ACCESS_DENIED", "Bạn không có quyền truy cập tệp tin này.");
         }
 
         return MapToDto(file);

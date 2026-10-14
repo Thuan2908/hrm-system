@@ -3,6 +3,25 @@ namespace Hrm.Contracts;
 public static class DepartmentPositionPolicy
 {
     /// <summary>
+    /// Kiểm tra chức danh/vị trí có tương thích và phù hợp với phòng ban hay không (ưu tiên theo DepartmentId).
+    /// </summary>
+    public static bool IsCompatible(
+        long targetDepartmentId,
+        long? positionDepartmentId,
+        string? deptCode = null,
+        string? deptName = null,
+        string? positionName = null,
+        string? positionCode = null)
+    {
+        if (positionDepartmentId.HasValue && positionDepartmentId.Value > 0)
+        {
+            return positionDepartmentId.Value == targetDepartmentId;
+        }
+
+        return IsCompatible(deptCode, deptName, positionName, positionCode);
+    }
+
+    /// <summary>
     /// Kiểm tra chức danh/vị trí có tương thích và phù hợp với phòng ban hay không.
     /// </summary>
     public static bool IsCompatible(string? deptCode, string? deptName, string? positionName, string? positionCode = null)

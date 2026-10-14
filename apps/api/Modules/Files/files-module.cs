@@ -13,6 +13,7 @@ public static class FilesModule
         this IServiceCollection services,
         IConfiguration configuration)
     {
+        services.Configure<FileStorageOptions>(configuration.GetSection("FileStorage"));
         var connectionString = configuration.GetConnectionString("DefaultConnection");
         if (string.IsNullOrWhiteSpace(connectionString))
         {

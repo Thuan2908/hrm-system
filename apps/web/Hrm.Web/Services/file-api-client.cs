@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Hrm.Contracts;
 using Microsoft.AspNetCore.Components.Forms;
+using Microsoft.JSInterop;
 
 namespace Hrm.Web.Services;
 
@@ -30,9 +31,14 @@ public interface IFileApiClient
     Task<bool> DeleteFileAsync(
         Guid fileId,
         CancellationToken cancellationToken = default);
+
+    Task DownloadToBrowserAsync(
+        Guid fileId,
+        string? fallbackFileName = null,
+        CancellationToken cancellationToken = default);
 }
 
-public sealed class FileApiClient(HttpClient httpClient, IAuthApiClient authApiClient) : IFileApiClient
+public sealed class FileApiClient(HttpClient httpClient, IJSRuntime jsRuntime) : IFileApiClient
 {
     private const long MaxAllowedUploadSize = 15 * 1024 * 1024; // 15MB
 
@@ -80,12 +86,6 @@ public sealed class FileApiClient(HttpClient httpClient, IAuthApiClient authApiC
             Content = content
         };
 
-        var token = await authApiClient.GetAccessTokenAsync(cancellationToken);
-        if (!string.IsNullOrWhiteSpace(token))
-        {
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        }
-
         using var response = await httpClient.SendAsync(request, cancellationToken);
         var apiResponse = await response.Content.ReadFromJsonAsync<ApiResponse<UploadFileResponse>>(cancellationToken);
 
@@ -106,12 +106,6 @@ public sealed class FileApiClient(HttpClient httpClient, IAuthApiClient authApiC
             HttpMethod.Get,
             $"api/v1/files/by-ref?moduleName={Uri.EscapeDataString(moduleName)}&referenceId={Uri.EscapeDataString(referenceId)}");
 
-        var token = await authApiClient.GetAccessTokenAsync(cancellationToken);
-        if (!string.IsNullOrWhiteSpace(token))
-        {
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        }
-
         using var response = await httpClient.SendAsync(request, cancellationToken);
         var apiResponse = await response.Content.ReadFromJsonAsync<ApiResponse<IReadOnlyList<StoredFileDto>>>(cancellationToken);
 
@@ -124,12 +118,6 @@ public sealed class FileApiClient(HttpClient httpClient, IAuthApiClient authApiC
     {
         using var request = new HttpRequestMessage(HttpMethod.Delete, $"api/v1/files/{fileId}");
 
-        var token = await authApiClient.GetAccessTokenAsync(cancellationToken);
-        if (!string.IsNullOrWhiteSpace(token))
-        {
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        }
-
         using var response = await httpClient.SendAsync(request, cancellationToken);
         var apiResponse = await response.Content.ReadFromJsonAsync<ApiResponse<string>>(cancellationToken);
 
@@ -139,5 +127,29 @@ public sealed class FileApiClient(HttpClient httpClient, IAuthApiClient authApiC
         }
 
         return true;
+    }
+
+    public async Task DownloadToBrowserAsync(
+        Guid fileId,
+        string? fallbackFileName = null,
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await httpClient.GetAsync($"api/v1/files/{fileId}/download", cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            var apiError = await response.Content.ReadFromJsonAsync<ApiResponse<object>>(cancellationToken);
+            throw new InvalidOperationException(apiError?.Error?.Message ?? "Không thể tải tệp tin.");
+        }
+
+        var fileName = response.Content.Headers.ContentDisposition?.FileNameStar ??
+                       response.Content.Headers.ContentDisposition?.FileName?.Trim('"') ??
+                       fallbackFileName ??
+                       $"{fileId}";
+
+        var contentType = response.Content.Headers.ContentType?.MediaType ?? "application/octet-stream";
+        var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
+        var base64 = Convert.ToBase64String(bytes);
+
+        await jsRuntime.InvokeVoidAsync("window.hrmDownloadFileFromBytes", cancellationToken, [fileName, contentType, base64]);
     }
 }

@@ -17,7 +17,7 @@ public interface IPayrollManagementApiClient
     Task<int> CalculatePayrollAsync(short month, short year, CancellationToken cancellationToken = default);
 }
 
-public sealed class PayrollApiClient(HttpClient httpClient, IAuthApiClient authApiClient) : IPayrollApiClient, IPayrollManagementApiClient
+public sealed class PayrollApiClient(HttpClient httpClient) : IPayrollApiClient, IPayrollManagementApiClient
 {
     public async Task<YearlyPayrollSummaryDto?> GetMyYearlyPayslipsAsync(short year, CancellationToken cancellationToken = default)
     {
@@ -65,12 +65,6 @@ public sealed class PayrollApiClient(HttpClient httpClient, IAuthApiClient authA
         if (body is not null)
         {
             request.Content = JsonContent.Create(body);
-        }
-
-        var token = await authApiClient.GetAccessTokenAsync(cancellationToken);
-        if (!string.IsNullOrWhiteSpace(token))
-        {
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         }
 
         using var response = await httpClient.SendAsync(request, cancellationToken);
