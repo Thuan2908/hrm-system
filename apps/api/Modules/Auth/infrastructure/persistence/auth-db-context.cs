@@ -33,6 +33,10 @@ public sealed class AuthDbContext(DbContextOptions<AuthDbContext> options) : DbC
             entity.Property(user => user.PasswordHash).HasColumnName("password_hash");
             entity.Property(user => user.IsActive).HasColumnName("is_active");
             entity.Property(user => user.LastLoginAt).HasColumnName("last_login");
+            entity.Property(user => user.DeletedAt).HasColumnName("deleted_at");
+            // Xóa mềm: mọi truy vấn mặc định bỏ qua tài khoản đã xóa.
+            // Dùng IgnoreQueryFilters() khi cần kiểm tra trùng username/emp_id hoặc cấp ID mới.
+            entity.HasQueryFilter(user => user.DeletedAt == null);
             entity.HasIndex(user => user.UserName).IsUnique();
             entity.HasOne(user => user.Role).WithMany().HasForeignKey(user => user.RoleId);
             entity.HasOne(user => user.Employee).WithMany().HasForeignKey(user => user.EmployeeId);

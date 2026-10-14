@@ -4,11 +4,12 @@
 @using System.ComponentModel.DataAnnotations
 @inject AdminApiClient AdminApiClient
 @inject IJSRuntime JsRuntime
+@inject AuthenticationStateProvider AuthStateProvider
 
 <PageTitle>Quản lý tài khoản</PageTitle>
 
 <div class="d-flex justify-content-between align-items-start gap-3 mb-4">
-    <div><h1 class="h3 mb-1">Tài khoản</h1><p class="text-secondary mb-0">Tìm kiếm, tạo, khóa và vô hiệu hóa tài khoản.</p></div>
+    <div><h1 class="h3 mb-1">Tài khoản</h1><p class="text-secondary mb-0">Thêm, xóa, khóa và phân quyền tài khoản.</p></div>
     <button class="btn btn-primary" @onclick="ToggleCreate">Tạo tài khoản</button>
 </div>
 
@@ -28,7 +29,7 @@
                     <div class="col-md-4"><label class="form-label">Nhân viên</label><InputSelect class="form-select" @bind-Value="createModel.EmployeeId"><option value="0">-- Chọn nhân viên --</option>@foreach (var employee in employees.Where(item => !item.HasAccount)){<option value="@employee.Id">@employee.Code · @employee.FullName</option>}</InputSelect><ValidationMessage For="@(() => createModel.EmployeeId)" /></div>
                     <div class="col-md-3"><label class="form-label">Tên đăng nhập</label><InputText class="form-control" @bind-Value="createModel.UserName" /><ValidationMessage For="@(() => createModel.UserName)" /></div>
                     <div class="col-md-3"><label class="form-label">Mật khẩu tạm</label><InputText type="password" class="form-control" @bind-Value="createModel.Password" /><ValidationMessage For="@(() => createModel.Password)" /></div>
-                    <div class="col-md-4"><label class="form-label">Vai trò</label><InputSelect class="form-select" @bind-Value="createModel.Role"><option value="">-- Chọn vai trò --</option>@foreach (var role in roles){<option value="@role.Name">@role.Name</option>}</InputSelect></div>
+                    <div class="col-md-4"><label class="form-label">Vai trò</label><InputSelect class="form-select" @bind-Value="createModel.Role"><option value="">-- Chọn vai trò --</option>@foreach (var role in roles){<option value="@role.Name">@role.Name</option>}</InputSelect><ValidationMessage For="@(() => createModel.Role)" /></div>
                     <div class="col-12"><button class="btn btn-primary" type="submit">Lưu tài khoản</button> <button class="btn btn-outline-secondary" type="button" @onclick="ToggleCreate">Hủy</button></div>
                 </div>
             </EditForm>
@@ -42,7 +43,7 @@
             <div class="col-md-4"><input class="form-control" placeholder="Họ tên, mã NV hoặc username" @bind="keyword" @bind:event="oninput" /></div>
             <div class="col-md-2"><select class="form-select" @bind="department"><option value="">Mọi phòng ban</option>@foreach (var item in departments){<option value="@item">@item</option>}</select></div>
             <div class="col-md-2"><select class="form-select" @bind="role"><option value="">Mọi vai trò</option>@foreach (var item in roles){<option value="@item.Name">@item.Name</option>}</select></div>
-            <div class="col-md-2"><select class="form-select" @bind="status"><option value="">Mọi trạng thái</option><option value="ACTIVE">Active</option><option value="LOCKED">Locked</option><option value="INACTIVE">Inactive</option></select></div>
+            <div class="col-md-2"><select class="form-select" @bind="status"><option value="">Mọi trạng thái</option><option value="ACTIVE">Active</option><option value="LOCKED">Locked</option></select></div>
             <div class="col-md-2"><button class="btn btn-outline-primary w-100" @onclick="SearchAsync">Tìm kiếm</button></div>
             <div class="col-md-3"><select class="form-select" @bind="sortBy"><option value="createdAt">Ngày tạo</option><option value="lastLogin">Đăng nhập cuối</option><option value="username">Username</option></select></div>
             <div class="col-md-3"><select class="form-select" @bind="sortDirection"><option value="desc">Giảm dần</option><option value="asc">Tăng dần</option></select></div>
@@ -64,17 +65,23 @@
                     <tbody>
                     @foreach (var user in users)
                     {
+                        var isSelf = user.Id == currentUserId;
+                        var isBlocked = user.IsLocked || !user.IsActive;
                         <tr>
-                            <td><strong>@user.FullName</strong><div class="small text-secondary">@user.UserName · @user.Department</div></td>
-                            <td><select class="form-select form-select-sm" value="@user.Roles.FirstOrDefault()" @onchange="args => ChangeRoleAsync(user, args)">@foreach (var item in roles){<option value="@item.Name">@item.Name</option>}</select></td>
+                            <td><strong>@user.FullName</strong>@if (isSelf){<span class="badge text-bg-info ms-2">Bạn</span>}<div class="small text-secondary">@user.UserName · @user.Department</div></td>
+                            <td><select class="form-select form-select-sm" value="@user.Roles.FirstOrDefault()" disabled="@isSelf" title="@(isSelf ? "Không thể tự đổi vai trò của mình" : null)" @onchange="args => ChangeRoleAsync(user, args)">@foreach (var item in roles){<option value="@item.Name">@item.Name</option>}</select></td>
                             <td><span class="badge @GetStatusClass(user)">@GetStatusText(user)</span></td>
                             <td>@user.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy")</td>
                             <td>@(user.LastLoginAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "Chưa đăng nhập")</td>
-                            <td class="text-end">
-                                <button class="btn btn-sm btn-outline-secondary me-1" @onclick="() => ToggleLockAsync(user)">@(user.IsLocked ? "Mở khóa" : "Khóa")</button>
-                                <button class="btn btn-sm btn-outline-warning me-1" @onclick="() => ToggleStatusAsync(user)">@(user.IsActive ? "Vô hiệu hóa" : "Kích hoạt")</button>
-                                <button class="btn btn-sm btn-outline-primary" @onclick="() => ResetPasswordAsync(user)">Đặt lại MK</button>
-                                <button class="btn btn-sm btn-outline-danger ms-1" disabled="@(!user.IsActive)" @onclick="() => OffboardAsync(user)">Thôi việc</button>
+                            <td class="text-end text-nowrap">
+                                <button class="btn btn-sm @(isBlocked ? "btn-outline-success" : "btn-outline-warning") me-1"
+                                        disabled="@isSelf"
+                                        title="@(isBlocked ? "Mở khóa tài khoản" : "Khóa tài khoản và thu hồi phiên đăng nhập")"
+                                        @onclick="() => ToggleLockAsync(user)">
+                                    @(isBlocked ? "Mở khóa" : "Khóa")
+                                </button>
+                                <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => ResetPasswordAsync(user)">Đặt lại MK</button>
+                                <button class="btn btn-sm btn-outline-danger" disabled="@isSelf" @onclick="() => DeleteUserAsync(user)">Xóa</button>
                             </td>
                         </tr>
                     }
@@ -107,9 +114,12 @@
     private int page = 1;
     private long total;
     private IEnumerable<string> departments => employees.Select(item => item.Department).Distinct().OrderBy(item => item);
+    private long currentUserId;
 
     protected override async Task OnInitializedAsync()
     {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _ = long.TryParse(authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value, out currentUserId);
         var roleResponse = await AdminApiClient.GetRolesAsync();
         roles = roleResponse?.Data ?? [];
         var employeeResponse = await AdminApiClient.GetEmployeesAsync();
@@ -157,21 +167,18 @@
 
     private async Task ToggleLockAsync(AdminUserDto user)
     {
-        if (!await ConfirmAsync(user.IsLocked ? "Mở khóa tài khoản này?" : "Khóa tài khoản này và thu hồi phiên đăng nhập?")) return;
-        await AdminApiClient.SetLockAsync(user.Id, !user.IsLocked);
-        await LoadAsync();
-    }
-
-    private async Task ToggleStatusAsync(AdminUserDto user)
-    {
-        if (!await ConfirmAsync(user.IsActive ? "Vô hiệu hóa tài khoản này?" : "Kích hoạt lại tài khoản này?")) return;
-        await AdminApiClient.SetStatusAsync(user.Id, !user.IsActive);
+        var isBlocked = user.IsLocked || !user.IsActive;
+        if (!await ConfirmAsync(isBlocked ? $"Mở khóa tài khoản '{user.UserName}'?" : $"Khóa tài khoản '{user.UserName}' và thu hồi phiên đăng nhập?")) return;
+        var response = await AdminApiClient.SetLockAsync(user.Id, !isBlocked);
+        SetMessage(response?.Success == true
+            ? (isBlocked ? "Đã mở khóa tài khoản." : "Đã khóa tài khoản.")
+            : response?.Error?.Message ?? "Không thể cập nhật trạng thái khóa.", response?.Success != true);
         await LoadAsync();
     }
 
     private async Task ResetPasswordAsync(AdminUserDto user)
     {
-        var password = await JsRuntime.InvokeAsync<string?>("prompt", $"Nhập mật khẩu mới cho {user.UserName}");
+        var password = await JsRuntime.InvokeAsync<string?>("prompt", $"Nhập mật khẩu mới cho {user.UserName}:");
         if (string.IsNullOrWhiteSpace(password)) return;
         var response = await AdminApiClient.ResetPasswordAsync(user.Id, password);
         SetMessage(response?.Success == true ? "Đã đặt lại mật khẩu và thu hồi các phiên cũ." : response?.Error?.Message ?? "Không thể đặt lại mật khẩu.", response?.Success != true);
@@ -192,27 +199,33 @@
         await LoadAsync();
     }
 
-    private async Task OffboardAsync(AdminUserDto user)
+    private async Task DeleteUserAsync(AdminUserDto user)
     {
-        if (!await ConfirmAsync($"Chuyển {user.FullName} sang RESIGNED, khóa tài khoản và thu hồi toàn bộ phiên đăng nhập?")) return;
-        var response = await AdminApiClient.OffboardEmployeeAsync(user.EmployeeId);
+        if (!await ConfirmAsync($"Xóa tài khoản '{user.UserName}' của {user.FullName}?\nTài khoản sẽ không thể đăng nhập và bị ẩn khỏi danh sách. Hồ sơ nhân sự vẫn được giữ nguyên.")) return;
+        var response = await AdminApiClient.DeleteUserAsync(user.Id);
         SetMessage(response?.Success == true
-            ? "Đã hoàn tất thôi việc và thu hồi quyền truy cập."
-            : response?.Error?.Message ?? "Không thể hoàn tất thôi việc.", response?.Success != true);
+            ? $"Đã xóa tài khoản {user.UserName}."
+            : response?.Error?.Message ?? "Không thể xóa tài khoản.", response?.Success != true);
+        if (response?.Success == true)
+        {
+            var employeeResponse = await AdminApiClient.GetEmployeesAsync();
+            employees = employeeResponse?.Data ?? employees;
+            if (users.Count == 1 && page > 1) page--;
+        }
         await LoadAsync();
     }
 
     private ValueTask<bool> ConfirmAsync(string text) => JsRuntime.InvokeAsync<bool>("confirm", text);
     private void SetMessage(string text, bool error) { message = text; hasError = error; }
-    private static string GetStatusText(AdminUserDto user) => !user.IsActive ? "Inactive" : user.IsLocked ? "Locked" : "Active";
-    private static string GetStatusClass(AdminUserDto user) => !user.IsActive ? "text-bg-secondary" : user.IsLocked ? "text-bg-danger" : "text-bg-success";
+    private static string GetStatusText(AdminUserDto user) => (user.IsLocked || !user.IsActive) ? "Locked" : "Active";
+    private static string GetStatusClass(AdminUserDto user) => (user.IsLocked || !user.IsActive) ? "text-bg-danger" : "text-bg-success";
 
     private sealed class CreateUserModel
     {
         [Range(1, long.MaxValue, ErrorMessage = "Vui lòng chọn nhân viên.")] public long EmployeeId { get; set; }
-        [Required] public string UserName { get; set; } = string.Empty;
-        [Required, MinLength(12)] public string Password { get; set; } = string.Empty;
-        public string Role { get; set; } = string.Empty;
+        [Required(ErrorMessage = "Vui lòng nhập tên đăng nhập.")] public string UserName { get; set; } = string.Empty;
+        [Required(ErrorMessage = "Vui lòng nhập mật khẩu.")] public string Password { get; set; } = string.Empty;
+        [Required(ErrorMessage = "Vui lòng chọn vai trò.")] public string Role { get; set; } = string.Empty;
         public void Reset() { EmployeeId = 0; UserName = string.Empty; Password = string.Empty; Role = string.Empty; }
     }
 }

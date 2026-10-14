@@ -376,9 +376,9 @@ public sealed class AuthService(
             throw new DomainException("AUTH_INVALID_PASSWORD", "Vui lòng nhập mật khẩu hiện tại.");
         }
 
-        if (string.IsNullOrWhiteSpace(request.NewPassword) || request.NewPassword.Length < 3)
+        if (string.IsNullOrWhiteSpace(request.NewPassword))
         {
-            throw new DomainException("AUTH_PASSWORD_TOO_SHORT", "Mật khẩu mới phải có tối thiểu 3 ký tự.");
+            throw new DomainException("AUTH_PASSWORD_REQUIRED", "Vui lòng nhập mật khẩu mới.");
         }
 
         var user = await dbContext.Users

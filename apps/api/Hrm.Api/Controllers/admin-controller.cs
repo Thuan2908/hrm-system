@@ -112,6 +112,16 @@ public sealed class AdminController(IAdminService adminService) : ControllerBase
         return Ok(ApiResponse.Ok<object>(new { }));
     }
 
+    [HttpDelete("users/{userId:long}")]
+    [Authorize(Policy = PermissionCodes.AdminUserManage)]
+    public async Task<ActionResult<ApiResponse<object>>> DeleteUser(
+        long userId,
+        CancellationToken cancellationToken)
+    {
+        await adminService.DeleteUserAsync(userId, GetActorId(), cancellationToken);
+        return Ok(ApiResponse.Ok<object>(new { }));
+    }
+
     [HttpGet("roles")]
     [Authorize(Policy = PermissionCodes.AdminUserRead)]
     public async Task<ActionResult<ApiResponse<IReadOnlyCollection<RoleDto>>>> GetRoles(CancellationToken cancellationToken)

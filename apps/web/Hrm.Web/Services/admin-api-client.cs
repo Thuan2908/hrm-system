@@ -55,10 +55,10 @@ public sealed class AdminApiClient(HttpClient httpClient, IAuthApiClient authApi
         CancellationToken cancellationToken = default) =>
         SendAsync<object>(HttpMethod.Put, $"api/v1/admin/users/{userId}/roles", new SetUserRolesRequest(roles), cancellationToken);
 
-    public Task<ApiResponse<object>?> OffboardEmployeeAsync(
-        long employeeId,
+    public Task<ApiResponse<object>?> DeleteUserAsync(
+        long userId,
         CancellationToken cancellationToken = default) =>
-        SendAsync<object>(HttpMethod.Post, $"api/v1/employees/{employeeId}/offboard", null, cancellationToken);
+        SendAsync<object>(HttpMethod.Delete, $"api/v1/admin/users/{userId}", null, cancellationToken);
 
     public Task<ApiResponse<IReadOnlyCollection<RoleDto>>?> GetRolesAsync(CancellationToken cancellationToken = default) =>
         SendAsync<IReadOnlyCollection<RoleDto>>(HttpMethod.Get, "api/v1/admin/roles", null, cancellationToken);

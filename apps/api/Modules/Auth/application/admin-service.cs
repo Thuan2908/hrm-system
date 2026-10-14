@@ -20,6 +20,7 @@ public interface IAdminService
     Task SetLockAsync(long userId, bool isLocked, long actorUserId, CancellationToken cancellationToken);
     Task SetRolesAsync(long userId, IReadOnlyCollection<string> roles, long actorUserId, CancellationToken cancellationToken);
     Task ResetPasswordAsync(long userId, string newPassword, long actorUserId, CancellationToken cancellationToken);
+    Task DeleteUserAsync(long userId, long actorUserId, CancellationToken cancellationToken);
     Task<IReadOnlyCollection<RoleDto>> GetRolesAsync(CancellationToken cancellationToken);
     Task<RoleDto> CreateRoleAsync(CreateRoleRequest request, long actorUserId, CancellationToken cancellationToken);
     Task DeleteRoleAsync(long roleId, long actorUserId, CancellationToken cancellationToken);
@@ -55,8 +56,7 @@ public sealed class AdminService(AuthDbContext dbContext, TimeProvider timeProvi
         {
             "ACTIVE" => query.Where(user => user.IsActive &&
                 (user.SecurityState == null || user.SecurityState.LockoutEnd == null || user.SecurityState.LockoutEnd <= now)),
-            "LOCKED" => query.Where(user => user.SecurityState != null && user.SecurityState.LockoutEnd > now),
-            "INACTIVE" => query.Where(user => !user.IsActive),
+            "LOCKED" => query.Where(user => !user.IsActive || (user.SecurityState != null && user.SecurityState.LockoutEnd > now)),
             _ => query
         };
 
@@ -93,13 +93,24 @@ public sealed class AdminService(AuthDbContext dbContext, TimeProvider timeProvi
     {
         EnsurePassword(request.Password);
         var role = await ResolveSingleRoleAsync(request.Roles, cancellationToken);
+        var userName = request.UserName.Trim();
+        if (string.IsNullOrWhiteSpace(userName))
+            throw new DomainException("USERNAME_INVALID", "Vui lòng nhập tên đăng nhập.");
         var employee = await dbContext.Employees.Include(item => item.Department)
             .SingleOrDefaultAsync(item => item.Id == request.EmployeeId, cancellationToken)
             ?? throw new DomainException("EMPLOYEE_NOT_FOUND", "Không tìm thấy nhân viên.");
         if (await dbContext.Users.AnyAsync(user => user.EmployeeId == request.EmployeeId, cancellationToken))
             throw new DomainException("EMPLOYEE_ACCOUNT_EXISTS", "Nhân viên đã có tài khoản.");
-        if (await dbContext.Users.AnyAsync(user => EF.Functions.ILike(user.UserName, request.UserName.Trim()), cancellationToken))
-            throw new DomainException("USERNAME_EXISTS", "Tên đăng nhập đã tồn tại.");
+
+        // Tài khoản đã bị xóa mềm trước đó của chính nhân viên này (nếu có) sẽ được tái sử dụng
+        // để không vi phạm ràng buộc duy nhất emp_id/username của schema hiện có.
+        var deletedAccount = await dbContext.Users.IgnoreQueryFilters()
+            .Include(user => user.SecurityState).Include(user => user.Metadata)
+            .FirstOrDefaultAsync(user => user.EmployeeId == request.EmployeeId && user.DeletedAt != null, cancellationToken);
+        var reusedId = deletedAccount?.Id ?? 0;
+        if (await dbContext.Users.IgnoreQueryFilters()
+                .AnyAsync(user => user.Id != reusedId && EF.Functions.ILike(user.UserName, userName), cancellationToken))
+            throw new DomainException("USERNAME_EXISTS", "Tên đăng nhập đã tồn tại (kể cả tài khoản đã xóa).");
 
         var strategy = dbContext.Database.CreateExecutionStrategy();
         return await strategy.ExecuteAsync(async () =>
@@ -107,22 +118,47 @@ public sealed class AdminService(AuthDbContext dbContext, TimeProvider timeProvi
             await using var transaction = await dbContext.Database.BeginTransactionAsync(
                 IsolationLevel.Serializable, cancellationToken);
             await dbContext.Database.ExecuteSqlRawAsync("LOCK TABLE users IN EXCLUSIVE MODE", cancellationToken);
-            var user = new ApplicationUser
+            var now = timeProvider.GetUtcNow();
+            ApplicationUser user;
+            if (deletedAccount is not null)
             {
-                Id = (await dbContext.Users.MaxAsync(item => (long?)item.Id, cancellationToken) ?? 0) + 1,
-                EmployeeId = employee.Id,
-                RoleId = role.Id,
-                UserName = request.UserName.Trim(),
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password, 12),
-                IsActive = true,
-                Employee = employee,
-                Role = role
-            };
-            dbContext.Users.Add(user);
-            user.Metadata = new UserAccountMetadata { UserId = user.Id, CreatedAt = timeProvider.GetUtcNow() };
+                user = deletedAccount;
+                user.UserName = userName;
+                user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password, 12);
+                user.RoleId = role.Id;
+                user.Role = role;
+                user.IsActive = true;
+                user.DeletedAt = null;
+                user.LastLoginAt = null;
+                user.Employee = employee;
+                if (user.SecurityState is not null)
+                {
+                    user.SecurityState.LockoutEnd = null;
+                    user.SecurityState.FailedAccessCount = 0;
+                }
+                if (user.Metadata is null) user.Metadata = new UserAccountMetadata { UserId = user.Id, CreatedAt = now };
+                else user.Metadata.CreatedAt = now;
+            }
+            else
+            {
+                user = new ApplicationUser
+                {
+                    Id = (await dbContext.Users.IgnoreQueryFilters().MaxAsync(item => (long?)item.Id, cancellationToken) ?? 0) + 1,
+                    EmployeeId = employee.Id,
+                    RoleId = role.Id,
+                    UserName = userName,
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password, 12),
+                    IsActive = true,
+                    Employee = employee,
+                    Role = role
+                };
+                dbContext.Users.Add(user);
+                user.Metadata = new UserAccountMetadata { UserId = user.Id, CreatedAt = now };
+            }
             await dbContext.SaveChangesAsync(cancellationToken);
             await AddAuditAsync(actorUserId, "admin.user.created", "User", IdText(user.Id), null,
-                new { user.UserName, user.EmployeeId, Role = role.Name }, cancellationToken);
+                new { user.UserName, user.EmployeeId, Role = role.Name, ReusedDeletedAccount = deletedAccount is not null },
+                cancellationToken);
             await transaction.CommitAsync(cancellationToken);
             return MapUser(user, timeProvider.GetUtcNow());
         });
@@ -135,7 +171,7 @@ public sealed class AdminService(AuthDbContext dbContext, TimeProvider timeProvi
         var employee = await dbContext.Employees.Include(item => item.Department)
             .SingleOrDefaultAsync(item => item.Id == request.EmployeeId, cancellationToken)
             ?? throw new DomainException("EMPLOYEE_NOT_FOUND", "Không tìm thấy nhân viên.");
-        if (await dbContext.Users.AnyAsync(item => item.Id != userId && item.EmployeeId == request.EmployeeId, cancellationToken))
+        if (await dbContext.Users.IgnoreQueryFilters().AnyAsync(item => item.Id != userId && item.EmployeeId == request.EmployeeId, cancellationToken))
             throw new DomainException("EMPLOYEE_ACCOUNT_EXISTS", "Nhân viên đã có tài khoản.");
         var before = user.EmployeeId;
         user.EmployeeId = employee.Id;
@@ -149,6 +185,11 @@ public sealed class AdminService(AuthDbContext dbContext, TimeProvider timeProvi
     public async Task SetStatusAsync(long userId, bool isActive, long actorUserId, CancellationToken cancellationToken)
     {
         var user = await FindUserAsync(userId, cancellationToken);
+        if (!isActive)
+        {
+            EnsureNotSelf(userId, actorUserId, "Bạn không thể tự vô hiệu hóa tài khoản của mình.");
+            await EnsureNotLastAdminAsync(user, cancellationToken);
+        }
         var before = user.IsActive;
         user.IsActive = isActive;
         if (!isActive) await RevokeUserTokensAsync(user.Id, cancellationToken);
@@ -160,14 +201,22 @@ public sealed class AdminService(AuthDbContext dbContext, TimeProvider timeProvi
     public async Task SetLockAsync(long userId, bool isLocked, long actorUserId, CancellationToken cancellationToken)
     {
         var user = await FindUserAsync(userId, cancellationToken);
+        if (isLocked)
+        {
+            EnsureNotSelf(userId, actorUserId, "Bạn không thể tự khóa tài khoản của mình.");
+            await EnsureNotLastAdminAsync(user, cancellationToken);
+        }
         user.SecurityState ??= new UserSecurityState { UserId = user.Id };
-        var before = user.SecurityState.LockoutEnd;
+        var beforeLock = user.SecurityState.LockoutEnd;
+        var beforeActive = user.IsActive;
         user.SecurityState.LockoutEnd = isLocked ? timeProvider.GetUtcNow().AddYears(10) : null;
         user.SecurityState.FailedAccessCount = 0;
+        user.IsActive = !isLocked;
         if (isLocked) await RevokeUserTokensAsync(user.Id, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
         await AddAuditAsync(actorUserId, isLocked ? "admin.user.locked" : "admin.user.unlocked",
-            "User", IdText(user.Id), new { LockoutEnd = before }, new { user.SecurityState.LockoutEnd }, cancellationToken);
+            "User", IdText(user.Id), new { LockoutEnd = beforeLock, IsActive = beforeActive },
+            new { user.SecurityState.LockoutEnd, user.IsActive }, cancellationToken);
     }
 
     public async Task SetRolesAsync(long userId, IReadOnlyCollection<string> roles, long actorUserId, CancellationToken cancellationToken)
@@ -175,6 +224,11 @@ public sealed class AdminService(AuthDbContext dbContext, TimeProvider timeProvi
         var user = await FindUserAsync(userId, cancellationToken);
         var role = await ResolveSingleRoleAsync(roles, cancellationToken);
         var before = user.Role.Name;
+        if (IsAdminRole(before) && !IsAdminRole(role.Name))
+        {
+            EnsureNotSelf(userId, actorUserId, "Bạn không thể tự gỡ vai trò ADMIN của mình.");
+            await EnsureNotLastAdminAsync(user, cancellationToken);
+        }
         user.RoleId = role.Id;
         user.Role = role;
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -191,6 +245,24 @@ public sealed class AdminService(AuthDbContext dbContext, TimeProvider timeProvi
         await dbContext.SaveChangesAsync(cancellationToken);
         await AddAuditAsync(actorUserId, "admin.user.password-reset", "User", IdText(user.Id), null,
             new { PasswordReset = true }, cancellationToken);
+    }
+
+    public async Task DeleteUserAsync(long userId, long actorUserId, CancellationToken cancellationToken)
+    {
+        EnsureNotSelf(userId, actorUserId, "Bạn không thể tự xóa tài khoản của mình.");
+        var user = await FindUserAsync(userId, cancellationToken);
+        await EnsureNotLastAdminAsync(user, cancellationToken);
+
+        var now = timeProvider.GetUtcNow();
+        user.DeletedAt = now;
+        user.IsActive = false;
+        await RevokeUserTokensAsync(user.Id, cancellationToken);
+        var sessions = await dbContext.ActiveSessions.Where(item => item.UserId == user.Id).ToArrayAsync(cancellationToken);
+        dbContext.ActiveSessions.RemoveRange(sessions);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await AddAuditAsync(actorUserId, "admin.user.deleted", "User", IdText(user.Id),
+            new { user.UserName, user.EmployeeId, Role = user.Role.Name },
+            new { DeletedAt = now, SoftDelete = true }, cancellationToken);
     }
 
     public async Task<IReadOnlyCollection<RoleDto>> GetRolesAsync(CancellationToken cancellationToken)
@@ -215,6 +287,12 @@ public sealed class AdminService(AuthDbContext dbContext, TimeProvider timeProvi
             throw new DomainException("ROLE_DESCRIPTION_INVALID", "Mô tả vai trò không được vượt quá 250 ký tự.");
 
         var requestedPermissions = request.Permissions.Select(PermissionCodes.Canonicalize).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        if (!name.Equals("ADMIN", StringComparison.OrdinalIgnoreCase) &&
+            requestedPermissions.Any(p => p.StartsWith("admin.", StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new DomainException("ADMIN_PERMISSIONS_RESTRICTED", "Các quyền quản trị hệ thống chỉ được phép gán cho vai trò ADMIN.");
+        }
+
         var definitions = await dbContext.Permissions
             .Where(item => requestedPermissions.Contains(item.Code))
             .ToArrayAsync(cancellationToken);
@@ -267,8 +345,8 @@ public sealed class AdminService(AuthDbContext dbContext, TimeProvider timeProvi
                 ?? throw new DomainException("ROLE_NOT_FOUND", "Không tìm thấy vai trò.");
             if (role.Name.Equals("ADMIN", StringComparison.OrdinalIgnoreCase))
                 throw new DomainException("ROLE_ADMIN_PROTECTED", "Không thể xóa vai trò ADMIN.");
-            if (await dbContext.Users.AnyAsync(user => user.RoleId == roleId, cancellationToken))
-                throw new DomainException("ROLE_IN_USE", "Không thể xóa vai trò đang được gán cho tài khoản.");
+            if (await dbContext.Users.IgnoreQueryFilters().AnyAsync(user => user.RoleId == roleId, cancellationToken))
+                throw new DomainException("ROLE_IN_USE", "Không thể xóa vai trò đang được gán cho tài khoản (kể cả tài khoản đã xóa).");
 
             var grants = await dbContext.RolePermissions
                 .Where(item => item.RoleId == roleId)
@@ -292,6 +370,19 @@ public sealed class AdminService(AuthDbContext dbContext, TimeProvider timeProvi
         var definitions = await dbContext.Permissions.Where(item => requested.Contains(item.Code)).ToArrayAsync(cancellationToken);
         if (definitions.Length != requested.Length)
             throw new DomainException("PERMISSION_INVALID", "Danh sách quyền chứa mã không hợp lệ.");
+
+        if (role.Name.Equals("ADMIN", StringComparison.OrdinalIgnoreCase) &&
+            (!requested.Contains(PermissionCodes.AdminRbacManage, StringComparer.OrdinalIgnoreCase) ||
+             !requested.Contains(PermissionCodes.AdminUserManage, StringComparer.OrdinalIgnoreCase)))
+        {
+            throw new DomainException("ADMIN_ESSENTIAL_PERMISSIONS_REQUIRED", "Vai trò ADMIN bắt buộc phải giữ các quyền quản trị tài khoản và vai trò.");
+        }
+
+        if (!role.Name.Equals("ADMIN", StringComparison.OrdinalIgnoreCase) &&
+            requested.Any(p => p.StartsWith("admin.", StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new DomainException("ADMIN_PERMISSIONS_RESTRICTED", "Các quyền quản trị hệ thống chỉ được phép gán cho vai trò ADMIN.");
+        }
 
         var existing = await dbContext.RolePermissions.Where(item => item.RoleId == roleId).ToArrayAsync(cancellationToken);
         var before = existing.Select(item => item.PermissionId).ToArray();
@@ -368,8 +459,30 @@ public sealed class AdminService(AuthDbContext dbContext, TimeProvider timeProvi
 
     private static void EnsurePassword(string password)
     {
-        if (password.Length < 3)
-            throw new DomainException("PASSWORD_WEAK", "Mật khẩu cần ít nhất 3 ký tự.");
+        if (string.IsNullOrWhiteSpace(password))
+            throw new DomainException("PASSWORD_REQUIRED", "Vui lòng nhập mật khẩu.");
+    }
+
+    private static bool IsAdminRole(string roleName) =>
+        roleName.Equals("ADMIN", StringComparison.OrdinalIgnoreCase);
+
+    private static void EnsureNotSelf(long userId, long actorUserId, string message)
+    {
+        if (userId == actorUserId)
+            throw new DomainException("ADMIN_SELF_ACTION_FORBIDDEN", message);
+    }
+
+    /// <summary>Không cho phép khóa/vô hiệu hóa/xóa/hạ quyền tài khoản ADMIN đang hoạt động cuối cùng.</summary>
+    private async Task EnsureNotLastAdminAsync(ApplicationUser user, CancellationToken cancellationToken)
+    {
+        if (!IsAdminRole(user.Role.Name)) return;
+        var now = timeProvider.GetUtcNow();
+        var otherActiveAdmins = await dbContext.Users.AsNoTracking()
+            .Where(item => item.Id != user.Id && item.IsActive && EF.Functions.ILike(item.Role.Name, "ADMIN"))
+            .Where(item => item.SecurityState == null || item.SecurityState.LockoutEnd == null || item.SecurityState.LockoutEnd <= now)
+            .AnyAsync(cancellationToken);
+        if (!otherActiveAdmins)
+            throw new DomainException("LAST_ADMIN_PROTECTED", "Không thể thực hiện: đây là tài khoản ADMIN đang hoạt động cuối cùng.");
     }
 
     private static (int Page, int PageSize) NormalizePaging(int page, int pageSize) =>

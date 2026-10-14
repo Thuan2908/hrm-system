@@ -482,9 +482,9 @@
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(passwordModel.NewPassword) || passwordModel.NewPassword.Length < 3)
+        if (string.IsNullOrWhiteSpace(passwordModel.NewPassword))
         {
-            globalErrorMessage = "Mật khẩu mới phải có tối thiểu 3 ký tự.";
+            globalErrorMessage = "Vui lòng nhập mật khẩu mới.";
             return;
         }
 

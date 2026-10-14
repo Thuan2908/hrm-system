@@ -142,7 +142,9 @@ builder.Services
 
 var app = builder.Build();
 
-if (app.Configuration.GetValue<bool>("Database:InitializeAuthSupportSchema", true))
+// Tắt tự động khởi tạo/seed C# khi ứng dụng khởi động để tránh xung đột dữ liệu dùng chung trên Supabase.
+// Dữ liệu và schema được quản trị thủ công qua scripts/supabase_schema_and_seed.sql.
+if (app.Configuration.GetValue<bool>("Database:InitializeAuthSupportSchema", false))
 {
     await using var scope = app.Services.CreateAsyncScope();
     var authInitializer = scope.ServiceProvider.GetService<IAuthDatabaseInitializer>();
