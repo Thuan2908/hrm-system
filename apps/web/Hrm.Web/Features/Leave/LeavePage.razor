@@ -263,11 +263,12 @@
                                         </div>
                                         @if (r.AttachmentFileId.HasValue)
                                         {
-                                            <a href="api/v1/files/@r.AttachmentFileId/download" target="_blank"
-                                               class="badge bg-light text-primary border text-decoration-none mt-1 d-inline-flex align-items-center gap-1"
-                                               title="Bấm để tải tệp minh chứng">
+                                            <button type="button"
+                                                    class="badge bg-light text-primary border text-decoration-none mt-1 d-inline-flex align-items-center gap-1"
+                                                    title="Bấm để tải tệp minh chứng"
+                                                    @onclick="() => DownloadAttachmentAsync(r.AttachmentFileId!.Value, r.AttachmentFileName)">
                                                 <span>📎</span> @(r.AttachmentFileName ?? "Tệp minh chứng")
-                                            </a>
+                                            </button>
                                         }
                                     </td>
                                     <td>
@@ -804,6 +805,18 @@
         finally
         {
             isSavingEdit = false;
+        }
+    }
+
+    private async Task DownloadAttachmentAsync(Guid fileId, string? fileName)
+    {
+        try
+        {
+            await FileApiClient.DownloadToBrowserAsync(fileId, fileName);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Lỗi khi tải tệp: " + ex.Message;
         }
     }
 

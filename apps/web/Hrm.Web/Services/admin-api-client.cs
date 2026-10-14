@@ -4,7 +4,7 @@ using Hrm.Contracts;
 
 namespace Hrm.Web.Services;
 
-public sealed class AdminApiClient(HttpClient httpClient, IAuthApiClient authApiClient)
+public sealed class AdminApiClient(HttpClient httpClient)
 {
     public Task<ApiResponse<PagedResult<AdminUserDto>>?> SearchUsersAsync(
         string? keyword,
@@ -82,10 +82,11 @@ public sealed class AdminApiClient(HttpClient httpClient, IAuthApiClient authApi
     public Task<ApiResponse<PagedResult<AuditLogDto>>?> SearchAuditAsync(
         string? action,
         int page,
+        int pageSize = 20,
         CancellationToken cancellationToken = default) =>
         SendAsync<PagedResult<AuditLogDto>>(
             HttpMethod.Get,
-            $"api/v1/admin/audit?action={Uri.EscapeDataString(action ?? string.Empty)}&page={page}&pageSize=20",
+            $"api/v1/admin/audit?action={Uri.EscapeDataString(action ?? string.Empty)}&page={page}&pageSize={pageSize}",
             null,
             cancellationToken);
 
@@ -99,12 +100,6 @@ public sealed class AdminApiClient(HttpClient httpClient, IAuthApiClient authApi
         if (body is not null)
         {
             request.Content = JsonContent.Create(body);
-        }
-
-        var token = await authApiClient.GetAccessTokenAsync(cancellationToken);
-        if (!string.IsNullOrWhiteSpace(token))
-        {
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         }
 
         using var response = await httpClient.SendAsync(request, cancellationToken);

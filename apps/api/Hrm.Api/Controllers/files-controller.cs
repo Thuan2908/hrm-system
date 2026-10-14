@@ -44,7 +44,7 @@ public sealed class FilesController(IFileService fileService) : ControllerBase
     [HttpGet("{id:guid}/download")]
     public async Task<IActionResult> Download(Guid id, CancellationToken cancellationToken)
     {
-        var result = await fileService.GetFileDownloadAsync(id, cancellationToken);
+        var result = await fileService.GetFileDownloadAsync(id, GetUserId(), HasPrivilegedFileAccess(), cancellationToken);
         if (result is null)
         {
             return NotFound(ApiResponse.Fail<string>(
@@ -57,7 +57,7 @@ public sealed class FilesController(IFileService fileService) : ControllerBase
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<ApiResponse<StoredFileDto>>> GetMetadata(Guid id, CancellationToken cancellationToken)
     {
-        var result = await fileService.GetMetadataAsync(id, cancellationToken);
+        var result = await fileService.GetMetadataAsync(id, GetUserId(), HasPrivilegedFileAccess(), cancellationToken);
         if (result is null)
         {
             return NotFound(ApiResponse.Fail<StoredFileDto>(
@@ -103,4 +103,15 @@ public sealed class FilesController(IFileService fileService) : ControllerBase
         long.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)
             ? userId
             : throw new UnauthorizedAccessException("User identifier is missing in security context.");
+
+    private bool HasPrivilegedFileAccess()
+    {
+        if (User.IsInRole("ADMIN")) return true;
+        var privileged = PermissionCodes.ExpandWithAliases([
+            PermissionCodes.LeaveApprove,
+            PermissionCodes.EmployeeRead,
+            PermissionCodes.EmployeeWrite
+        ]);
+        return privileged.Any(p => User.HasClaim("permission", p));
+    }
 }

@@ -16,7 +16,7 @@ public interface ILeaveApiClient
     Task<bool> RejectRequestAsync(Guid requestId, string? reason, CancellationToken cancellationToken = default);
 }
 
-public sealed class LeaveApiClient(HttpClient httpClient, IAuthApiClient authApiClient) : ILeaveApiClient
+public sealed class LeaveApiClient(HttpClient httpClient) : ILeaveApiClient
 {
     public async Task<LeaveBalanceSummaryDto?> GetBalanceAsync(CancellationToken cancellationToken = default)
     {
@@ -119,12 +119,6 @@ public sealed class LeaveApiClient(HttpClient httpClient, IAuthApiClient authApi
         if (body is not null)
         {
             request.Content = JsonContent.Create(body);
-        }
-
-        var token = await authApiClient.GetAccessTokenAsync(cancellationToken);
-        if (!string.IsNullOrWhiteSpace(token))
-        {
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         }
 
         using var response = await httpClient.SendAsync(request, cancellationToken);

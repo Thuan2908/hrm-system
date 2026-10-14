@@ -20,14 +20,30 @@ public interface IEmployeeApiClient
 
     Task<ApiResponse<EmployeeDto>?> TransferEmployeeAsync(long employeeId, TransferDepartmentRequest request, CancellationToken cancellationToken = default);
 
+    Task<ApiResponse<EmployeeDto>?> PromoteEmployeeAsync(long employeeId, PromoteEmployeeRequest request, CancellationToken cancellationToken = default);
+
     Task<bool> OffboardEmployeeAsync(long employeeId, CancellationToken cancellationToken = default);
 
-    Task<IReadOnlyList<DepartmentDto>> GetDepartmentsAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<DepartmentDto>> GetDepartmentsAsync(bool includeInactive = false, CancellationToken cancellationToken = default);
 
-    Task<IReadOnlyList<PositionDto>> GetPositionsAsync(CancellationToken cancellationToken = default);
+    Task<ApiResponse<DepartmentDto>?> CreateDepartmentAsync(CreateDepartmentRequest request, CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<DepartmentDto>?> UpdateDepartmentAsync(long id, UpdateDepartmentRequest request, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<PositionDto>> GetPositionsAsync(bool includeInactive = false, CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<PositionDto>?> CreatePositionAsync(CreatePositionRequest request, CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<PositionDto>?> UpdatePositionAsync(long id, UpdatePositionRequest request, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<SalaryProfileDto>> GetSalaryHistoryAsync(long employeeId, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<EmployeeTimelineEventDto>> GetEmployeeTimelineAsync(long employeeId, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<string>> GetAvailableRolesAsync(CancellationToken cancellationToken = default);
 }
 
-public sealed class EmployeeApiClient(HttpClient httpClient, IAuthApiClient authApiClient) : IEmployeeApiClient
+public sealed class EmployeeApiClient(HttpClient httpClient) : IEmployeeApiClient
 {
     public async Task<IReadOnlyList<EmployeeDto>> GetEmployeesAsync(
         string? keyword = null,
@@ -66,6 +82,11 @@ public sealed class EmployeeApiClient(HttpClient httpClient, IAuthApiClient auth
         return await SendAsync<EmployeeDto>(HttpMethod.Post, $"api/v1/employees/{employeeId}/transfer", request, cancellationToken);
     }
 
+    public async Task<ApiResponse<EmployeeDto>?> PromoteEmployeeAsync(long employeeId, PromoteEmployeeRequest request, CancellationToken cancellationToken = default)
+    {
+        return await SendAsync<EmployeeDto>(HttpMethod.Post, $"api/v1/employees/{employeeId}/promote", request, cancellationToken);
+    }
+
     public async Task<bool> OffboardEmployeeAsync(long employeeId, CancellationToken cancellationToken = default)
     {
         var response = await SendAsync<object>(HttpMethod.Post, $"api/v1/employees/{employeeId}/offboard", null, cancellationToken);
@@ -76,15 +97,55 @@ public sealed class EmployeeApiClient(HttpClient httpClient, IAuthApiClient auth
         return true;
     }
 
-    public async Task<IReadOnlyList<DepartmentDto>> GetDepartmentsAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<DepartmentDto>> GetDepartmentsAsync(bool includeInactive = false, CancellationToken cancellationToken = default)
     {
-        var response = await SendAsync<IReadOnlyList<DepartmentDto>>(HttpMethod.Get, "api/v1/employees/departments", null, cancellationToken);
+        var url = includeInactive ? "api/v1/employees/departments?includeInactive=true" : "api/v1/employees/departments";
+        var response = await SendAsync<IReadOnlyList<DepartmentDto>>(HttpMethod.Get, url, null, cancellationToken);
         return response?.Data ?? [];
     }
 
-    public async Task<IReadOnlyList<PositionDto>> GetPositionsAsync(CancellationToken cancellationToken = default)
+    public async Task<ApiResponse<DepartmentDto>?> CreateDepartmentAsync(CreateDepartmentRequest request, CancellationToken cancellationToken = default)
     {
-        var response = await SendAsync<IReadOnlyList<PositionDto>>(HttpMethod.Get, "api/v1/employees/positions", null, cancellationToken);
+        return await SendAsync<DepartmentDto>(HttpMethod.Post, "api/v1/employees/departments", request, cancellationToken);
+    }
+
+    public async Task<ApiResponse<DepartmentDto>?> UpdateDepartmentAsync(long id, UpdateDepartmentRequest request, CancellationToken cancellationToken = default)
+    {
+        return await SendAsync<DepartmentDto>(HttpMethod.Put, $"api/v1/employees/departments/{id}", request, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<PositionDto>> GetPositionsAsync(bool includeInactive = false, CancellationToken cancellationToken = default)
+    {
+        var url = includeInactive ? "api/v1/employees/positions?includeInactive=true" : "api/v1/employees/positions";
+        var response = await SendAsync<IReadOnlyList<PositionDto>>(HttpMethod.Get, url, null, cancellationToken);
+        return response?.Data ?? [];
+    }
+
+    public async Task<ApiResponse<PositionDto>?> CreatePositionAsync(CreatePositionRequest request, CancellationToken cancellationToken = default)
+    {
+        return await SendAsync<PositionDto>(HttpMethod.Post, "api/v1/employees/positions", request, cancellationToken);
+    }
+
+    public async Task<ApiResponse<PositionDto>?> UpdatePositionAsync(long id, UpdatePositionRequest request, CancellationToken cancellationToken = default)
+    {
+        return await SendAsync<PositionDto>(HttpMethod.Put, $"api/v1/employees/positions/{id}", request, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<SalaryProfileDto>> GetSalaryHistoryAsync(long employeeId, CancellationToken cancellationToken = default)
+    {
+        var response = await SendAsync<IReadOnlyList<SalaryProfileDto>>(HttpMethod.Get, $"api/v1/employees/{employeeId}/salary-history", null, cancellationToken);
+        return response?.Data ?? [];
+    }
+
+    public async Task<IReadOnlyList<EmployeeTimelineEventDto>> GetEmployeeTimelineAsync(long employeeId, CancellationToken cancellationToken = default)
+    {
+        var response = await SendAsync<IReadOnlyList<EmployeeTimelineEventDto>>(HttpMethod.Get, $"api/v1/employees/{employeeId}/timeline", null, cancellationToken);
+        return response?.Data ?? [];
+    }
+
+    public async Task<IReadOnlyList<string>> GetAvailableRolesAsync(CancellationToken cancellationToken = default)
+    {
+        var response = await SendAsync<IReadOnlyList<string>>(HttpMethod.Get, "api/v1/employees/roles", null, cancellationToken);
         return response?.Data ?? [];
     }
 
@@ -98,12 +159,6 @@ public sealed class EmployeeApiClient(HttpClient httpClient, IAuthApiClient auth
         if (body is not null)
         {
             request.Content = JsonContent.Create(body);
-        }
-
-        var token = await authApiClient.GetAccessTokenAsync(cancellationToken);
-        if (!string.IsNullOrWhiteSpace(token))
-        {
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         }
 
         using var response = await httpClient.SendAsync(request, cancellationToken);

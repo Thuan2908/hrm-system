@@ -2,6 +2,7 @@
 @layout EmployeeLayout
 @attribute [Authorize]
 @inject ILeaveApiClient LeaveApiClient
+@inject IFileApiClient FileApiClient
 
 <PageTitle>Duyệt đơn nghỉ phép - Saigon Retail</PageTitle>
 
@@ -94,8 +95,19 @@
                                                 <td>
                                                     <span class="emp-badge emp-badge-success tabular-nums">@p.DaysCount.ToString("0.#") ngày</span>
                                                 </td>
-                                                <td class="small text-muted" style="max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="@p.Reason">
-                                                    @p.Reason
+                                                <td class="small text-muted" style="max-width: 250px;">
+                                                    <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="@p.Reason">
+                                                        @p.Reason
+                                                    </div>
+                                                    @if (p.AttachmentFileId.HasValue)
+                                                    {
+                                                        <button type="button"
+                                                                class="badge bg-light text-primary border text-decoration-none mt-1 d-inline-flex align-items-center gap-1"
+                                                                title="Bấm để tải tệp minh chứng"
+                                                                @onclick="() => DownloadAttachmentAsync(p.AttachmentFileId.Value, p.AttachmentFileName)">
+                                                            <span>📎</span> @(p.AttachmentFileName ?? "Tệp minh chứng")
+                                                        </button>
+                                                    }
                                                 </td>
                                                 <td class="small text-muted tabular-nums">
                                                     @p.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
@@ -201,6 +213,18 @@
         finally
         {
             isProcessingApproval = false;
+        }
+    }
+
+    private async Task DownloadAttachmentAsync(Guid fileId, string? fileName)
+    {
+        try
+        {
+            await FileApiClient.DownloadToBrowserAsync(fileId, fileName);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Lỗi khi tải tệp minh chứng: " + ex.Message;
         }
     }
 }

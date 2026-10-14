@@ -56,45 +56,30 @@ public sealed class LeaveController(ILeaveService leaveService) : ControllerBase
     }
 
     [HttpGet("pending")]
+    [Authorize(Policy = PermissionCodes.LeaveApprove)]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<PendingLeaveApprovalDto>>>> GetPending(CancellationToken cancellationToken)
     {
-        var hasAccess = User.IsInRole("ADMIN")
-            || User.HasClaim("permission", PermissionCodes.LeaveApprove)
-            || User.HasClaim("permission", "LEAVE_APPROVE");
-
-        if (!hasAccess) return Forbid();
-
         var result = await leaveService.GetPendingRequestsAsync(cancellationToken);
         return Ok(ApiResponse.Ok(result));
     }
 
     [HttpPost("{id:guid}/approve")]
+    [Authorize(Policy = PermissionCodes.LeaveApprove)]
     public async Task<ActionResult<ApiResponse<string>>> ApproveRequest(
         Guid id,
         CancellationToken cancellationToken)
     {
-        var hasAccess = User.IsInRole("ADMIN")
-            || User.HasClaim("permission", PermissionCodes.LeaveApprove)
-            || User.HasClaim("permission", "LEAVE_APPROVE");
-
-        if (!hasAccess) return Forbid();
-
         await leaveService.ApproveLeaveRequestAsync(id, GetUserId(), cancellationToken);
         return Ok(ApiResponse.Ok("Đã phê duyệt đơn xin nghỉ phép thành công."));
     }
 
     [HttpPost("{id:guid}/reject")]
+    [Authorize(Policy = PermissionCodes.LeaveApprove)]
     public async Task<ActionResult<ApiResponse<string>>> RejectRequest(
         Guid id,
         [FromBody] RejectLeaveRequestInput? input,
         CancellationToken cancellationToken)
     {
-        var hasAccess = User.IsInRole("ADMIN")
-            || User.HasClaim("permission", PermissionCodes.LeaveApprove)
-            || User.HasClaim("permission", "LEAVE_APPROVE");
-
-        if (!hasAccess) return Forbid();
-
         await leaveService.RejectLeaveRequestAsync(id, input?.Reason, GetUserId(), cancellationToken);
         return Ok(ApiResponse.Ok("Đã từ chối đơn xin nghỉ phép."));
     }

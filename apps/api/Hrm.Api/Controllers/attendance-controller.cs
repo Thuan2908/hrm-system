@@ -50,13 +50,9 @@ public sealed class AttendanceController(IAttendanceService attendanceService) :
     }
 
     [HttpGet("team-summary")]
+    [Authorize(Policy = PermissionCodes.AttendanceTeamRead)]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<TeamAttendanceItemDto>>>> GetTeamSummary(CancellationToken cancellationToken)
     {
-        var hasAccess = User.IsInRole("ADMIN")
-            || User.HasClaim("permission", "ATT_APPROVE");
-
-        if (!hasAccess) return Forbid();
-
         var result = await attendanceService.GetTeamAttendanceSummaryAsync(cancellationToken);
         return Ok(ApiResponse.Ok(result));
     }

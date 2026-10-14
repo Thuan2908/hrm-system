@@ -39,6 +39,15 @@ public sealed class EmployeesController(
         return Ok(ApiResponse.Ok(result));
     }
 
+    [HttpGet("roles")]
+    [Authorize(Policy = PermissionCodes.EmployeeWrite)]
+    public async Task<ActionResult<ApiResponse<IReadOnlyList<string>>>> GetRoles(
+        CancellationToken cancellationToken)
+    {
+        var result = await employeeService.GetAvailableRolesAsync(cancellationToken);
+        return Ok(ApiResponse.Ok(result));
+    }
+
     [HttpGet("{id:long}")]
     [Authorize(Policy = PermissionCodes.EmployeeRead)]
     public async Task<ActionResult<ApiResponse<EmployeeDto>>> GetEmployeeById(
@@ -90,6 +99,17 @@ public sealed class EmployeesController(
         return Ok(ApiResponse.Ok(result));
     }
 
+    [HttpPost("{id:long}/promote")]
+    [Authorize(Policy = PermissionCodes.EmployeePromote)]
+    public async Task<ActionResult<ApiResponse<EmployeeDto>>> Promote(
+        long id,
+        [FromBody] PromoteEmployeeRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await employeeService.PromoteEmployeeAsync(id, request, GetActorId(), cancellationToken);
+        return Ok(ApiResponse.Ok(result));
+    }
+
     [HttpPost("{employeeId:long}/offboard")]
     [Authorize(Policy = PermissionCodes.EmployeeOffboard)]
     public async Task<ActionResult<ApiResponse<object>>> Offboard(
@@ -100,21 +120,85 @@ public sealed class EmployeesController(
         return Ok(ApiResponse.Ok<object>(new { }));
     }
 
+    [HttpGet("{id:long}/salary-history")]
+    [Authorize(Policy = PermissionCodes.EmployeeRead)]
+    public async Task<ActionResult<ApiResponse<IReadOnlyList<SalaryProfileDto>>>> GetSalaryHistory(
+        long id,
+        CancellationToken cancellationToken)
+    {
+        var result = await employeeService.GetSalaryHistoryAsync(id, cancellationToken);
+        return Ok(ApiResponse.Ok(result));
+    }
+
+    [HttpGet("{id:long}/timeline")]
+    [Authorize(Policy = PermissionCodes.EmployeeRead)]
+    public async Task<ActionResult<ApiResponse<IReadOnlyList<EmployeeTimelineEventDto>>>> GetTimeline(
+        long id,
+        CancellationToken cancellationToken)
+    {
+        var result = await employeeService.GetEmployeeTimelineAsync(id, cancellationToken);
+        return Ok(ApiResponse.Ok(result));
+    }
+
     [HttpGet("departments")]
     [Authorize(Policy = PermissionCodes.EmployeeRead)]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<DepartmentDto>>>> GetDepartments(
+        [FromQuery] bool includeInactive = false,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await employeeService.GetDepartmentsAsync(includeInactive, cancellationToken);
+        return Ok(ApiResponse.Ok(result));
+    }
+
+    [HttpPost("departments")]
+    [Authorize(Policy = PermissionCodes.EmployeeWrite)]
+    public async Task<ActionResult<ApiResponse<DepartmentDto>>> CreateDepartment(
+        [FromBody] CreateDepartmentRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await employeeService.GetDepartmentsAsync(cancellationToken);
+        var result = await employeeService.CreateDepartmentAsync(request, GetActorId(), cancellationToken);
+        return Created($"api/v1/employees/departments/{result.Id}", ApiResponse.Ok(result));
+    }
+
+    [HttpPut("departments/{id:long}")]
+    [Authorize(Policy = PermissionCodes.EmployeeWrite)]
+    public async Task<ActionResult<ApiResponse<DepartmentDto>>> UpdateDepartment(
+        long id,
+        [FromBody] UpdateDepartmentRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await employeeService.UpdateDepartmentAsync(id, request, GetActorId(), cancellationToken);
         return Ok(ApiResponse.Ok(result));
     }
 
     [HttpGet("positions")]
     [Authorize(Policy = PermissionCodes.EmployeeRead)]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<PositionDto>>>> GetPositions(
+        [FromQuery] bool includeInactive = false,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await employeeService.GetPositionsAsync(includeInactive, cancellationToken);
+        return Ok(ApiResponse.Ok(result));
+    }
+
+    [HttpPost("positions")]
+    [Authorize(Policy = PermissionCodes.EmployeeWrite)]
+    public async Task<ActionResult<ApiResponse<PositionDto>>> CreatePosition(
+        [FromBody] CreatePositionRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await employeeService.GetPositionsAsync(cancellationToken);
+        var result = await employeeService.CreatePositionAsync(request, GetActorId(), cancellationToken);
+        return Created($"api/v1/employees/positions/{result.Id}", ApiResponse.Ok(result));
+    }
+
+    [HttpPut("positions/{id:long}")]
+    [Authorize(Policy = PermissionCodes.EmployeeWrite)]
+    public async Task<ActionResult<ApiResponse<PositionDto>>> UpdatePosition(
+        long id,
+        [FromBody] UpdatePositionRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await employeeService.UpdatePositionAsync(id, request, GetActorId(), cancellationToken);
         return Ok(ApiResponse.Ok(result));
     }
 

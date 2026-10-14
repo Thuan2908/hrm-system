@@ -27,6 +27,10 @@ public sealed class Position
     public long Id { get; set; }
     public string? Code { get; set; }
     public required string Name { get; set; }
+    public long? DepartmentId { get; set; }
+    public decimal DefaultPositionAllowance { get; set; }
+    public bool IsActive { get; set; } = true;
+    public Department? Department { get; set; }
 }
 
 public sealed class Employee
@@ -44,6 +48,9 @@ public sealed class Employee
     public string? EducationLevel { get; set; }
     public DateOnly? HireDate { get; set; }
     public string Status { get; set; } = "ACTIVE";
+    public int DependentCount { get; set; }
+    public string? BankName { get; set; }
+    public string? BankAccountNumber { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
 
     public Department Department { get; set; } = null!;
@@ -73,6 +80,20 @@ public sealed class Department
     public long Id { get; set; }
     public required string Code { get; set; }
     public required string Name { get; set; }
+    public string? Description { get; set; }
+    public bool IsActive { get; set; } = true;
+}
+
+public sealed class EmployeeTimelineEvent
+{
+    public long Id { get; set; }
+    public long EmployeeId { get; set; }
+    public string EventType { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public DateTimeOffset Timestamp { get; set; } = DateTimeOffset.UtcNow;
+    public long? CreatedByUserId { get; set; }
+    public string? CreatedByName { get; set; }
 }
 
 public sealed class UserSecurityState
