@@ -13,6 +13,7 @@ Permission code gợi ý:
 - leave.self.create
 - self_approved (ordinary leave auto-approved on submission; excludes resignations)
 - leave.approve (only for the assigned direct manager; checked from current DB grants)
+- leave.approve.all (explicit global approval grant; excludes manual self-approval; no automatic role grants)
 - leave.team.approve
 - leave.hr.approve
 - payroll.run

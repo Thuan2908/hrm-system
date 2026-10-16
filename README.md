@@ -98,11 +98,13 @@ dotnet run --project apps/web/Hrm.Web/Hrm.Web.csproj --launch-profile https
 
 Supabase schema and baseline data are managed manually. API startup does not create, alter, drop or seed database objects, and there is no automatic migration step. Provision required tables, columns, indexes, constraints and baseline permissions in Supabase before running features that depend on them. See `docs/decisions/ADR-016-manual-cloud-database-changes.md`.
 
-The consolidated manual migration is `scripts/migrations/20261014_001_schema_and_seed.sql`. Open the file and run it manually in Supabase SQL Editor against the existing legacy database. It contains Auth, Employees, Files, Attendance, Leave and Payroll schema/seed SQL, including the manager/RBAC additions. The optional demo payroll and destructive cleanup switches at the top are false by default. No application command runs this file.
+The single manual schema/seed file is `scripts/migrations/20261014_001_schema_and_seed.sql`. Run the entire file manually in Supabase SQL Editor for a new database or a compatible existing HRM database. It replaces the old root-level bootstrap and separate permission seed, and includes all current modules, employee/position fields, manager approval and `leave.approve.all`. Existing role IDs and grants are retained; default grants are assigned only when a baseline role is first created. ADMIN starts with account/RBAC/audit permissions only. No accounts or passwords are seeded. Optional demo payroll and destructive cleanup switches are false by default. Incompatible historical payroll/leave layouts stop execution and require a separate reviewed data conversion. No application command runs this file.
 
 For manager-based leave approval, manually add nullable `employees.manager_id` (`bigint`, referencing `employees.emp_id`, indexed, and disallowing self-management), `leave_requests.is_auto_approved` (`boolean`, NOT NULL, default false), and the `self_approved` entry in `permissions`. Grant it only to the intended roles using role management. Existing employees need an assigned manager and that manager's role needs `leave.approve` for manual reviews.
 
 Cloud schema verification tests are read-only. Workflow tests that create temporary tables run only when `HRM_TEST_POSTGRES_CONNECTION` points to a separate disposable test database; they do not use the application's Supabase connection.
+
+For system-wide leave approval, the consolidated file creates `leave.approve.all`; explicitly grant it to the intended roles in Admin role management. No role receives this permission automatically. Refresh the affected session to update navigation. `leave.approve` retains direct-manager scope; global reviewers can filter departments and sort by submission time or full name on the same approval page. Manual self-approval remains prohibited.
 
 Run the automated checks using the .NET 10 Microsoft Testing Platform syntax:
 

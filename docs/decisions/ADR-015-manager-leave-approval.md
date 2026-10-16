@@ -2,6 +2,8 @@
 
 Status: Accepted
 
+Extended by ADR-017: explicit `leave.approve.all` permits system-wide review without a manager relationship. The direct-manager permission and automatic-approval behavior below remain supported.
+
 ## Decision
 
 Employees have a nullable `manager_id` referencing `employees.emp_id`. Self-management and management cycles are rejected. Existing employees keep a null manager until assigned through employee management.

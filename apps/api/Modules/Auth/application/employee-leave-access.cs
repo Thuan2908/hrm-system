@@ -25,7 +25,7 @@ public sealed class EmployeeLeaveAccess(AuthDbContext dbContext, TimeProvider ti
     {
         var query = dbContext.Employees.AsNoTracking();
         if (managerId.HasValue) query = query.Where(e => e.ManagerId == managerId.Value);
-        return await query.Select(e => new LeaveEmployeeInfo(e.Id, e.Code, e.FullName, e.Department.Name, e.ManagerId))
+        return await query.Select(e => new LeaveEmployeeInfo(e.Id, e.Code, e.FullName, e.Department.Name, e.ManagerId, e.DepartmentId))
             .ToListAsync(cancellationToken);
     }
 

@@ -18,7 +18,8 @@
 - BR-LEAVE-003: Người dùng không được tự duyệt thủ công đơn của chính mình. Quyền `self_approved` cho phép hệ thống tự động duyệt đơn nghỉ thông thường khi gửi; đơn thôi việc luôn cần quản lý duyệt.
 - BR-LEAVE-004: Approve/reject phải lưu người duyệt, thời điểm và ghi chú.
 - BR-LEAVE-005: Các loại baseline: phép năm, ốm, thai sản, thôi việc.
-- BR-LEAVE-006: Queue và thao tác approve/reject chỉ áp dụng cho nhân viên được quản lý trực tiếp, kể cả Admin. Quyền được kiểm tra lại từ database; không gán `self_approved` mặc định.
+- BR-LEAVE-006: Quyền `leave.approve` giới hạn ở nhân viên được quản lý trực tiếp. Quyền riêng `leave.approve.all` cho phép xem/duyệt/từ chối đơn toàn hệ thống, kể cả nhân viên chưa có manager. Cả hai phạm vi đều không được duyệt thủ công đơn của chính mình, kể cả Admin. Quyền được kiểm tra lại từ database; không tự cấp `self_approved` hoặc `leave.approve.all` (ADR-017).
+- BR-LEAVE-007: Người có quyền duyệt toàn hệ thống được lọc theo phòng ban và sắp xếp theo thời gian gửi/họ tên. Quyết định lưu thành công đầu tiên là cuối cùng khi nhiều người cùng xử lý một đơn.
 
 ## Payroll
 - BR-PAY-001: Payroll theo tháng/năm cho từng employee.

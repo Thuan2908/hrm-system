@@ -20,7 +20,7 @@ public sealed class LeaveDbContext(DbContextOptions<LeaveDbContext> options) : D
             entity.Property(e => e.EndDate).HasColumnName("end_date").IsRequired();
             entity.Property(e => e.DaysCount).HasColumnName("days_count").HasPrecision(4, 1).IsRequired();
             entity.Property(e => e.Reason).HasColumnName("reason").IsRequired();
-            entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(50).IsRequired();
+            entity.Property(e => e.Status).HasColumnName("status").HasMaxLength(50).IsRequired().IsConcurrencyToken();
             entity.Property(e => e.RejectionReason).HasColumnName("rejection_reason");
             entity.Property(e => e.AttachmentFileId).HasColumnName("attachment_file_id");
             entity.Property(e => e.AttachmentFileName).HasColumnName("attachment_file_name");

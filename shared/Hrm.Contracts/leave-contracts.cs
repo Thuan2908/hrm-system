@@ -101,3 +101,6 @@ public sealed record PendingLeaveApprovalDto(
 
 public sealed record RejectLeaveRequestInput(string? Reason = null);
 
+public sealed record LeaveApprovalDepartmentDto(long Id, string Name);
+public sealed record LeaveApprovalOptionsDto(bool CanApproveAll, IReadOnlyList<LeaveApprovalDepartmentDto> Departments);
+

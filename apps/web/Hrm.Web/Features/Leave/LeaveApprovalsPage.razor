@@ -14,7 +14,7 @@
                 <span>QUẢN LÝ &amp; DUYỆT ĐƠN</span>
             </div>
             <h1 class="emp-page-header-title">Duyệt Đơn Xin Nghỉ Phép</h1>
-            <p class="emp-page-header-desc">Phê duyệt hoặc từ chối các yêu cầu nghỉ phép của nhân sự trong bộ phận.</p>
+            <p class="emp-page-header-desc">@(approvalOptions?.CanApproveAll == true ? "Duyệt đơn của nhân sự toàn hệ thống." : "Duyệt đơn của nhân sự do bạn quản lý trực tiếp.")</p>
         </div>
         <div class="d-flex align-items-center gap-2">
             <button class="btn emp-btn-secondary" @onclick="LoadPendingApprovalsAsync" disabled="@isLoadingApprovals">
@@ -43,8 +43,44 @@
 
     <AuthorizeView>
         <Authorized Context="authCtx">
-            @if (authCtx.User.IsInRole("ADMIN") || authCtx.User.HasClaim("permission", PermissionCodes.LeaveApprove) || authCtx.User.HasClaim("permission", "LEAVE_APPROVE"))
+            @if (isLoadingApprovals)
             {
+                <div class="d-flex align-items-center gap-2 py-4 text-muted" role="status" aria-live="polite">
+                    <span class="spinner-border spinner-border-sm" aria-hidden="true"></span>
+                    <span>Đang tải danh sách đơn chờ duyệt...</span>
+                </div>
+            }
+            else if (approvalOptions is not null)
+            {
+                @if (approvalOptions.CanApproveAll)
+                {
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label" for="approval-department">Phòng ban</label>
+                            <select id="approval-department" class="form-select" @bind="selectedDepartmentId" @bind:after="LoadPendingApprovalsAsync" disabled="@isLoadingApprovals">
+                                <option value="0">Tất cả phòng ban</option>
+                                @foreach (var department in approvalOptions.Departments)
+                                {
+                                    <option value="@department.Id">@department.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="approval-sort">Sắp xếp theo</label>
+                            <select id="approval-sort" class="form-select" @bind="sortBy" @bind:after="LoadPendingApprovalsAsync" disabled="@isLoadingApprovals">
+                                <option value="createdAt">Thời gian gửi</option>
+                                <option value="employeeName">Họ tên nhân viên</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label" for="approval-direction">Thứ tự</label>
+                            <select id="approval-direction" class="form-select" @bind="sortDirection" @bind:after="LoadPendingApprovalsAsync" disabled="@isLoadingApprovals">
+                                <option value="desc">@(sortBy == "employeeName" ? "Z → A" : "Mới nhất trước")</option>
+                                <option value="asc">@(sortBy == "employeeName" ? "A → Z" : "Cũ nhất trước")</option>
+                            </select>
+                        </div>
+                    </div>
+                }
                 <div class="card emp-card">
                     <div class="card-header bg-white border-bottom border-light py-3 px-4 d-flex justify-content-between align-items-center">
                         <div class="d-flex align-items-center gap-2">
@@ -135,7 +171,7 @@
                     </div>
                 </div>
             }
-            else
+            else if (string.IsNullOrWhiteSpace(errorMessage))
             {
                 <div class="alert alert-warning border-0 shadow-sm" style="border-radius: 12px;">
                     Bạn không có quyền truy cập chức năng này. Vui lòng liên hệ Admin.
@@ -147,6 +183,10 @@
 
 @code {
     private IReadOnlyList<PendingLeaveApprovalDto> pendingApprovals = [];
+    private LeaveApprovalOptionsDto? approvalOptions;
+    private long selectedDepartmentId;
+    private string sortBy = "createdAt";
+    private string sortDirection = "desc";
     private bool isLoadingApprovals = true;
     private bool isProcessingApproval = false;
     private string? successMessage;
@@ -163,11 +203,20 @@
         errorMessage = null;
         try
         {
-            pendingApprovals = await LeaveApiClient.GetPendingRequestsAsync();
+            approvalOptions = await LeaveApiClient.GetApprovalOptionsAsync();
+            if (approvalOptions?.CanApproveAll != true)
+            {
+                selectedDepartmentId = 0;
+                sortBy = "createdAt";
+                sortDirection = "desc";
+            }
+            pendingApprovals = await LeaveApiClient.GetPendingRequestsAsync(
+                departmentId: selectedDepartmentId > 0 ? selectedDepartmentId : null, sortBy: sortBy, descending: sortDirection == "desc");
         }
         catch (Exception ex)
         {
             errorMessage = "Không thể tải danh sách đơn chờ duyệt: " + ex.Message;
+            approvalOptions = null;
             pendingApprovals = [];
         }
         finally

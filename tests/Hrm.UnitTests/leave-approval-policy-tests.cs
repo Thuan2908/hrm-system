@@ -47,6 +47,28 @@ public sealed class LeaveApprovalPolicyTests
     }
 
     [Fact]
+    public void GlobalApproverCanReviewOtherDepartmentsAndEmployeesWithoutManagers()
+    {
+        var actor = new LeaveUserAccess(3, 30, true, [PermissionCodes.LeaveApproveAll]);
+        Assert.True(LeaveApprovalPolicy.CanReview(actor, 20, 10));
+        Assert.True(LeaveApprovalPolicy.CanReview(actor, 40, null));
+        Assert.False(LeaveApprovalPolicy.CanReview(actor, 30, 10));
+        Assert.False(LeaveApprovalPolicy.CanReview(actor with { IsActive = false }, 20, 10));
+        Assert.False(LeaveApprovalPolicy.CanAutoApprove(actor, LeaveTypes.Annual));
+    }
+
+    [Theory]
+    [InlineData("LEAVE_APPROVE")]
+    [InlineData("leave.hr.approve")]
+    [InlineData("leave.team.approve")]
+    public void ExistingAliasesDoNotGrantGlobalApproval(string alias)
+    {
+        var actor = new LeaveUserAccess(3, 30, true, [alias]);
+        Assert.False(LeaveApprovalPolicy.HasPermission(actor, PermissionCodes.LeaveApproveAll));
+        Assert.False(LeaveApprovalPolicy.CanReview(actor, 20, 10));
+    }
+
+    [Fact]
     public void ApprovalPermissionDoesNotGrantAutomaticApproval()
     {
         var actor = new LeaveUserAccess(1, 10, true, [PermissionCodes.LeaveApprove]);
