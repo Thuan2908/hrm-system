@@ -1,5 +1,6 @@
 using Hrm.Contracts;
 using Hrm.SharedKernel;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Diagnostics;
 
 namespace Hrm.Api.ErrorHandling;
@@ -27,6 +28,8 @@ public sealed class ApiExceptionHandler(
     {
         var (statusCode, code, message) = exception switch
         {
+            DbUpdateConcurrencyException =>
+                (StatusCodes.Status409Conflict, "LEAVE_ALREADY_PROCESSED", "Đơn đã được người khác xử lý. Vui lòng tải lại danh sách."),
             UnauthorizedAccessException =>
                 (StatusCodes.Status403Forbidden, "PERMISSION_DENIED", "Bạn không có quyền thực hiện thao tác này."),
             DomainException domainException =>

@@ -11,7 +11,8 @@ public interface ILeaveApiClient
     Task<LeaveRequestDto?> CreateRequestAsync(CreateLeaveRequestDto request, CancellationToken cancellationToken = default);
     Task<LeaveRequestDto?> UpdateRequestAsync(Guid requestId, UpdateLeaveRequestDto request, CancellationToken cancellationToken = default);
     Task<bool> CancelRequestAsync(Guid requestId, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<PendingLeaveApprovalDto>> GetPendingRequestsAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<PendingLeaveApprovalDto>> GetPendingRequestsAsync(long? departmentId = null, string sortBy = "createdAt", bool descending = true, CancellationToken cancellationToken = default);
+    Task<LeaveApprovalOptionsDto?> GetApprovalOptionsAsync(CancellationToken cancellationToken = default);
     Task<bool> ApproveRequestAsync(Guid requestId, CancellationToken cancellationToken = default);
     Task<bool> RejectRequestAsync(Guid requestId, string? reason, CancellationToken cancellationToken = default);
 }
@@ -32,10 +33,21 @@ public sealed class LeaveApiClient(HttpClient httpClient) : ILeaveApiClient
         return response?.Data ?? [];
     }
 
-    public async Task<IReadOnlyList<PendingLeaveApprovalDto>> GetPendingRequestsAsync(CancellationToken cancellationToken = default)
+    public async Task<LeaveApprovalOptionsDto?> GetApprovalOptionsAsync(CancellationToken cancellationToken = default)
     {
+        var response = await SendAsync<LeaveApprovalOptionsDto>(HttpMethod.Get, "api/v1/leave/approval-options", null, cancellationToken);
+        if (response?.Success != true) throw new InvalidOperationException(response?.Error?.Message ?? "Không thể tải phạm vi duyệt đơn.");
+        return response.Data;
+    }
+
+    public async Task<IReadOnlyList<PendingLeaveApprovalDto>> GetPendingRequestsAsync(
+        long? departmentId = null, string sortBy = "createdAt", bool descending = true, CancellationToken cancellationToken = default)
+    {
+        var url = $"api/v1/leave/pending?sortBy={Uri.EscapeDataString(sortBy)}&descending={descending.ToString().ToLowerInvariant()}";
+        if (departmentId.HasValue) url += $"&departmentId={departmentId.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)}";
         var response = await SendAsync<IReadOnlyList<PendingLeaveApprovalDto>>(
-            HttpMethod.Get, "api/v1/leave/pending", null, cancellationToken);
+            HttpMethod.Get, url, null, cancellationToken);
+        if (response?.Success != true) throw new InvalidOperationException(response?.Error?.Message ?? "Không thể tải đơn chờ duyệt.");
         return response?.Data ?? [];
     }
 

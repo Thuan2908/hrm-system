@@ -15,6 +15,9 @@ public interface ILeaveService
     Task<IReadOnlyList<LeaveRequestDto>> GetMyRequestsAsync(long userId, CancellationToken cancellationToken);
     Task CancelLeaveRequestAsync(long userId, Guid requestId, CancellationToken cancellationToken);
     Task<IReadOnlyList<PendingLeaveApprovalDto>> GetPendingRequestsAsync(long actorUserId, CancellationToken cancellationToken);
+    Task<IReadOnlyList<PendingLeaveApprovalDto>> GetPendingRequestsAsync(long actorUserId, long? departmentId, string sortBy, bool descending, CancellationToken cancellationToken);
+    Task<LeaveApprovalOptionsDto> GetApprovalOptionsAsync(long actorUserId, CancellationToken cancellationToken);
+    Task<bool> CanReviewAttachmentAsync(long actorUserId, Guid fileId, CancellationToken cancellationToken);
     Task ApproveLeaveRequestAsync(Guid requestId, long actorUserId, CancellationToken cancellationToken);
     Task RejectLeaveRequestAsync(Guid requestId, string? reason, long actorUserId, CancellationToken cancellationToken);
 }
@@ -276,18 +279,38 @@ public sealed class LeaveService(
         IsAutoApproved: e.IsAutoApproved
     );
 
-    public async Task<IReadOnlyList<PendingLeaveApprovalDto>> GetPendingRequestsAsync(long actorUserId, CancellationToken cancellationToken)
+    public async Task<LeaveApprovalOptionsDto> GetApprovalOptionsAsync(long actorUserId, CancellationToken cancellationToken)
     {
         var actor = await GetReviewerAsync(actorUserId, cancellationToken);
-        var directReports = await employeeAccess.GetEmployeesAsync(actor.EmployeeId, cancellationToken);
-        var employees = directReports.Where(e => e.Id != actor.EmployeeId).ToDictionary(e => e.Id);
+        var global = LeaveApprovalPolicy.HasPermission(actor, PermissionCodes.LeaveApproveAll);
+        var employees = await employeeAccess.GetEmployeesAsync(global ? null : actor.EmployeeId, cancellationToken);
+        var departments = employees.Where(e => e.Id != actor.EmployeeId)
+            .GroupBy(e => e.DepartmentId)
+            .Select(g => new LeaveApprovalDepartmentDto(g.Key, g.First().DepartmentName))
+            .OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase).ToArray();
+        return new LeaveApprovalOptionsDto(global, departments);
+    }
+
+    public Task<IReadOnlyList<PendingLeaveApprovalDto>> GetPendingRequestsAsync(long actorUserId, CancellationToken cancellationToken) =>
+        GetPendingRequestsAsync(actorUserId, null, "createdAt", true, cancellationToken);
+
+    public async Task<IReadOnlyList<PendingLeaveApprovalDto>> GetPendingRequestsAsync(long actorUserId,
+        long? departmentId, string sortBy, bool descending, CancellationToken cancellationToken)
+    {
+        var actor = await GetReviewerAsync(actorUserId, cancellationToken);
+        if (sortBy is not ("createdAt" or "employeeName"))
+            throw new ArgumentException("Thứ tự sắp xếp không hợp lệ.", nameof(sortBy));
+        var global = LeaveApprovalPolicy.HasPermission(actor, PermissionCodes.LeaveApproveAll);
+        var directReports = await employeeAccess.GetEmployeesAsync(global ? null : actor.EmployeeId, cancellationToken);
+        var employees = directReports.Where(e => e.Id != actor.EmployeeId && (!departmentId.HasValue || e.DepartmentId == departmentId.Value))
+            .ToDictionary(e => e.Id);
         var employeeIds = employees.Keys.ToArray();
         var pending = await dbContext.LeaveRequests.AsNoTracking()
             .Where(r => r.Status == LeaveStatuses.Pending && employeeIds.Contains(r.EmployeeId))
             .OrderByDescending(r => r.CreatedAt)
             .ToListAsync(cancellationToken);
 
-        return pending.Select(r =>
+        var rows = pending.Select(r =>
         {
             employees.TryGetValue(r.EmployeeId, out var emp);
             return new PendingLeaveApprovalDto(
@@ -308,7 +331,12 @@ public sealed class LeaveService(
                 r.AttachmentFileName,
                 r.CreatedAt
             );
-        }).ToList();
+        });
+        var nameComparer = StringComparer.Create(System.Globalization.CultureInfo.GetCultureInfo("vi-VN"), true);
+        var ordered = sortBy == "employeeName"
+            ? (descending ? rows.OrderByDescending(r => r.EmployeeName, nameComparer) : rows.OrderBy(r => r.EmployeeName, nameComparer))
+            : (descending ? rows.OrderByDescending(r => r.CreatedAt) : rows.OrderBy(r => r.CreatedAt));
+        return ordered.ThenBy(r => r.Id).ToList();
     }
 
     public async Task ApproveLeaveRequestAsync(Guid requestId, long actorUserId, CancellationToken cancellationToken)
@@ -330,13 +358,14 @@ public sealed class LeaveService(
         request.ApprovedAt = now;
         request.UpdatedAt = now;
 
+        // Claim the pending decision before applying resignation side effects.
+        await dbContext.SaveChangesAsync(cancellationToken);
         if (string.Equals(request.LeaveType, LeaveTypes.Resignation, StringComparison.OrdinalIgnoreCase))
         {
             await employeeAccess.MarkResignedAsync(request.EmployeeId, cancellationToken);
             await accessRevoker.RevokeAsync(request.EmployeeId, actorUserId, cancellationToken);
         }
 
-        await dbContext.SaveChangesAsync(cancellationToken);
         await employeeAccess.AuditDecisionAsync(request.Id, request.EmployeeId, actorUserId, request.Status, false, null, cancellationToken);
     }
 
@@ -363,10 +392,19 @@ public sealed class LeaveService(
         await employeeAccess.AuditDecisionAsync(request.Id, request.EmployeeId, actorUserId, request.Status, false, request.RejectionReason, cancellationToken);
     }
 
+    public async Task<bool> CanReviewAttachmentAsync(long actorUserId, Guid fileId, CancellationToken cancellationToken)
+    {
+        var actor = await employeeAccess.GetUserAsync(actorUserId, cancellationToken);
+        if (!LeaveApprovalPolicy.HasPermission(actor, PermissionCodes.LeaveApproveAll)) return false;
+        return await dbContext.LeaveRequests.AsNoTracking()
+            .AnyAsync(r => r.AttachmentFileId == fileId && r.EmployeeId != actor.EmployeeId, cancellationToken);
+    }
+
     private async Task<LeaveUserAccess> GetReviewerAsync(long actorUserId, CancellationToken cancellationToken)
     {
         var actor = await employeeAccess.GetUserAsync(actorUserId, cancellationToken);
-        if (!LeaveApprovalPolicy.HasPermission(actor, PermissionCodes.LeaveApprove))
+        if (!LeaveApprovalPolicy.HasPermission(actor, PermissionCodes.LeaveApprove)
+            && !LeaveApprovalPolicy.HasPermission(actor, PermissionCodes.LeaveApproveAll))
             throw new UnauthorizedAccessException("Bạn không có quyền duyệt đơn nghỉ phép.");
         return actor;
     }
@@ -374,9 +412,10 @@ public sealed class LeaveService(
     private async Task EnsureCanReviewAsync(long employeeId, long actorUserId, CancellationToken cancellationToken)
     {
         var actor = await GetReviewerAsync(actorUserId, cancellationToken);
-        var reports = await employeeAccess.GetEmployeesAsync(actor.EmployeeId, cancellationToken);
+        var global = LeaveApprovalPolicy.HasPermission(actor, PermissionCodes.LeaveApproveAll);
+        var reports = await employeeAccess.GetEmployeesAsync(global ? null : actor.EmployeeId, cancellationToken);
         var employee = reports.FirstOrDefault(e => e.Id == employeeId);
         if (employee is null || !LeaveApprovalPolicy.CanReview(actor, employeeId, employee.ManagerId))
-            throw new UnauthorizedAccessException("Chỉ quản lý trực tiếp có quyền duyệt mới được xử lý đơn này.");
+            throw new UnauthorizedAccessException("Bạn không có quyền duyệt đơn trong phạm vi nhân sự này.");
     }
 }

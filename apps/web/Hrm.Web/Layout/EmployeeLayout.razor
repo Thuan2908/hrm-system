@@ -194,7 +194,8 @@
                 continue;
             }
 
-            if (string.IsNullOrEmpty(item.RequiredPermission) || isAdmin || HasPermission(user, item.RequiredPermission))
+            if (string.IsNullOrEmpty(item.RequiredPermission) || isAdmin || HasPermission(user, item.RequiredPermission)
+                || (item.RequiredPermission == PermissionCodes.LeaveApprove && HasPermission(user, PermissionCodes.LeaveApproveAll)))
             {
                 list.Add(item);
             }

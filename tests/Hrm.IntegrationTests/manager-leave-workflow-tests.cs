@@ -76,11 +76,86 @@ public sealed class ManagerLeaveWorkflowTests
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => fixture.Service.ApproveLeaveRequestAsync(request.Id, 1, ct));
     }
 
+    [Fact]
+    public async Task GlobalOnlyApproverCanFilterSortAndReviewAcrossDepartmentsButNotSelf()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        var ct = TestContext.Current.CancellationToken;
+        await fixture.ExecuteAsync("""
+            INSERT INTO permissions VALUES (3, 'leave.approve.all', 'Global');
+            DELETE FROM role_permissions WHERE role_id IN (2, 3);
+            INSERT INTO role_permissions VALUES (3, 3);
+            INSERT INTO departments VALUES (2, 'OTHER', 'Other Department');
+            UPDATE employees SET dept_id = 2 WHERE emp_id = 20;
+            """);
+        var employeeRequest = await fixture.Service.CreateLeaveRequestAsync(2, Request(LeaveTypes.Annual), ct);
+        var managerRequest = await fixture.Service.CreateLeaveRequestAsync(1, Request(LeaveTypes.Annual), ct);
+        var ownRequest = await fixture.Service.CreateLeaveRequestAsync(3, Request(LeaveTypes.Annual), ct);
+        var options = await fixture.Service.GetApprovalOptionsAsync(3, ct);
+        Assert.True(options.CanApproveAll);
+        Assert.Equal(2, options.Departments.Count);
+        Assert.Equal(2, (await fixture.Service.GetPendingRequestsAsync(3, ct)).Count);
+        var departmentRows = await fixture.Service.GetPendingRequestsAsync(3, 2, "employeeName", false, ct);
+        Assert.Equal(employeeRequest.Id, Assert.Single(departmentRows).Id);
+        var sorted = await fixture.Service.GetPendingRequestsAsync(3, null, "employeeName", false, ct);
+        Assert.Collection(sorted, r => Assert.Equal("Employee", r.EmployeeName), r => Assert.Equal("Manager", r.EmployeeName));
+        var reverse = await fixture.Service.GetPendingRequestsAsync(3, null, "employeeName", true, ct);
+        Assert.Collection(reverse, r => Assert.Equal("Manager", r.EmployeeName), r => Assert.Equal("Employee", r.EmployeeName));
+        // Filters must never broaden the direct manager's scope.
+        Assert.Empty(await fixture.Service.GetPendingRequestsAsync(1, 1, "createdAt", true, ct));
+        Assert.Equal(employeeRequest.Id, Assert.Single(await fixture.Service.GetPendingRequestsAsync(1, ct)).Id);
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => fixture.Service.ApproveLeaveRequestAsync(ownRequest.Id, 3, ct));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => fixture.Service.RejectLeaveRequestAsync(ownRequest.Id, "No", 3, ct));
+        await fixture.Service.ApproveLeaveRequestAsync(employeeRequest.Id, 3, ct);
+        await fixture.Service.RejectLeaveRequestAsync(managerRequest.Id, "Rejected by HR", 3, ct);
+        Assert.Empty(await fixture.Service.GetPendingRequestsAsync(3, ct));
+        Assert.Equal(2, await fixture.Auth.AuditLogs.CountAsync(ct));
+    }
+
+    [Fact]
+    public async Task GlobalPermissionRevocationAppliesWithoutRefreshingToken()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        var ct = TestContext.Current.CancellationToken;
+        await fixture.ExecuteAsync("""
+            INSERT INTO permissions VALUES (3, 'leave.approve.all', 'Global');
+            DELETE FROM role_permissions WHERE role_id IN (2, 3);
+            INSERT INTO role_permissions VALUES (3, 3);
+            """);
+        var request = await fixture.Service.CreateLeaveRequestAsync(2, Request(LeaveTypes.Annual), ct);
+        Assert.Single(await fixture.Service.GetPendingRequestsAsync(3, ct));
+        await fixture.ExecuteAsync("DELETE FROM role_permissions WHERE role_id = 3");
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => fixture.Service.GetPendingRequestsAsync(3, ct));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => fixture.Service.GetApprovalOptionsAsync(3, ct));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => fixture.Service.ApproveLeaveRequestAsync(request.Id, 3, ct));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => fixture.Service.RejectLeaveRequestAsync(request.Id, "No", 3, ct));
+    }
+
+    [Fact]
+    public async Task GlobalAndDirectManagerCannotOverwriteEachOthersDecision()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        var ct = TestContext.Current.CancellationToken;
+        await fixture.ExecuteAsync("""
+            INSERT INTO permissions VALUES (3, 'leave.approve.all', 'Global');
+            DELETE FROM role_permissions WHERE role_id IN (2, 3);
+            INSERT INTO role_permissions VALUES (3, 3);
+            """);
+        var request = await fixture.Service.CreateLeaveRequestAsync(2, Request(LeaveTypes.Annual), ct);
+        await using var staleContext = fixture.CreateLeaveContext();
+        await staleContext.LeaveRequests.SingleAsync(r => r.Id == request.Id, ct);
+        var competingService = new LeaveService(staleContext, new EmployeeLeaveAccess(fixture.Auth, TimeProvider.System), new UnexpectedRevoker(), TimeProvider.System);
+        await fixture.Service.ApproveLeaveRequestAsync(request.Id, 1, ct);
+        await Assert.ThrowsAsync<DbUpdateConcurrencyException>(() => competingService.RejectLeaveRequestAsync(request.Id, "Stale", 3, ct));
+        Assert.Equal(1, await fixture.Auth.AuditLogs.CountAsync(ct));
+    }
+
     private static CreateLeaveRequestDto Request(string type) => new(type, new DateOnly(2027, 1, 4), new DateOnly(2027, 1, 4), "Test");
 
     private sealed class Fixture(NpgsqlConnection connection, AuthDbContext auth, LeaveDbContext leave) : IAsyncDisposable
     {
         public AuthDbContext Auth { get; } = auth;
+        public LeaveDbContext CreateLeaveContext() => new(new DbContextOptionsBuilder<LeaveDbContext>().UseNpgsql(connection).Options);
         public LeaveService Service { get; } = new(leave, new EmployeeLeaveAccess(auth, TimeProvider.System), new UnexpectedRevoker(), TimeProvider.System);
 
         public static async Task<Fixture> CreateAsync()

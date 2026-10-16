@@ -1,7 +1,7 @@
 namespace Hrm.Modules.Auth.Contracts;
 
 public sealed record LeaveUserAccess(long UserId, long EmployeeId, bool IsActive, IReadOnlyList<string> Permissions);
-public sealed record LeaveEmployeeInfo(long Id, string Code, string FullName, string DepartmentName, long? ManagerId);
+public sealed record LeaveEmployeeInfo(long Id, string Code, string FullName, string DepartmentName, long? ManagerId, long DepartmentId = 0);
 
 public interface IEmployeeLeaveAccess
 {

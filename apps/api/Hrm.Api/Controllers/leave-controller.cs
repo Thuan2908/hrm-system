@@ -56,21 +56,22 @@ public sealed class LeaveController(ILeaveService leaveService) : ControllerBase
     }
 
     [HttpGet("pending")]
-    [Authorize(Policy = PermissionCodes.LeaveApprove)]
-    public async Task<ActionResult<ApiResponse<IReadOnlyList<PendingLeaveApprovalDto>>>> GetPending(CancellationToken cancellationToken)
+    public async Task<ActionResult<ApiResponse<IReadOnlyList<PendingLeaveApprovalDto>>>> GetPending(
+        [FromQuery] long? departmentId = null, [FromQuery] string sortBy = "createdAt",
+        [FromQuery] bool descending = true, CancellationToken cancellationToken = default)
     {
-        var hasAccess = User.IsInRole("ADMIN")
-            || User.HasClaim("permission", PermissionCodes.LeaveApprove)
-            || User.HasClaim("permission", "LEAVE_APPROVE");
+        var result = await leaveService.GetPendingRequestsAsync(GetUserId(), departmentId, sortBy, descending, cancellationToken);
+        return Ok(ApiResponse.Ok(result));
+    }
 
-        if (!hasAccess) return Forbid();
-
-        var result = await leaveService.GetPendingRequestsAsync(GetUserId(), cancellationToken);
+    [HttpGet("approval-options")]
+    public async Task<ActionResult<ApiResponse<LeaveApprovalOptionsDto>>> GetApprovalOptions(CancellationToken cancellationToken)
+    {
+        var result = await leaveService.GetApprovalOptionsAsync(GetUserId(), cancellationToken);
         return Ok(ApiResponse.Ok(result));
     }
 
     [HttpPost("{id:guid}/approve")]
-    [Authorize(Policy = PermissionCodes.LeaveApprove)]
     public async Task<ActionResult<ApiResponse<string>>> ApproveRequest(
         Guid id,
         CancellationToken cancellationToken)
@@ -80,7 +81,6 @@ public sealed class LeaveController(ILeaveService leaveService) : ControllerBase
     }
 
     [HttpPost("{id:guid}/reject")]
-    [Authorize(Policy = PermissionCodes.LeaveApprove)]
     public async Task<ActionResult<ApiResponse<string>>> RejectRequest(
         Guid id,
         [FromBody] RejectLeaveRequestInput? input,

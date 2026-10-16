@@ -11,6 +11,7 @@ public static class PermissionCodes
     public const string AttendanceTeamRead = "attendance.team.read";
     public const string LeaveSelfCreate = "leave.self.create";
     public const string LeaveApprove = "leave.approve";
+    public const string LeaveApproveAll = "leave.approve.all";
     public const string SelfApproved = "self_approved";
     public const string LeaveSelfApproved = SelfApproved;
     public const string PayrollRun = "payroll.run";
@@ -27,7 +28,7 @@ public static class PermissionCodes
     [
         EmployeeRead, EmployeeWrite, EmployeeTransfer, EmployeePromote, EmployeeOffboard,
         AttendanceSelfWrite, AttendanceTeamRead,
-        LeaveSelfCreate, LeaveApprove, SelfApproved,
+        LeaveSelfCreate, LeaveApprove, LeaveApproveAll, SelfApproved,
         PayrollRun, PayrollFinalize, PayrollSelfRead, ReportRead,
         AdminUserRead, AdminUserSearch, AdminUserManage, AdminRbacManage, AuditRead
     ];
@@ -38,6 +39,7 @@ public static class PermissionCodes
         new(AttendanceTeamRead, "Xem & Theo dõi chấm công bộ phận", "Chấm công", "Xem và theo dõi chấm công của nhân sự bộ phận/toàn công ty", ["ATT_APPROVE", "attendance.team.approve"]),
         new(LeaveSelfCreate, "Tạo đơn xin nghỉ phép", "Nghỉ phép", "Tạo và gửi yêu cầu xin nghỉ phép, nghỉ ốm, nghỉ bù", ["LEAVE_REQUEST", "leave.create"]),
         new(LeaveApprove, "Duyệt đơn nghỉ phép", "Nghỉ phép", "Trưởng nhóm / Quản lý / HR xét duyệt đơn nghỉ của nhân viên", ["LEAVE_APPROVE", "leave.team.approve", "leave.hr.approve"]),
+        new(LeaveApproveAll, "Duyệt đơn nghỉ toàn hệ thống", "Nghỉ phép", "Duyệt hoặc từ chối đơn của nhân sự ở mọi phòng ban, ngoại trừ đơn của chính mình", []),
         new(SelfApproved, "Tự động duyệt đơn cá nhân", "Nghỉ phép", "Tự động phê duyệt các yêu cầu/đơn từ do chính mình tạo mà không cần cấp trên duyệt", ["LEAVE_SELF_APPROVE", "self.approve"]),
         new(PayrollSelfRead, "Xem phiếu lương cá nhân", "Tiền lương", "Xem chi tiết bảng lương, các khoản phụ cấp và khấu trừ cá nhân", ["PAYROLL_VIEW", "payroll.read"]),
         new(PayrollRun, "Tính & Chốt bảng lương", "Tiền lương", "Tổng hợp công và tính lương cho nhân viên toàn đơn vị", ["PAYROLL_MANAGE"]),

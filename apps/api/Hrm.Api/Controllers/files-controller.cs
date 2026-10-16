@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Hrm.Contracts;
 using Hrm.Modules.Files.Application;
+using Hrm.Modules.Leave.Application;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -42,9 +43,10 @@ public sealed class FilesController(IFileService fileService) : ControllerBase
     }
 
     [HttpGet("{id:guid}/download")]
-    public async Task<IActionResult> Download(Guid id, CancellationToken cancellationToken)
+    public async Task<IActionResult> Download(Guid id, [FromServices] ILeaveService leaveService, CancellationToken cancellationToken)
     {
-        var result = await fileService.GetFileDownloadAsync(id, GetUserId(), HasPrivilegedFileAccess(), cancellationToken);
+        var access = HasPrivilegedFileAccess() || await leaveService.CanReviewAttachmentAsync(GetUserId(), id, cancellationToken);
+        var result = await fileService.GetFileDownloadAsync(id, GetUserId(), access, cancellationToken);
         if (result is null)
         {
             return NotFound(ApiResponse.Fail<string>(
@@ -55,9 +57,10 @@ public sealed class FilesController(IFileService fileService) : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
-    public async Task<ActionResult<ApiResponse<StoredFileDto>>> GetMetadata(Guid id, CancellationToken cancellationToken)
+    public async Task<ActionResult<ApiResponse<StoredFileDto>>> GetMetadata(Guid id, [FromServices] ILeaveService leaveService, CancellationToken cancellationToken)
     {
-        var result = await fileService.GetMetadataAsync(id, GetUserId(), HasPrivilegedFileAccess(), cancellationToken);
+        var access = HasPrivilegedFileAccess() || await leaveService.CanReviewAttachmentAsync(GetUserId(), id, cancellationToken);
+        var result = await fileService.GetMetadataAsync(id, GetUserId(), access, cancellationToken);
         if (result is null)
         {
             return NotFound(ApiResponse.Fail<StoredFileDto>(
