@@ -30,6 +30,12 @@ public interface IEmployeeApiClient
 
     Task<ApiResponse<DepartmentDto>?> UpdateDepartmentAsync(long id, UpdateDepartmentRequest request, CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<PositionRankDto>> GetPositionRanksAsync(bool includeInactive = false, CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<PositionRankDto>?> CreatePositionRankAsync(CreatePositionRankRequest request, CancellationToken cancellationToken = default);
+
+    Task<ApiResponse<PositionRankDto>?> UpdatePositionRankAsync(long id, UpdatePositionRankRequest request, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<PositionDto>> GetPositionsAsync(bool includeInactive = false, CancellationToken cancellationToken = default);
 
     Task<ApiResponse<PositionDto>?> CreatePositionAsync(CreatePositionRequest request, CancellationToken cancellationToken = default);
@@ -112,6 +118,23 @@ public sealed class EmployeeApiClient(HttpClient httpClient) : IEmployeeApiClien
     public async Task<ApiResponse<DepartmentDto>?> UpdateDepartmentAsync(long id, UpdateDepartmentRequest request, CancellationToken cancellationToken = default)
     {
         return await SendAsync<DepartmentDto>(HttpMethod.Put, $"api/v1/employees/departments/{id}", request, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<PositionRankDto>> GetPositionRanksAsync(bool includeInactive = false, CancellationToken cancellationToken = default)
+    {
+        var url = includeInactive ? "api/v1/employees/position-ranks?includeInactive=true" : "api/v1/employees/position-ranks";
+        var response = await SendAsync<IReadOnlyList<PositionRankDto>>(HttpMethod.Get, url, null, cancellationToken);
+        return response?.Data ?? [];
+    }
+
+    public async Task<ApiResponse<PositionRankDto>?> CreatePositionRankAsync(CreatePositionRankRequest request, CancellationToken cancellationToken = default)
+    {
+        return await SendAsync<PositionRankDto>(HttpMethod.Post, "api/v1/employees/position-ranks", request, cancellationToken);
+    }
+
+    public async Task<ApiResponse<PositionRankDto>?> UpdatePositionRankAsync(long id, UpdatePositionRankRequest request, CancellationToken cancellationToken = default)
+    {
+        return await SendAsync<PositionRankDto>(HttpMethod.Put, $"api/v1/employees/position-ranks/{id}", request, cancellationToken);
     }
 
     public async Task<IReadOnlyList<PositionDto>> GetPositionsAsync(bool includeInactive = false, CancellationToken cancellationToken = default)

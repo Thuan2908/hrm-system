@@ -50,6 +50,12 @@ public interface IEmployeeService
 
     Task<DepartmentDto> UpdateDepartmentAsync(long id, UpdateDepartmentRequest request, long actorUserId, CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<PositionRankDto>> GetPositionRanksAsync(bool includeInactive = false, CancellationToken cancellationToken = default);
+
+    Task<PositionRankDto> CreatePositionRankAsync(CreatePositionRankRequest request, long actorUserId, CancellationToken cancellationToken = default);
+
+    Task<PositionRankDto> UpdatePositionRankAsync(long id, UpdatePositionRankRequest request, long actorUserId, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<PositionDto>> GetPositionsAsync(bool includeInactive = false, CancellationToken cancellationToken = default);
 
     Task<PositionDto> CreatePositionAsync(CreatePositionRequest request, long actorUserId, CancellationToken cancellationToken = default);
@@ -641,6 +647,7 @@ public sealed class EmployeeService(
         var employee = await dbContext.Employees
             .Include(e => e.Department)
             .Include(e => e.Position)
+                .ThenInclude(p => p!.Rank)
             .Include(e => e.SalaryProfiles)
             .FirstOrDefaultAsync(e => e.Id == id, cancellationToken)
             ?? throw new DomainException("EMPLOYEE_NOT_FOUND", "Không tìm thấy nhân viên.");
@@ -652,6 +659,7 @@ public sealed class EmployeeService(
 
         var targetPos = await dbContext.Positions
             .Include(p => p.Department)
+            .Include(p => p.Rank)
             .FirstOrDefaultAsync(p => p.Id == request.TargetPositionId, cancellationToken)
             ?? throw new DomainException("POSITION_NOT_FOUND", "Chức danh/vị trí bổ nhiệm mới không tồn tại.");
 
@@ -666,6 +674,7 @@ public sealed class EmployeeService(
             .Include(u => u.Role)
             .Include(u => u.Employee)
                 .ThenInclude(e => e!.Position)
+                    .ThenInclude(p => p!.Rank)
             .Include(u => u.Employee)
                 .ThenInclude(e => e!.Department)
             .FirstOrDefaultAsync(u => u.Id == actorUserId, cancellationToken);
@@ -676,11 +685,11 @@ public sealed class EmployeeService(
             (actorUser?.Employee?.Department?.Name?.Contains("Ban Giám Đốc", StringComparison.OrdinalIgnoreCase) ?? false);
 
         var actorRank = isActorAdminOrBoard
-            ? 5
-            : PositionHierarchyPolicy.GetPositionRank(actorUser?.Employee?.Position?.Name, actorUser?.Employee?.Position?.Code);
+            ? 999
+            : (actorUser?.Employee?.Position?.Rank?.Level ?? (actorUser?.Employee?.Position?.Level > 0 ? actorUser?.Employee?.Position?.Level : null) ?? PositionHierarchyPolicy.GetPositionRank(actorUser?.Employee?.Position?.Name, actorUser?.Employee?.Position?.Code));
 
-        var currentTargetRank = PositionHierarchyPolicy.GetPositionRank(employee.Position?.Name, employee.Position?.Code);
-        var newTargetRank = PositionHierarchyPolicy.GetPositionRank(targetPos.Name, targetPos.Code);
+        var currentTargetRank = employee.Position?.Rank?.Level ?? (employee.Position?.Level > 0 ? employee.Position?.Level : null) ?? PositionHierarchyPolicy.GetPositionRank(employee.Position?.Name, employee.Position?.Code);
+        var newTargetRank = targetPos.Rank?.Level ?? (targetPos.Level > 0 ? targetPos.Level : PositionHierarchyPolicy.GetPositionRank(targetPos.Name, targetPos.Code));
         var actorDeptId = actorUser?.Employee?.DepartmentId ?? 0;
 
         // 2. Kiểm tra thẩm quyền bổ nhiệm theo quy tắc phân cấp và phạm vi phòng ban
@@ -752,7 +761,7 @@ public sealed class EmployeeService(
             {
                 var desiredRoleName = !string.IsNullOrWhiteSpace(request.NewRoleName)
                     ? request.NewRoleName.Trim().ToUpperInvariant()
-                    : PositionHierarchyPolicy.SuggestRoleForPosition(targetPos.Name, employee.Department?.Code);
+                    : (targetPos.Rank?.DefaultRoleName ?? PositionHierarchyPolicy.SuggestRoleForPosition(targetPos.Name, employee.Department?.Code, newTargetRank));
 
                 var newRole = await dbContext.Roles.FirstOrDefaultAsync(r => r.Name == desiredRoleName, cancellationToken);
                 if (newRole != null && targetUser.RoleId != newRole.Id)
@@ -942,10 +951,199 @@ public sealed class EmployeeService(
         return new DepartmentDto(dept.Id, dept.Code, dept.Name, dept.Description, dept.IsActive, employeeCount);
     }
 
+    public async Task<IReadOnlyList<PositionRankDto>> GetPositionRanksAsync(bool includeInactive = false, CancellationToken cancellationToken = default)
+    {
+        var query = dbContext.PositionRanks.AsNoTracking().AsQueryable();
+        if (!includeInactive)
+        {
+            query = query.Where(r => r.IsActive);
+        }
+
+        return await query
+            .OrderBy(r => r.Level)
+            .ThenBy(r => r.Code)
+            .Select(r => new PositionRankDto(
+                r.Id,
+                r.Code,
+                r.Name,
+                r.Level,
+                r.Description,
+                r.DefaultRoleName,
+                r.IsActive))
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<PositionRankDto> CreatePositionRankAsync(CreatePositionRankRequest request, long actorUserId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(request.Code))
+        {
+            throw new DomainException("INVALID_CODE", "Mã mức rank không được để trống.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Name))
+        {
+            throw new DomainException("INVALID_NAME", "Tên mức rank không được để trống.");
+        }
+
+        if (request.Level <= 0)
+        {
+            throw new DomainException("INVALID_LEVEL", "Cấp bậc (Level) phải lớn hơn hoặc bằng 1.");
+        }
+
+        var codeTrim = request.Code.Trim().ToUpperInvariant();
+        if (await dbContext.PositionRanks.AnyAsync(r => EF.Functions.ILike(r.Code, codeTrim), cancellationToken))
+        {
+            throw new DomainException("RANK_CODE_EXISTS", $"Mã mức rank '{codeTrim}' đã tồn tại.");
+        }
+
+        // Tự động tâng/nâng các cấp bậc cao hơn lên +1 nếu người dùng bật ShiftExistingHigherRanks
+        if (request.ShiftExistingHigherRanks && request.Level > 1)
+        {
+            var higherRanks = await dbContext.PositionRanks
+                .Where(r => r.Level >= request.Level)
+                .ToListAsync(cancellationToken);
+
+            foreach (var hr in higherRanks)
+            {
+                hr.Level += 1;
+            }
+
+            var higherPositions = await dbContext.Positions
+                .Where(p => p.Level >= request.Level)
+                .ToListAsync(cancellationToken);
+
+            foreach (var hp in higherPositions)
+            {
+                hp.Level += 1;
+            }
+        }
+
+        var rank = new PositionRank
+        {
+            Code = codeTrim,
+            Name = request.Name.Trim(),
+            Level = request.Level,
+            Description = request.Description?.Trim(),
+            DefaultRoleName = string.IsNullOrWhiteSpace(request.DefaultRoleName) ? "EMPLOYEE" : request.DefaultRoleName.Trim().ToUpperInvariant(),
+            IsActive = true
+        };
+
+        dbContext.PositionRanks.Add(rank);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        var now = timeProvider.GetUtcNow();
+        dbContext.AuditLogs.Add(new AuditLogEntry
+        {
+            Id = Guid.NewGuid(),
+            ActorUserId = actorUserId,
+            Action = "position_rank.created",
+            EntityType = "PositionRank",
+            EntityId = rank.Id.ToString(CultureInfo.InvariantCulture),
+            AfterJson = JsonSerializer.Serialize(new { rank.Code, rank.Name, rank.Level, rank.DefaultRoleName }),
+            CreatedAt = now
+        });
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return new PositionRankDto(
+            rank.Id,
+            rank.Code,
+            rank.Name,
+            rank.Level,
+            rank.Description,
+            rank.DefaultRoleName,
+            rank.IsActive);
+    }
+
+    public async Task<PositionRankDto> UpdatePositionRankAsync(long id, UpdatePositionRankRequest request, long actorUserId, CancellationToken cancellationToken = default)
+    {
+        var rank = await dbContext.PositionRanks.FirstOrDefaultAsync(r => r.Id == id, cancellationToken)
+            ?? throw new DomainException("RANK_NOT_FOUND", "Không tìm thấy mức rank chức danh.");
+
+        if (string.IsNullOrWhiteSpace(request.Code))
+        {
+            throw new DomainException("INVALID_CODE", "Mã mức rank không được để trống.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Name))
+        {
+            throw new DomainException("INVALID_NAME", "Tên mức rank không được để trống.");
+        }
+
+        if (request.Level <= 0)
+        {
+            throw new DomainException("INVALID_LEVEL", "Cấp bậc (Level) phải lớn hơn hoặc bằng 1.");
+        }
+
+        var codeTrim = request.Code.Trim().ToUpperInvariant();
+        if (await dbContext.PositionRanks.AnyAsync(r => r.Id != id && EF.Functions.ILike(r.Code, codeTrim), cancellationToken))
+        {
+            throw new DomainException("RANK_CODE_EXISTS", $"Mã mức rank '{codeTrim}' đã tồn tại.");
+        }
+
+        if (request.ShiftExistingHigherRanks && request.Level > 1)
+        {
+            var higherRanks = await dbContext.PositionRanks
+                .Where(r => r.Id != id && r.Level >= request.Level)
+                .ToListAsync(cancellationToken);
+
+            foreach (var hr in higherRanks)
+            {
+                hr.Level += 1;
+            }
+
+            var higherPositions = await dbContext.Positions
+                .Where(p => p.RankId != id && p.Level >= request.Level)
+                .ToListAsync(cancellationToken);
+
+            foreach (var hp in higherPositions)
+            {
+                hp.Level += 1;
+            }
+        }
+
+        rank.Code = codeTrim;
+        rank.Name = request.Name.Trim();
+        rank.Level = request.Level;
+        rank.Description = request.Description?.Trim();
+        rank.DefaultRoleName = string.IsNullOrWhiteSpace(request.DefaultRoleName) ? "EMPLOYEE" : request.DefaultRoleName.Trim().ToUpperInvariant();
+        rank.IsActive = request.IsActive;
+
+        // Đồng bộ Level cho toàn bộ chức danh đang gắn với rank này
+        var linkedPositions = await dbContext.Positions.Where(p => p.RankId == id).ToListAsync(cancellationToken);
+        foreach (var lp in linkedPositions)
+        {
+            lp.Level = rank.Level;
+        }
+
+        var now = timeProvider.GetUtcNow();
+        dbContext.AuditLogs.Add(new AuditLogEntry
+        {
+            Id = Guid.NewGuid(),
+            ActorUserId = actorUserId,
+            Action = "position_rank.updated",
+            EntityType = "PositionRank",
+            EntityId = rank.Id.ToString(CultureInfo.InvariantCulture),
+            AfterJson = JsonSerializer.Serialize(new { rank.Code, rank.Name, rank.Level, rank.DefaultRoleName, rank.IsActive }),
+            CreatedAt = now
+        });
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return new PositionRankDto(
+            rank.Id,
+            rank.Code,
+            rank.Name,
+            rank.Level,
+            rank.Description,
+            rank.DefaultRoleName,
+            rank.IsActive);
+    }
+
     public async Task<IReadOnlyList<PositionDto>> GetPositionsAsync(bool includeInactive = false, CancellationToken cancellationToken = default)
     {
         var query = dbContext.Positions
             .Include(p => p.Department)
+            .Include(p => p.Rank)
             .AsNoTracking()
             .AsQueryable();
 
@@ -955,7 +1153,8 @@ public sealed class EmployeeService(
         }
 
         return await query
-            .OrderBy(p => p.Code)
+            .OrderBy(p => p.Rank != null ? p.Rank.Level : p.Level)
+            .ThenBy(p => p.Code)
             .Select(p => new PositionDto(
                 p.Id,
                 p.Code,
@@ -963,6 +1162,9 @@ public sealed class EmployeeService(
                 p.DepartmentId,
                 p.Department != null ? p.Department.Name : null,
                 p.DefaultPositionAllowance,
+                p.Rank != null ? p.Rank.Level : p.Level,
+                p.RankId,
+                p.Rank != null ? p.Rank.Name : null,
                 p.IsActive))
             .ToListAsync(cancellationToken);
     }
@@ -998,6 +1200,26 @@ public sealed class EmployeeService(
             departmentName = dept.Name;
         }
 
+        PositionRank? targetRank = null;
+        if (request.RankId.HasValue && request.RankId.Value > 0)
+        {
+            targetRank = await dbContext.PositionRanks.FirstOrDefaultAsync(r => r.Id == request.RankId.Value, cancellationToken);
+        }
+
+        var positionLevel = targetRank?.Level ?? (request.Level > 0 ? request.Level : 1);
+
+        if (request.ShiftExistingHigherRanks && positionLevel > 1)
+        {
+            var higherPositions = await dbContext.Positions
+                .Where(p => p.Level >= positionLevel)
+                .ToListAsync(cancellationToken);
+
+            foreach (var hp in higherPositions)
+            {
+                hp.Level += 1;
+            }
+        }
+
         var now = timeProvider.GetUtcNow();
         var position = new Position
         {
@@ -1005,6 +1227,8 @@ public sealed class EmployeeService(
             Name = request.Name.Trim(),
             DepartmentId = request.DepartmentId > 0 ? request.DepartmentId : null,
             DefaultPositionAllowance = request.DefaultPositionAllowance,
+            RankId = targetRank?.Id,
+            Level = positionLevel,
             IsActive = true
         };
 
@@ -1018,7 +1242,7 @@ public sealed class EmployeeService(
             Action = "position.created",
             EntityType = "Position",
             EntityId = position.Id.ToString(CultureInfo.InvariantCulture),
-            AfterJson = JsonSerializer.Serialize(new { position.Code, position.Name, position.DepartmentId, position.DefaultPositionAllowance }),
+            AfterJson = JsonSerializer.Serialize(new { position.Code, position.Name, position.DepartmentId, position.DefaultPositionAllowance, position.Level, position.RankId }),
             CreatedAt = now
         });
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -1030,6 +1254,9 @@ public sealed class EmployeeService(
             position.DepartmentId,
             departmentName,
             position.DefaultPositionAllowance,
+            position.Level,
+            position.RankId,
+            targetRank?.Name,
             position.IsActive);
     }
 
@@ -1037,6 +1264,7 @@ public sealed class EmployeeService(
     {
         var position = await dbContext.Positions
             .Include(p => p.Department)
+            .Include(p => p.Rank)
             .FirstOrDefaultAsync(p => p.Id == id, cancellationToken)
             ?? throw new DomainException("POSITION_NOT_FOUND", "Không tìm thấy chức danh.");
 
@@ -1080,11 +1308,33 @@ public sealed class EmployeeService(
             departmentName = dept.Name;
         }
 
+        PositionRank? targetRank = null;
+        if (request.RankId.HasValue && request.RankId.Value > 0)
+        {
+            targetRank = await dbContext.PositionRanks.FirstOrDefaultAsync(r => r.Id == request.RankId.Value, cancellationToken);
+        }
+
+        var positionLevel = targetRank?.Level ?? (request.Level > 0 ? request.Level : position.Level);
+
+        if (request.ShiftExistingHigherRanks && positionLevel > 1)
+        {
+            var higherPositions = await dbContext.Positions
+                .Where(p => p.Id != id && p.Level >= positionLevel)
+                .ToListAsync(cancellationToken);
+
+            foreach (var hp in higherPositions)
+            {
+                hp.Level += 1;
+            }
+        }
+
         var now = timeProvider.GetUtcNow();
         position.Code = codeTrim;
         position.Name = request.Name.Trim();
         position.DepartmentId = request.DepartmentId > 0 ? request.DepartmentId : null;
         position.DefaultPositionAllowance = request.DefaultPositionAllowance;
+        position.RankId = targetRank?.Id;
+        position.Level = positionLevel;
         position.IsActive = request.IsActive;
 
         dbContext.AuditLogs.Add(new AuditLogEntry
@@ -1094,7 +1344,7 @@ public sealed class EmployeeService(
             Action = "position.updated",
             EntityType = "Position",
             EntityId = position.Id.ToString(CultureInfo.InvariantCulture),
-            AfterJson = JsonSerializer.Serialize(new { position.Code, position.Name, position.DepartmentId, position.DefaultPositionAllowance, position.IsActive }),
+            AfterJson = JsonSerializer.Serialize(new { position.Code, position.Name, position.DepartmentId, position.DefaultPositionAllowance, position.Level, position.RankId, position.IsActive }),
             CreatedAt = now
         });
 
@@ -1107,6 +1357,9 @@ public sealed class EmployeeService(
             position.DepartmentId,
             departmentName,
             position.DefaultPositionAllowance,
+            position.Level,
+            position.RankId,
+            targetRank?.Name ?? position.Rank?.Name,
             position.IsActive);
     }
 

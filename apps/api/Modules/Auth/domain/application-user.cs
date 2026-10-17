@@ -25,6 +25,17 @@ public sealed class ApplicationRole
     public string? Description { get; set; }
 }
 
+public sealed class PositionRank
+{
+    public long Id { get; set; }
+    public required string Code { get; set; }
+    public required string Name { get; set; }
+    public int Level { get; set; }
+    public string? Description { get; set; }
+    public string? DefaultRoleName { get; set; }
+    public bool IsActive { get; set; } = true;
+}
+
 public sealed class Position
 {
     public long Id { get; set; }
@@ -32,8 +43,11 @@ public sealed class Position
     public required string Name { get; set; }
     public long? DepartmentId { get; set; }
     public decimal DefaultPositionAllowance { get; set; }
+    public long? RankId { get; set; }
+    public int Level { get; set; } = 1;
     public bool IsActive { get; set; } = true;
     public Department? Department { get; set; }
+    public PositionRank? Rank { get; set; }
 }
 
 public sealed class Employee

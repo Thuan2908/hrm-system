@@ -9,6 +9,7 @@ public sealed class AuthDbContext(DbContextOptions<AuthDbContext> options) : DbC
     public DbSet<ApplicationRole> Roles => Set<ApplicationRole>();
     public DbSet<Employee> Employees => Set<Employee>();
     public DbSet<Department> Departments => Set<Department>();
+    public DbSet<PositionRank> PositionRanks => Set<PositionRank>();
     public DbSet<Position> Positions => Set<Position>();
     public DbSet<PermissionDefinition> Permissions => Set<PermissionDefinition>();
     public DbSet<RolePermissionGrant> RolePermissions => Set<RolePermissionGrant>();
@@ -52,6 +53,21 @@ public sealed class AuthDbContext(DbContextOptions<AuthDbContext> options) : DbC
             entity.Property(role => role.Description).HasColumnName("description");
         });
 
+        builder.Entity<PositionRank>(entity =>
+        {
+            entity.ToTable("position_ranks");
+            entity.HasKey(rank => rank.Id);
+            entity.Property(rank => rank.Id).HasColumnName("rank_id").ValueGeneratedOnAdd().UseIdentityByDefaultColumn();
+            entity.Property(rank => rank.Code).HasColumnName("rank_code");
+            entity.Property(rank => rank.Name).HasColumnName("rank_name");
+            entity.Property(rank => rank.Level).HasColumnName("rank_level");
+            entity.Property(rank => rank.Description).HasColumnName("description");
+            entity.Property(rank => rank.DefaultRoleName).HasColumnName("default_role_name");
+            entity.Property(rank => rank.IsActive).HasColumnName("is_active");
+            entity.HasIndex(rank => rank.Code).IsUnique();
+            entity.HasIndex(rank => rank.Level);
+        });
+
         builder.Entity<Position>(entity =>
         {
             entity.ToTable("positions");
@@ -61,8 +77,11 @@ public sealed class AuthDbContext(DbContextOptions<AuthDbContext> options) : DbC
             entity.Property(position => position.Name).HasColumnName("position_name");
             entity.Property(position => position.DepartmentId).HasColumnName("dept_id");
             entity.Property(position => position.DefaultPositionAllowance).HasColumnName("default_position_allowance").HasPrecision(15, 2);
+            entity.Property(position => position.RankId).HasColumnName("rank_id");
+            entity.Property(position => position.Level).HasColumnName("position_level").HasDefaultValue(1);
             entity.Property(position => position.IsActive).HasColumnName("is_active");
             entity.HasOne(position => position.Department).WithMany().HasForeignKey(position => position.DepartmentId).IsRequired(false);
+            entity.HasOne(position => position.Rank).WithMany().HasForeignKey(position => position.RankId).IsRequired(false);
         });
 
         builder.Entity<Employee>(entity =>

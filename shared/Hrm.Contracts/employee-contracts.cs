@@ -93,6 +93,32 @@ public sealed record UpdateDepartmentRequest(
     string? Description = null,
     bool IsActive = true);
 
+public sealed record PositionRankDto(
+    long Id,
+    string Code,
+    string Name,
+    int Level,
+    string? Description = null,
+    string? DefaultRoleName = null,
+    bool IsActive = true);
+
+public sealed record CreatePositionRankRequest(
+    string Code,
+    string Name,
+    int Level,
+    string? Description = null,
+    string? DefaultRoleName = null,
+    bool ShiftExistingHigherRanks = false);
+
+public sealed record UpdatePositionRankRequest(
+    string Code,
+    string Name,
+    int Level,
+    string? Description = null,
+    string? DefaultRoleName = null,
+    bool IsActive = true,
+    bool ShiftExistingHigherRanks = false);
+
 public sealed record PositionDto(
     long Id,
     string? Code,
@@ -100,20 +126,29 @@ public sealed record PositionDto(
     long? DepartmentId = null,
     string? DepartmentName = null,
     decimal DefaultPositionAllowance = 0m,
+    int Level = 1,
+    long? RankId = null,
+    string? RankName = null,
     bool IsActive = true);
 
 public sealed record CreatePositionRequest(
     string Code,
     string Name,
     long? DepartmentId = null,
-    decimal DefaultPositionAllowance = 0m);
+    decimal DefaultPositionAllowance = 0m,
+    int Level = 1,
+    long? RankId = null,
+    bool ShiftExistingHigherRanks = false);
 
 public sealed record UpdatePositionRequest(
     string Code,
     string Name,
     long? DepartmentId = null,
     decimal DefaultPositionAllowance = 0m,
-    bool IsActive = true);
+    int Level = 1,
+    long? RankId = null,
+    bool IsActive = true,
+    bool ShiftExistingHigherRanks = false);
 
 public sealed record TransferDepartmentRequest(
     long TargetDepartmentId,

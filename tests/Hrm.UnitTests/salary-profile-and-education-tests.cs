@@ -132,24 +132,46 @@ public sealed class SalaryProfileAndEducationTests
     }
 
     [Theory]
-    [InlineData("Giám Đốc Điều Hành", 5)]
-    [InlineData("Tổng Giám Đốc", 5)]
-    [InlineData("Director of Engineering", 5)]
-    [InlineData("Trưởng Phòng Kỹ Thuật", 4)]
-    [InlineData("Head of Marketing", 4)]
-    [InlineData("Lead Manager", 4)]
-    [InlineData("Trưởng Nhóm Phát Triển", 3)]
-    [InlineData("Team Leader", 3)]
-    [InlineData("Phó Phòng Kế Toán", 3)]
-    [InlineData("Chuyên Viên Kinh Doanh", 2)]
-    [InlineData("Kỹ Sư Phần Mềm", 2)]
-    [InlineData("Nhân Viên Bán Hàng", 1)]
+    [InlineData("Chủ Tịch Hội Đồng Quản Trị", 11)]
+    [InlineData("Tổng Giám Đốc", 10)]
+    [InlineData("Giám Đốc Điều Hành", 9)]
+    [InlineData("Director of Engineering", 9)]
+    [InlineData("Phó Giám Đốc", 8)]
+    [InlineData("Trưởng Phòng Kỹ Thuật", 7)]
+    [InlineData("Head of Marketing", 7)]
+    [InlineData("Lead Manager", 7)]
+    [InlineData("Phó Phòng Kế Toán", 6)]
+    [InlineData("Trưởng Nhóm Phát Triển", 5)]
+    [InlineData("Team Leader", 5)]
+    [InlineData("Senior Software Engineer", 4)]
+    [InlineData("Chuyên Viên Kinh Doanh", 3)]
+    [InlineData("Kỹ Sư Phần Mềm", 3)]
+    [InlineData("Nhân Viên Bán Hàng", 2)]
     [InlineData("Thực tập sinh", 1)]
     [InlineData(null, 1)]
     public void PositionHierarchyPolicyMapsKeywordsToRanks(string? title, int expectedRank)
     {
         var rank = PositionHierarchyPolicy.GetPositionRank(title);
         Assert.Equal(expectedRank, rank);
+    }
+
+    [Fact]
+    public void PositionHierarchyPolicyPrioritizesDbLevelOverKeywords()
+    {
+        // Khi CSDL có positionLevel, hệ thống phải ưu tiên giá trị CSDL thay vì keyword
+        var rank1 = PositionHierarchyPolicy.GetPositionRank("Nhân viên thử việc", positionLevel: 4);
+        Assert.Equal(4, rank1);
+
+        var rank2 = PositionHierarchyPolicy.GetPositionRank("Giám đốc", positionLevel: 2);
+        Assert.Equal(2, rank2);
+
+        // Hỗ trợ mở rộng cấp bậc linh hoạt (không bị chặn trần cố định = 5)
+        var rank3 = PositionHierarchyPolicy.GetPositionRank("Chuyên viên", positionLevel: 10);
+        Assert.Equal(10, rank3);
+
+        var rank4 = PositionHierarchyPolicy.GetPositionRank("Chuyên viên", positionLevel: -1);
+        // Fallback to keyword when <= 0 (Chuyên viên = cấp 3)
+        Assert.Equal(3, rank4);
     }
 
     [Fact]

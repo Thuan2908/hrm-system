@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS positions (
     position_name varchar(255) NOT NULL,
     dept_id bigint NULL REFERENCES departments(dept_id) ON DELETE RESTRICT,
     default_position_allowance numeric(15,2) NOT NULL DEFAULT 0,
+    position_level integer NOT NULL DEFAULT 1,
     is_active boolean NOT NULL DEFAULT true
 );
 CREATE TABLE IF NOT EXISTS employees (

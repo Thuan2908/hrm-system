@@ -161,6 +161,37 @@ public sealed class EmployeesController(
         return Ok(ApiResponse.Ok(result));
     }
 
+    [HttpGet("position-ranks")]
+    [Authorize(Policy = PermissionCodes.EmployeeRead)]
+    public async Task<ActionResult<ApiResponse<IReadOnlyList<PositionRankDto>>>> GetPositionRanks(
+        [FromQuery] bool includeInactive = false,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await employeeService.GetPositionRanksAsync(includeInactive, cancellationToken);
+        return Ok(ApiResponse.Ok(result));
+    }
+
+    [HttpPost("position-ranks")]
+    [Authorize(Policy = PermissionCodes.EmployeeWrite)]
+    public async Task<ActionResult<ApiResponse<PositionRankDto>>> CreatePositionRank(
+        [FromBody] CreatePositionRankRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await employeeService.CreatePositionRankAsync(request, GetActorId(), cancellationToken);
+        return Created($"api/v1/employees/position-ranks/{result.Id}", ApiResponse.Ok(result));
+    }
+
+    [HttpPut("position-ranks/{id:long}")]
+    [Authorize(Policy = PermissionCodes.EmployeeWrite)]
+    public async Task<ActionResult<ApiResponse<PositionRankDto>>> UpdatePositionRank(
+        long id,
+        [FromBody] UpdatePositionRankRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await employeeService.UpdatePositionRankAsync(id, request, GetActorId(), cancellationToken);
+        return Ok(ApiResponse.Ok(result));
+    }
+
     [HttpGet("positions")]
     [Authorize(Policy = PermissionCodes.EmployeeRead)]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<PositionDto>>>> GetPositions(

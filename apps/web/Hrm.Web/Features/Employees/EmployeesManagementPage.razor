@@ -878,6 +878,12 @@
                                     <i class="bi bi-briefcase me-1"></i> Danh mục Chức danh / Vị trí (@allPositions.Count)
                                 </button>
                             </li>
+                            <li class="nav-item">
+                                <button class="nav-link rounded-pill @(catalogTab == "ranks" ? "active bg-primary" : "bg-light text-dark")"
+                                        @onclick='() => SwitchCatalogTab("ranks")'>
+                                    <i class="bi bi-award me-1"></i> Danh mục Mức Rank (@allPositionRanks.Count)
+                                </button>
+                            </li>
                         </ul>
 
                         @if (catalogTab == "departments")
@@ -977,7 +983,9 @@
                                         </div>
                                         <div class="mb-2">
                                             <label class="form-label small fw-semibold">Tên chức danh <span class="text-danger">*</span></label>
-                                            <input type="text" class="form-control" placeholder="Ví dụ: Kỹ sư phần mềm..." @bind="posFormName" />
+                                            <input type="text" class="form-control" placeholder="Ví dụ: Kỹ sư phần mềm, Trưởng phòng Kinh doanh..." 
+                                                   value="@posFormName" 
+                                                   @oninput="OnPosFormNameInput" />
                                         </div>
                                         <div class="mb-2">
                                             <label class="form-label small fw-semibold">Phòng ban chuyên môn (để trống nếu dùng chung)</label>
@@ -992,6 +1000,44 @@
                                         <div class="mb-2">
                                             <label class="form-label small fw-semibold">Phụ cấp chức vụ mặc định (VNĐ)</label>
                                             <input type="number" min="0" step="50000" class="form-control font-monospace" @bind="posFormAllowance" />
+                                        </div>
+                                        <div class="mb-3">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <label class="form-label small fw-semibold mb-0">Mức Rank liên kết (từ Bảng position_ranks) <span class="text-danger">*</span></label>
+                                                <span class="badge @GetRankBadgeClass(posFormLevel) px-2 py-1">
+                                                    @PositionHierarchyPolicy.GetRankDisplayName(posFormLevel, allPositionRanks)
+                                                </span>
+                                            </div>
+                                            <div class="input-group">
+                                                <span class="input-group-text bg-white"><i class="bi bi-award-fill text-warning"></i></span>
+                                                <select class="form-select fw-semibold" value="@posFormRankId" @onchange="OnPosRankSelectChanged">
+                                                    <option value="">-- Tùy chỉnh (hoặc theo cấp số) --</option>
+                                                    @foreach (var r in allPositionRanks.OrderBy(x => x.Level))
+                                                    {
+                                                        <option value="@r.Id">Cấp @r.Level - @r.Name (@r.Code) - Vai trò: @r.DefaultRoleName</option>
+                                                    }
+                                                </select>
+                                            </div>
+                                            <div class="row g-2 mt-1">
+                                                <div class="col-sm-5">
+                                                    <label class="form-label extra-small text-muted mb-0">Cấp bậc số (Level)</label>
+                                                    <input type="number" min="1" max="99" class="form-control form-control-sm font-monospace" @bind="posFormLevel" />
+                                                </div>
+                                                <div class="col-sm-7 d-flex align-items-end">
+                                                    <div class="form-check form-switch pb-1">
+                                                        <input class="form-check-input" type="checkbox" id="posShiftSwitch" @bind="posFormShiftHigher" />
+                                                        <label class="form-check-label extra-small text-muted" for="posShiftSwitch">Tự động +1 cấp cho các chức danh &ge; cấp này</label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="form-text small text-muted d-flex justify-content-between align-items-center mt-1">
+                                                <span>Tự động khớp khi gõ tên hoặc chọn thủ công.</span>
+                                                @{
+                                                    var currentDept = allDepartments.FirstOrDefault(d => d.Id == posFormDepartmentId);
+                                                    var currentRankObj = allPositionRanks.FirstOrDefault(r => r.Id == posFormRankId || r.Level == posFormLevel);
+                                                }
+                                                <span>Gợi ý vai trò: <strong class="text-primary">@PositionHierarchyPolicy.SuggestRoleForPosition(posFormName, currentDept?.Code, posFormLevel, defaultRoleFromDb: currentRankObj?.DefaultRoleName, dbRanks: allPositionRanks)</strong></span>
+                                            </div>
                                         </div>
                                         @if (editingPosId > 0)
                                         {
@@ -1020,6 +1066,7 @@
                                                     <th>Mã</th>
                                                     <th>Tên chức danh</th>
                                                     <th>Phòng ban</th>
+                                                    <th>Cấp bậc (Rank)</th>
                                                     <th>Phụ cấp chuẩn</th>
                                                     <th>Trạng thái</th>
                                                     <th class="text-end">Sửa</th>
@@ -1040,6 +1087,11 @@
                                                             {
                                                                 <span class="badge bg-secondary-subtle text-secondary">Dùng chung</span>
                                                             }
+                                                        </td>
+                                                        <td>
+                                                            <span class="badge @GetRankBadgeClass(p.Level)">
+                                                                Cấp @p.Level: @(p.RankName ?? PositionHierarchyPolicy.GetRankDisplayName(p.Level))
+                                                            </span>
                                                         </td>
                                                         <td class="font-monospace tabular-nums">@FormatVnd(p.DefaultPositionAllowance)</td>
                                                         <td>
@@ -1065,6 +1117,124 @@
                                 </div>
                             </div>
                         }
+                        else if (catalogTab == "ranks")
+                        {
+                            <div class="row g-4">
+                                <div class="col-lg-5">
+                                    <div class="card p-3 border rounded-3 bg-light">
+                                        <h6 class="fw-bold text-primary mb-3">@(editingRankId == 0 ? "➕ Thêm mới Mức Rank" : "✏️ Cập nhật Mức Rank")</h6>
+                                        <div class="mb-2">
+                                            <label class="form-label small fw-semibold">Mã Rank <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control font-monospace" placeholder="Ví dụ: R_STAFF, R_DEPUTY_DIR, R_DIR..." @bind="rankFormCode" />
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label small fw-semibold">Tên Mức Rank <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" placeholder="Ví dụ: Phó Giám Đốc, Chuyên Viên Cao Cấp..." @bind="rankFormName" />
+                                        </div>
+                                        <div class="row g-2 mb-2">
+                                            <div class="col-sm-5">
+                                                <label class="form-label small fw-semibold">Cấp bậc (Level) <span class="text-danger">*</span></label>
+                                                <input type="number" min="1" max="99" class="form-control font-monospace" @bind="rankFormLevel" />
+                                            </div>
+                                            <div class="col-sm-7">
+                                                <label class="form-label small fw-semibold">Vai trò mặc định (Role)</label>
+                                                <select class="form-select" @bind="rankFormDefaultRole">
+                                                    <option value="EMPLOYEE">EMPLOYEE (Nhân viên)</option>
+                                                    <option value="HR">HR (Nhân sự)</option>
+                                                    <option value="ADMIN">ADMIN (Quản trị / Ban Lãnh Đạo)</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label small fw-semibold">Mô tả thẩm quyền / Tiêu chuẩn</label>
+                                            <textarea class="form-control" rows="2" placeholder="Thẩm quyền phê duyệt, đối tượng áp dụng..." @bind="rankFormDescription"></textarea>
+                                        </div>
+                                        <div class="card p-2 border-warning-subtle bg-warning-subtle mb-3">
+                                            <div class="form-check form-switch mb-0">
+                                                <input class="form-check-input" type="checkbox" id="rankShiftSwitch" @bind="rankFormShiftHigher" />
+                                                <label class="form-check-label small fw-semibold text-dark" for="rankShiftSwitch">
+                                                    Tự động tâng bậc các Rank &ge; cấp này (+1)
+                                                </label>
+                                            </div>
+                                            <small class="text-muted extra-small mt-1">
+                                                Ví dụ: Nếu chèn "Phó Giám Đốc" ở Cấp 8, các cấp từ 8 trở lên (Giám Đốc, Phó TGĐ, TGĐ...) sẽ tự động tăng lên +1.
+                                            </small>
+                                        </div>
+                                        @if (editingRankId > 0)
+                                        {
+                                            <div class="form-check form-switch mb-3">
+                                                <input class="form-check-input" type="checkbox" id="rankActiveSwitch" @bind="rankFormIsActive" />
+                                                <label class="form-check-label small fw-semibold" for="rankActiveSwitch">Đang kích hoạt hoạt động</label>
+                                            </div>
+                                        }
+                                        <div class="d-flex gap-2">
+                                            @if (editingRankId > 0)
+                                            {
+                                                <button class="btn btn-outline-secondary btn-sm rounded-pill" @onclick="ResetRankForm">Hủy</button>
+                                            }
+                                            <button class="btn btn-primary btn-sm rounded-pill px-3" @onclick="SaveRankAsync">
+                                                @(editingRankId == 0 ? "Thêm Mức Rank" : "Lưu thay đổi")
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-lg-7">
+                                    <div class="table-responsive border rounded-3">
+                                        <table class="table table-hover align-middle mb-0">
+                                            <thead class="table-light small text-uppercase">
+                                                <tr>
+                                                    <th>Cấp</th>
+                                                    <th>Mã</th>
+                                                    <th>Tên Mức Rank</th>
+                                                    <th>Role mặc định</th>
+                                                    <th>Trạng thái</th>
+                                                    <th class="text-end">Sửa</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var r in allPositionRanks.OrderBy(x => x.Level))
+                                                {
+                                                    <tr>
+                                                        <td>
+                                                            <span class="badge @GetRankBadgeClass(r.Level) font-monospace">
+                                                                Cấp @r.Level
+                                                            </span>
+                                                        </td>
+                                                        <td class="font-monospace fw-bold">@r.Code</td>
+                                                        <td>
+                                                            <div class="fw-semibold">@r.Name</div>
+                                                            @if (!string.IsNullOrWhiteSpace(r.Description))
+                                                            {
+                                                                <small class="text-muted">@r.Description</small>
+                                                            }
+                                                        </td>
+                                                        <td>
+                                                            <span class="badge bg-light text-dark border">@r.DefaultRoleName</span>
+                                                        </td>
+                                                        <td>
+                                                            @if (r.IsActive)
+                                                            {
+                                                                <span class="badge bg-success-subtle text-success">Hoạt động</span>
+                                                            }
+                                                            else
+                                                            {
+                                                                <span class="badge bg-secondary-subtle text-secondary">Vô hiệu hóa</span>
+                                                            }
+                                                        </td>
+                                                        <td class="text-end">
+                                                            <button class="btn btn-sm btn-outline-primary py-0 px-2" @onclick="() => EditRank(r)">
+                                                                <i class="bi bi-pencil"></i>
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        }
                     </div>
 
                     <div class="modal-footer border-top px-4 py-3 bg-light" style="border-bottom-left-radius: 20px; border-bottom-right-radius: 20px;">
@@ -1078,12 +1248,13 @@
     <!-- Modal Bổ nhiệm / Thăng chức (Promotion) -->
     @if (showPromoteModal && promotingEmployee != null)
     {
-        var currentRank = PositionHierarchyPolicy.GetPositionRank(promotingEmployee.PositionName);
+        var currentPos = positions.FirstOrDefault(p => p.Name == promotingEmployee.PositionName);
+        var currentRank = PositionHierarchyPolicy.GetPositionRank(promotingEmployee.PositionName, currentPos?.Code, currentPos?.Level);
         var targetDept = departments.FirstOrDefault(d => d.Id == promotingEmployee.DepartmentId);
         var eligiblePositions = positions
             .Where(p => DepartmentPositionPolicy.IsCompatible(promotingEmployee.DepartmentId, p.DepartmentId, targetDept?.Code, targetDept?.Name, p.Name, p.Code))
-            .Where(p => PositionHierarchyPolicy.GetPositionRank(p.Name, p.Code) > currentRank)
-            .OrderBy(p => PositionHierarchyPolicy.GetPositionRank(p.Name, p.Code))
+            .Where(p => PositionHierarchyPolicy.GetPositionRank(p.Name, p.Code, p.Level) > currentRank)
+            .OrderBy(p => PositionHierarchyPolicy.GetPositionRank(p.Name, p.Code, p.Level))
             .ToList();
 
         <div class="modal fade show d-block" tabindex="-1" style="background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 1060;">
@@ -1121,7 +1292,7 @@
                                     <div class="small text-muted d-flex align-items-center gap-3 flex-wrap">
                                         <span>Phòng ban: <strong>@(promotingEmployee.DepartmentName ?? "Chưa phân bổ")</strong></span>
                                         <span>Chức danh hiện tại: <strong class="text-primary">@(promotingEmployee.PositionName ?? "Chưa phân chức vụ")</strong></span>
-                                        <span class="badge bg-primary-subtle text-primary">@PositionHierarchyPolicy.GetRankDisplayName(currentRank)</span>
+                                        <span class="badge bg-primary-subtle text-primary">@PositionHierarchyPolicy.GetRankDisplayName(currentRank, allPositionRanks)</span>
                                     </div>
                                 </div>
                             </div>
@@ -1134,8 +1305,8 @@
                                     <option value="0">-- Chọn vị trí thăng chức (Cấp bậc cao hơn) --</option>
                                     @foreach (var pos in eligiblePositions)
                                     {
-                                        var pRank = PositionHierarchyPolicy.GetPositionRank(pos.Name, pos.Code);
-                                        <option value="@pos.Id">@pos.Name (@PositionHierarchyPolicy.GetRankDisplayName(pRank)) - Phụ cấp chuẩn: @pos.DefaultPositionAllowance.ToString("N0") đ</option>
+                                        var pRank = PositionHierarchyPolicy.GetPositionRank(pos.Name, pos.Code, pos.Level, allPositionRanks);
+                                        <option value="@pos.Id">@pos.Name (@(pos.RankName != null ? $"Cấp {pRank}: {pos.RankName}" : PositionHierarchyPolicy.GetRankDisplayName(pRank, allPositionRanks))) - Phụ cấp chuẩn: @pos.DefaultPositionAllowance.ToString("N0") đ</option>
                                     }
                                 </select>
                                 @if (eligiblePositions.Count == 0)
@@ -1155,20 +1326,21 @@
                             @if (promoteTargetPositionId > 0)
                             {
                                 var selectedNewPos = positions.FirstOrDefault(p => p.Id == promoteTargetPositionId);
-                                var newRank = PositionHierarchyPolicy.GetPositionRank(selectedNewPos?.Name, selectedNewPos?.Code);
+                                var newRank = PositionHierarchyPolicy.GetPositionRank(selectedNewPos?.Name, selectedNewPos?.Code, selectedNewPos?.Level, allPositionRanks);
+                                var targetRankObj = allPositionRanks.FirstOrDefault(r => r.Id == selectedNewPos?.RankId || r.Level == selectedNewPos?.Level);
 
                                 <div class="col-12">
                                     <div class="p-3 border rounded-3 bg-primary-subtle border-primary-subtle d-flex align-items-center justify-content-between flex-wrap gap-2">
                                         <div>
                                             <span class="fw-bold text-primary">Thăng tiến cấp bậc:</span>
-                                            <span class="badge bg-secondary ms-2 me-1">@PositionHierarchyPolicy.GetRankDisplayName(currentRank)</span>
+                                            <span class="badge bg-secondary ms-2 me-1">@PositionHierarchyPolicy.GetRankDisplayName(currentRank, allPositionRanks)</span>
                                             <i class="bi bi-arrow-right text-primary"></i>
-                                            <span class="badge bg-success ms-1">@PositionHierarchyPolicy.GetRankDisplayName(newRank)</span>
+                                            <span class="badge bg-success ms-1">@(selectedNewPos?.RankName != null ? $"Cấp {newRank}: {selectedNewPos.RankName}" : PositionHierarchyPolicy.GetRankDisplayName(newRank, allPositionRanks))</span>
                                         </div>
                                         @if (promotingEmployee.HasAccount)
                                         {
                                             <div class="small text-primary-emphasis">
-                                                <i class="bi bi-shield-lock me-1"></i> Gợi ý Role tài khoản: <strong>@PositionHierarchyPolicy.SuggestRoleForPosition(selectedNewPos?.Name, targetDept?.Code)</strong>
+                                                <i class="bi bi-shield-lock me-1"></i> Gợi ý Role tài khoản: <strong>@PositionHierarchyPolicy.SuggestRoleForPosition(selectedNewPos?.Name, targetDept?.Code, selectedNewPos?.Level, defaultRoleFromDb: targetRankObj?.DefaultRoleName, dbRanks: allPositionRanks)</strong>
                                             </div>
                                         }
                                     </div>
@@ -1538,6 +1710,7 @@
     private string? catalogMessage;
     private IReadOnlyList<DepartmentDto> allDepartments = [];
     private IReadOnlyList<PositionDto> allPositions = [];
+    private IReadOnlyList<PositionRankDto> allPositionRanks = [];
 
     // Dept form
     private long editingDeptId = 0;
@@ -1552,7 +1725,20 @@
     private string posFormName = string.Empty;
     private long posFormDepartmentId = 0;
     private decimal posFormAllowance = 0m;
+    private int posFormLevel = 1;
+    private long? posFormRankId = null;
+    private bool posFormShiftHigher = false;
     private bool posFormIsActive = true;
+
+    // Rank form
+    private long editingRankId = 0;
+    private string rankFormCode = string.Empty;
+    private string rankFormName = string.Empty;
+    private int rankFormLevel = 1;
+    private string rankFormDescription = string.Empty;
+    private string rankFormDefaultRole = "EMPLOYEE";
+    private bool rankFormShiftHigher = false;
+    private bool rankFormIsActive = true;
 
     protected override async Task OnInitializedAsync()
     {
@@ -1581,6 +1767,7 @@
         {
             departments = await EmployeeApiClient.GetDepartmentsAsync();
             positions = await EmployeeApiClient.GetPositionsAsync();
+            allPositionRanks = await EmployeeApiClient.GetPositionRanksAsync();
             managerOptions = await EmployeeApiClient.GetEmployeesAsync();
             employees = await EmployeeApiClient.GetEmployeesAsync(
                 departmentId: selectedDepartmentId > 0 ? selectedDepartmentId : null,
@@ -1977,19 +2164,21 @@
         promoteErrorMessage = null;
         isSubmittingPromote = false;
 
-        var currentRank = PositionHierarchyPolicy.GetPositionRank(emp.PositionName);
+        var currentPos = positions.FirstOrDefault(p => p.Name == emp.PositionName);
+        var currentRank = PositionHierarchyPolicy.GetPositionRank(emp.PositionName, currentPos?.Code, currentPos?.Level);
         var targetDept = departments.FirstOrDefault(d => d.Id == emp.DepartmentId);
         var eligible = positions
             .Where(p => DepartmentPositionPolicy.IsCompatible(emp.DepartmentId, p.DepartmentId, targetDept?.Code, targetDept?.Name, p.Name, p.Code))
-            .Where(p => PositionHierarchyPolicy.GetPositionRank(p.Name, p.Code) > currentRank)
-            .OrderBy(p => PositionHierarchyPolicy.GetPositionRank(p.Name, p.Code))
+            .Where(p => PositionHierarchyPolicy.GetPositionRank(p.Name, p.Code, p.Level, allPositionRanks) > currentRank)
+            .OrderBy(p => PositionHierarchyPolicy.GetPositionRank(p.Name, p.Code, p.Level, allPositionRanks))
             .FirstOrDefault();
 
         if (eligible != null)
         {
             promoteTargetPositionId = eligible.Id;
             promotePositionAllowance = eligible.DefaultPositionAllowance;
-            promoteNewRoleName = PositionHierarchyPolicy.SuggestRoleForPosition(eligible.Name, targetDept?.Code);
+            var rankObj = allPositionRanks.FirstOrDefault(r => r.Id == eligible.RankId || r.Level == eligible.Level);
+            promoteNewRoleName = PositionHierarchyPolicy.SuggestRoleForPosition(eligible.Name, targetDept?.Code, eligible.Level, defaultRoleFromDb: rankObj?.DefaultRoleName, dbRanks: allPositionRanks);
         }
 
         showPromoteModal = true;
@@ -2012,7 +2201,8 @@
             {
                 promotePositionAllowance = pos.DefaultPositionAllowance;
                 var targetDept = departments.FirstOrDefault(d => d.Id == promotingEmployee?.DepartmentId);
-                promoteNewRoleName = PositionHierarchyPolicy.SuggestRoleForPosition(pos.Name, targetDept?.Code);
+                var rankObj = allPositionRanks.FirstOrDefault(r => r.Id == pos.RankId || r.Level == pos.Level);
+                promoteNewRoleName = PositionHierarchyPolicy.SuggestRoleForPosition(pos.Name, targetDept?.Code, pos.Level, defaultRoleFromDb: rankObj?.DefaultRoleName, dbRanks: allPositionRanks);
             }
         }
     }
@@ -2201,6 +2391,7 @@
         await ReloadCatalogsAsync();
         ResetDeptForm();
         ResetPosForm();
+        ResetRankForm();
     }
 
     private void CloseCatalogModal()
@@ -2218,6 +2409,7 @@
     {
         allDepartments = await EmployeeApiClient.GetDepartmentsAsync(includeInactive: true);
         allPositions = await EmployeeApiClient.GetPositionsAsync(includeInactive: true);
+        allPositionRanks = await EmployeeApiClient.GetPositionRanksAsync(includeInactive: true);
         departments = allDepartments.Where(d => d.IsActive).ToList();
         positions = allPositions.Where(p => p.IsActive).ToList();
     }
@@ -2287,6 +2479,52 @@
         }
     }
 
+    private void OnPosRankSelectChanged(ChangeEventArgs e)
+    {
+        if (long.TryParse(e.Value?.ToString(), out var rId) && rId > 0)
+        {
+            posFormRankId = rId;
+            var rank = allPositionRanks.FirstOrDefault(r => r.Id == rId);
+            if (rank != null)
+            {
+                posFormLevel = rank.Level;
+            }
+        }
+        else
+        {
+            posFormRankId = null;
+        }
+    }
+
+    private void OnPosFormNameInput(ChangeEventArgs e)
+    {
+        posFormName = e.Value?.ToString() ?? string.Empty;
+        if (editingPosId == 0 && !string.IsNullOrWhiteSpace(posFormName))
+        {
+            var detected = PositionHierarchyPolicy.GetPositionRank(posFormName);
+            if (detected > 0)
+            {
+                posFormLevel = detected;
+                var matchedRank = allPositionRanks.FirstOrDefault(r => r.Level == detected);
+                if (matchedRank != null)
+                {
+                    posFormRankId = matchedRank.Id;
+                }
+            }
+        }
+    }
+
+    private static string GetRankBadgeClass(int rank) => rank switch
+    {
+        >= 8 => "bg-danger text-white",
+        >= 6 => "bg-warning-subtle text-warning-emphasis border border-warning",
+        5 => "bg-primary text-white",
+        4 => "bg-primary-subtle text-primary border border-primary",
+        3 => "bg-info-subtle text-info-emphasis border border-info",
+        2 => "bg-success-subtle text-success-emphasis border border-success",
+        _ => "bg-secondary-subtle text-secondary border"
+    };
+
     private void ResetPosForm()
     {
         editingPosId = 0;
@@ -2294,6 +2532,9 @@
         posFormName = string.Empty;
         posFormDepartmentId = 0;
         posFormAllowance = 0m;
+        posFormLevel = 1;
+        posFormRankId = allPositionRanks.FirstOrDefault(r => r.Level == 1)?.Id;
+        posFormShiftHigher = false;
         posFormIsActive = true;
     }
 
@@ -2304,6 +2545,9 @@
         posFormName = pos.Name;
         posFormDepartmentId = pos.DepartmentId ?? 0;
         posFormAllowance = pos.DefaultPositionAllowance;
+        posFormLevel = pos.Level > 0 ? pos.Level : 1;
+        posFormRankId = pos.RankId ?? allPositionRanks.FirstOrDefault(r => r.Level == pos.Level)?.Id;
+        posFormShiftHigher = false;
         posFormIsActive = pos.IsActive;
     }
 
@@ -2323,7 +2567,10 @@
                     Code: posFormCode.Trim(),
                     Name: posFormName.Trim(),
                     DepartmentId: posFormDepartmentId > 0 ? posFormDepartmentId : null,
-                    DefaultPositionAllowance: posFormAllowance);
+                    DefaultPositionAllowance: posFormAllowance,
+                    Level: posFormLevel,
+                    RankId: posFormRankId,
+                    ShiftExistingHigherRanks: posFormShiftHigher);
 
                 var res = await EmployeeApiClient.CreatePositionAsync(req);
                 if (res?.Success == true)
@@ -2344,7 +2591,10 @@
                     Name: posFormName.Trim(),
                     DepartmentId: posFormDepartmentId > 0 ? posFormDepartmentId : null,
                     DefaultPositionAllowance: posFormAllowance,
-                    IsActive: posFormIsActive);
+                    Level: posFormLevel,
+                    IsActive: posFormIsActive,
+                    RankId: posFormRankId,
+                    ShiftExistingHigherRanks: posFormShiftHigher);
 
                 var res = await EmployeeApiClient.UpdatePositionAsync(editingPosId, req);
                 if (res?.Success == true)
@@ -2356,6 +2606,93 @@
                 else
                 {
                     catalogMessage = res?.Error?.Message ?? "Không thể cập nhật chức danh.";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            catalogMessage = "Lỗi: " + ex.Message;
+        }
+    }
+
+    // Rank Form logic
+    private void ResetRankForm()
+    {
+        editingRankId = 0;
+        rankFormCode = string.Empty;
+        rankFormName = string.Empty;
+        rankFormLevel = allPositionRanks.Count > 0 ? allPositionRanks.Max(r => r.Level) + 1 : 1;
+        rankFormDescription = string.Empty;
+        rankFormDefaultRole = "EMPLOYEE";
+        rankFormShiftHigher = false;
+        rankFormIsActive = true;
+    }
+
+    private void EditRank(PositionRankDto rank)
+    {
+        editingRankId = rank.Id;
+        rankFormCode = rank.Code;
+        rankFormName = rank.Name;
+        rankFormLevel = rank.Level;
+        rankFormDescription = rank.Description ?? string.Empty;
+        rankFormDefaultRole = rank.DefaultRoleName ?? "EMPLOYEE";
+        rankFormShiftHigher = false;
+        rankFormIsActive = rank.IsActive;
+    }
+
+    private async Task SaveRankAsync()
+    {
+        if (string.IsNullOrWhiteSpace(rankFormCode) || string.IsNullOrWhiteSpace(rankFormName))
+        {
+            catalogMessage = "Vui lòng nhập mã và tên mức rank.";
+            return;
+        }
+
+        try
+        {
+            if (editingRankId == 0)
+            {
+                var req = new CreatePositionRankRequest(
+                    Code: rankFormCode.Trim(),
+                    Name: rankFormName.Trim(),
+                    Level: rankFormLevel,
+                    Description: rankFormDescription?.Trim(),
+                    DefaultRoleName: rankFormDefaultRole,
+                    ShiftExistingHigherRanks: rankFormShiftHigher);
+
+                var res = await EmployeeApiClient.CreatePositionRankAsync(req);
+                if (res?.Success == true)
+                {
+                    catalogMessage = $"Tạo mức rank '{res.Data?.Name}' (Cấp {res.Data?.Level}) thành công!";
+                    ResetRankForm();
+                    await ReloadCatalogsAsync();
+                }
+                else
+                {
+                    catalogMessage = res?.Error?.Message ?? "Không thể tạo mức rank.";
+                }
+            }
+            else
+            {
+                var req = new UpdatePositionRankRequest(
+                    Code: rankFormCode.Trim(),
+                    Name: rankFormName.Trim(),
+                    Level: rankFormLevel,
+                    Description: rankFormDescription?.Trim(),
+                    DefaultRoleName: rankFormDefaultRole,
+                    IsActive: rankFormIsActive,
+                    ShiftExistingHigherRanks: rankFormShiftHigher);
+
+                var res = await EmployeeApiClient.UpdatePositionRankAsync(editingRankId, req);
+                if (res?.Success == true)
+                {
+                    catalogMessage = $"Cập nhật mức rank '{res.Data?.Name}' thành công!";
+                    ResetRankForm();
+                    await ReloadCatalogsAsync();
+                }
+                else
+                {
+                    catalogMessage = res?.Error?.Message ?? "Không thể cập nhật mức rank.";
                 }
             }
         }
