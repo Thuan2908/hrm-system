@@ -323,11 +323,7 @@ public sealed class AdminService(
             throw new DomainException("ADMIN_PERMISSIONS_RESTRICTED", "Các quyền quản trị hệ thống chỉ được phép gán cho vai trò ADMIN.");
         }
 
-        var definitions = await dbContext.Permissions
-            .Where(item => requestedPermissions.Contains(item.Code))
-            .ToArrayAsync(cancellationToken);
-        if (definitions.Length != requestedPermissions.Length)
-            throw new DomainException("PERMISSION_INVALID", "Danh sách quyền chứa mã không hợp lệ.");
+        var definitions = await ResolveAndEnsurePermissionsAsync(requestedPermissions, cancellationToken);
 
         var strategy = dbContext.Database.CreateExecutionStrategy();
         return await strategy.ExecuteAsync(async () =>
@@ -396,9 +392,7 @@ public sealed class AdminService(
         var role = await dbContext.Roles.SingleOrDefaultAsync(item => item.Id == roleId, cancellationToken)
             ?? throw new DomainException("ROLE_NOT_FOUND", "Không tìm thấy vai trò.");
         var requested = permissions.Select(PermissionCodes.Canonicalize).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
-        var definitions = await dbContext.Permissions.Where(item => requested.Contains(item.Code)).ToArrayAsync(cancellationToken);
-        if (definitions.Length != requested.Length)
-            throw new DomainException("PERMISSION_INVALID", "Danh sách quyền chứa mã không hợp lệ.");
+        var definitions = await ResolveAndEnsurePermissionsAsync(requested, cancellationToken);
 
         if (role.Name.Equals("ADMIN", StringComparison.OrdinalIgnoreCase) &&
             (!requested.Contains(PermissionCodes.AdminRbacManage, StringComparer.OrdinalIgnoreCase) ||
@@ -520,4 +514,45 @@ public sealed class AdminService(
         (Math.Max(1, page), Math.Clamp(pageSize, 1, 100));
 
     private static string IdText(long id) => id.ToString(CultureInfo.InvariantCulture);
+
+    private async Task<IReadOnlyList<Hrm.Modules.Auth.Domain.PermissionDefinition>> ResolveAndEnsurePermissionsAsync(
+        string[] requested, CancellationToken cancellationToken)
+    {
+        var definitions = await dbContext.Permissions
+            .Where(item => requested.Contains(item.Code))
+            .ToListAsync(cancellationToken);
+
+        var existingCodes = definitions.Select(d => d.Code).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var missingCodes = requested.Where(code => !existingCodes.Contains(code)).ToArray();
+
+        if (missingCodes.Length > 0)
+        {
+            var catalogItems = PermissionCodes.Catalog
+                .Where(c => missingCodes.Contains(c.Code, StringComparer.OrdinalIgnoreCase))
+                .ToArray();
+
+            if (catalogItems.Length > 0)
+            {
+                foreach (var item in catalogItems)
+                {
+                    var newPerm = new Hrm.Modules.Auth.Domain.PermissionDefinition
+                    {
+                        Code = item.Code,
+                        Description = item.Description
+                    };
+                    dbContext.Permissions.Add(newPerm);
+                    definitions.Add(newPerm);
+                }
+
+                await dbContext.SaveChangesAsync(cancellationToken);
+            }
+        }
+
+        if (definitions.Count != requested.Length)
+        {
+            throw new DomainException("PERMISSION_INVALID", "Danh sách quyền chứa mã không hợp lệ.");
+        }
+
+        return definitions;
+    }
 }

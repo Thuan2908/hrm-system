@@ -22,6 +22,9 @@ public sealed class EmployeesController(
         CancellationToken cancellationToken)
     {
         var hasWrite = User.IsInRole("ADMIN")
+            || User.HasClaim("permission", PermissionCodes.EmployeeCreate)
+            || User.HasClaim("permission", "EMP_CREATE")
+            || User.HasClaim("permission", PermissionCodes.EmployeeUpdate)
             || User.HasClaim("permission", PermissionCodes.EmployeeWrite)
             || User.HasClaim("permission", "EMP_EDIT");
 
@@ -40,7 +43,7 @@ public sealed class EmployeesController(
     }
 
     [HttpGet("roles")]
-    [Authorize(Policy = PermissionCodes.EmployeeWrite)]
+    [Authorize(Policy = PermissionCodes.EmployeeRead)]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<string>>>> GetRoles(
         CancellationToken cancellationToken)
     {
@@ -64,7 +67,7 @@ public sealed class EmployeesController(
     }
 
     [HttpPost]
-    [Authorize(Policy = PermissionCodes.EmployeeWrite)]
+    [Authorize(Policy = PermissionCodes.EmployeeCreate)]
     public async Task<ActionResult<ApiResponse<EmployeeDto>>> CreateEmployee(
         [FromBody] CreateEmployeeRequest request,
         CancellationToken cancellationToken)
@@ -74,33 +77,20 @@ public sealed class EmployeesController(
     }
 
     [HttpPut("{id:long}")]
-    [Authorize(Policy = PermissionCodes.EmployeeWrite)]
+    [Authorize(Policy = PermissionCodes.EmployeeUpdate)]
     public async Task<ActionResult<ApiResponse<EmployeeDto>>> UpdateEmployee(
         long id,
         [FromBody] UpdateEmployeeRequest request,
         CancellationToken cancellationToken)
     {
-        var hasTransfer = User.IsInRole("ADMIN")
-            || User.HasClaim("permission", PermissionCodes.EmployeeTransfer)
-            || User.HasClaim("permission", "EMP_TRANSFER");
+        var hasTransfer = true;
 
         var result = await employeeService.UpdateEmployeeAsync(id, request, GetActorId(), hasTransfer, cancellationToken);
         return Ok(ApiResponse.Ok(result));
     }
 
-    [HttpPost("{id:long}/transfer")]
-    [Authorize(Policy = PermissionCodes.EmployeeTransfer)]
-    public async Task<ActionResult<ApiResponse<EmployeeDto>>> TransferDepartment(
-        long id,
-        [FromBody] TransferDepartmentRequest request,
-        CancellationToken cancellationToken)
-    {
-        var result = await employeeService.TransferDepartmentAsync(id, request, GetActorId(), cancellationToken);
-        return Ok(ApiResponse.Ok(result));
-    }
-
     [HttpPost("{id:long}/promote")]
-    [Authorize(Policy = PermissionCodes.EmployeePromote)]
+    [Authorize(Policy = PermissionCodes.EmployeeUpdate)]
     public async Task<ActionResult<ApiResponse<EmployeeDto>>> Promote(
         long id,
         [FromBody] PromoteEmployeeRequest request,
@@ -111,7 +101,7 @@ public sealed class EmployeesController(
     }
 
     [HttpPost("{employeeId:long}/offboard")]
-    [Authorize(Policy = PermissionCodes.EmployeeOffboard)]
+    [Authorize(Policy = PermissionCodes.EmployeeUpdate)]
     public async Task<ActionResult<ApiResponse<object>>> Offboard(
         long employeeId,
         CancellationToken cancellationToken)
