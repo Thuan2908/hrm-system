@@ -15,7 +15,7 @@ public static class LeaveApprovalPolicy
         actor.IsActive && PermissionCodes.ExpandWithAliases(actor.Permissions).Contains(permission, StringComparer.OrdinalIgnoreCase);
 
     public static bool CanReview(LeaveUserAccess actor, long employeeId, long? managerId) =>
-        actor.EmployeeId != employeeId
+        (!actor.EmployeeId.HasValue || actor.EmployeeId.Value != employeeId)
         && (HasPermission(actor, PermissionCodes.LeaveApproveAll)
-            || (managerId == actor.EmployeeId && HasPermission(actor, PermissionCodes.LeaveApprove)));
+            || (actor.EmployeeId.HasValue && managerId == actor.EmployeeId.Value && HasPermission(actor, PermissionCodes.LeaveApprove)));
 }

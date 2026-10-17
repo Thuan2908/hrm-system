@@ -241,7 +241,11 @@ public sealed class LeaveService(
     {
         var user = await employeeAccess.GetUserAsync(userId, cancellationToken);
         if (!user.IsActive) throw new UnauthorizedAccessException("Tài khoản không hoạt động.");
-        return user.EmployeeId;
+        if (!user.EmployeeId.HasValue)
+        {
+            throw new DomainException("EMPLOYEE_NOT_APPLICABLE", "Tài khoản Quản trị Hệ thống không có đơn nghỉ phép.");
+        }
+        return user.EmployeeId.Value;
     }
 
     private static decimal CalculateWorkingDays(DateOnly start, DateOnly end)
@@ -284,7 +288,7 @@ public sealed class LeaveService(
         var actor = await GetReviewerAsync(actorUserId, cancellationToken);
         var global = LeaveApprovalPolicy.HasPermission(actor, PermissionCodes.LeaveApproveAll);
         var employees = await employeeAccess.GetEmployeesAsync(global ? null : actor.EmployeeId, cancellationToken);
-        var departments = employees.Where(e => e.Id != actor.EmployeeId)
+        var departments = employees.Where(e => !actor.EmployeeId.HasValue || e.Id != actor.EmployeeId.Value)
             .GroupBy(e => e.DepartmentId)
             .Select(g => new LeaveApprovalDepartmentDto(g.Key, g.First().DepartmentName))
             .OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase).ToArray();
@@ -302,7 +306,7 @@ public sealed class LeaveService(
             throw new ArgumentException("Thứ tự sắp xếp không hợp lệ.", nameof(sortBy));
         var global = LeaveApprovalPolicy.HasPermission(actor, PermissionCodes.LeaveApproveAll);
         var directReports = await employeeAccess.GetEmployeesAsync(global ? null : actor.EmployeeId, cancellationToken);
-        var employees = directReports.Where(e => e.Id != actor.EmployeeId && (!departmentId.HasValue || e.DepartmentId == departmentId.Value))
+        var employees = directReports.Where(e => (!actor.EmployeeId.HasValue || e.Id != actor.EmployeeId.Value) && (!departmentId.HasValue || e.DepartmentId == departmentId.Value))
             .ToDictionary(e => e.Id);
         var employeeIds = employees.Keys.ToArray();
         var pending = await dbContext.LeaveRequests.AsNoTracking()
@@ -397,7 +401,7 @@ public sealed class LeaveService(
         var actor = await employeeAccess.GetUserAsync(actorUserId, cancellationToken);
         if (!LeaveApprovalPolicy.HasPermission(actor, PermissionCodes.LeaveApproveAll)) return false;
         return await dbContext.LeaveRequests.AsNoTracking()
-            .AnyAsync(r => r.AttachmentFileId == fileId && r.EmployeeId != actor.EmployeeId, cancellationToken);
+            .AnyAsync(r => r.AttachmentFileId == fileId && (!actor.EmployeeId.HasValue || r.EmployeeId != actor.EmployeeId.Value), cancellationToken);
     }
 
     private async Task<LeaveUserAccess> GetReviewerAsync(long actorUserId, CancellationToken cancellationToken)

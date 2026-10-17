@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text.Json;
 using Hrm.Contracts;
 using Hrm.Modules.Auth.Contracts;
@@ -108,8 +108,8 @@ public sealed class EmployeeService(
         var employeeIds = employees.Select(e => e.Id).ToHashSet();
         var accounts = await dbContext.Users
             .AsNoTracking()
-            .Where(u => employeeIds.Contains(u.EmployeeId))
-            .Select(u => u.EmployeeId)
+            .Where(u => u.EmployeeId.HasValue && employeeIds.Contains(u.EmployeeId.Value))
+            .Select(u => u.EmployeeId!.Value)
             .ToHashSetAsync(cancellationToken);
 
         return employees.Select(e => MapToDto(e, accounts.Contains(e.Id), includeSensitiveInfo)).ToList();

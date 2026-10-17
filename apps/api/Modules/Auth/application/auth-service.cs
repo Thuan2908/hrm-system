@@ -219,14 +219,19 @@ public sealed class AuthService(
     {
         var user = await dbContext.Users.AsNoTracking()
             .Include(u => u.Employee)
-                .ThenInclude(e => e.Department)
+                .ThenInclude(e => e!.Department)
             .Include(u => u.Employee)
-                .ThenInclude(e => e.Position)
+                .ThenInclude(e => e!.Position)
             .Include(u => u.Employee)
-                .ThenInclude(e => e.SalaryProfiles)
+                .ThenInclude(e => e!.SalaryProfiles)
             .Include(u => u.Role)
             .SingleOrDefaultAsync(u => u.Id == userId, cancellationToken)
             ?? throw new DomainException("AUTH_USER_NOT_FOUND", "Không tìm thấy tài khoản.");
+
+        if (user.Employee is null)
+        {
+            throw new DomainException("EMPLOYEE_NOT_APPLICABLE", "Tài khoản Quản trị Hệ thống không liên kết với hồ sơ nhân viên.");
+        }
 
         var emp = user.Employee;
         var currentProfile = emp.SalaryProfiles.FirstOrDefault(sp => sp.IsCurrent);
@@ -370,6 +375,11 @@ public sealed class AuthService(
             .SingleOrDefaultAsync(item => item.Id == userId, cancellationToken)
             ?? throw new DomainException("AUTH_USER_NOT_FOUND", "Không tìm thấy tài khoản.");
 
+        if (user.Employee is null)
+        {
+            return await CreateSessionAsync(user, cancellationToken);
+        }
+
         user.Employee.FullName = request.FullName.Trim();
         if (request.Phone is not null) user.Employee.Phone = request.Phone.Trim();
         if (request.Email is not null) user.Employee.Email = request.Email.Trim();
@@ -423,7 +433,7 @@ public sealed class AuthService(
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString(CultureInfo.InvariantCulture)),
             new(ClaimTypes.NameIdentifier, user.Id.ToString(CultureInfo.InvariantCulture)),
             new(ClaimTypes.Name, user.UserName),
-            new("full_name", user.Employee.FullName),
+            new("full_name", user.Employee?.FullName ?? "System Administrator"),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new(ClaimTypes.Role, user.Role.Name.ToUpperInvariant())
         };
@@ -463,7 +473,7 @@ public sealed class AuthService(
         var permissions = PermissionCodes.ExpandWithAliases(rawPermissions);
 
         return new UserSessionDto(
-            user.Id, user.UserName, user.Employee.FullName,
+            user.Id, user.UserName, user.Employee?.FullName ?? "System Administrator",
             [user.Role.Name.ToUpperInvariant()], permissions);
     }
 

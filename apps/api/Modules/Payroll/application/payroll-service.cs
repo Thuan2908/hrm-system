@@ -126,7 +126,12 @@ public sealed class PayrollService(
             throw new DomainException("AUTH_USER_NOT_FOUND", "Không tìm thấy thông tin tài khoản.");
         }
 
-        return user.EmployeeId;
+        if (!user.EmployeeId.HasValue)
+        {
+            throw new DomainException("EMPLOYEE_NOT_APPLICABLE", "Tài khoản Quản trị Hệ thống không có bảng lương.");
+        }
+
+        return user.EmployeeId.Value;
     }
 
     public async Task<IReadOnlyList<PayrollManagementItemDto>> GetAllPayslipsAsync(short? month, short? year, CancellationToken cancellationToken)
