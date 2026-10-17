@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="../../shared/Hrm.Contracts/Hrm.Contracts.csproj" />
     <ProjectReference Include="../../apps/api/Modules/Leave/Hrm.Modules.Leave.csproj" />
+    <ProjectReference Include="../../apps/api/Modules/Payroll/Hrm.Modules.Payroll.csproj" />
   </ItemGroup>
 
 </Project>

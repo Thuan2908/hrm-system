@@ -50,6 +50,7 @@
                     <select class="form-select form-select-sm fw-bold rounded-pill bg-light border-0 shadow-none"
                             style="width: 130px; height: 36px; padding-left: 14px; padding-right: 32px !important; cursor: pointer; color: var(--emp-heading);"
                             value="@selectedYear" @onchange="OnYearChangedAsync">
+                        <option value="2027">Năm 2027</option>
                         <option value="2026">Năm 2026</option>
                         <option value="2025">Năm 2025</option>
                         <option value="2024">Năm 2024</option>
@@ -59,6 +60,46 @@
                             @onclick="PrintPayslipAsync">
                         <i class="bi bi-printer me-1"></i>
                         <span>In bảng lương năm</span>
+                    </button>
+                </div>
+            }
+            else
+            {
+                <div class="d-flex align-items-center gap-2 flex-wrap ms-auto">
+                    <span class="small text-secondary fw-semibold text-nowrap"><i class="bi bi-calendar-event me-1"></i>Kỳ lương:</span>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-outline-secondary" title="Tháng trước" @onclick="() => ChangeMonthAsync(-1)">
+                            <i class="bi bi-chevron-left"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" title="Tháng sau" @onclick="() => ChangeMonthAsync(1)">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </div>
+                    <select class="form-select form-select-sm fw-bold rounded-pill bg-light border-0 shadow-none text-primary"
+                            style="width: 120px; height: 36px; padding-left: 14px; cursor: pointer;"
+                            value="@selectedMonth" @onchange="OnMonthChangedAsync">
+                        @for (short m = 1; m <= 12; m++)
+                        {
+                            <option value="@m">Tháng @m</option>
+                        }
+                    </select>
+                    <select class="form-select form-select-sm fw-bold rounded-pill bg-light border-0 shadow-none text-secondary"
+                            style="width: 110px; height: 36px; padding-left: 14px; cursor: pointer;"
+                            value="@selectedYear" @onchange="OnPeriodYearChangedAsync">
+                        <option value="2027">Năm 2027</option>
+                        <option value="2026">Năm 2026</option>
+                        <option value="2025">Năm 2025</option>
+                        <option value="2024">Năm 2024</option>
+                    </select>
+                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-semibold shadow-sm text-nowrap"
+                            style="height: 36px;"
+                            @onclick="SetCurrentPeriodAsync">
+                        <i class="bi bi-clock-history me-1"></i> Hiện tại
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 fw-semibold shadow-sm text-nowrap d-inline-flex align-items-center gap-1"
+                            style="height: 36px; color: var(--emp-primary); border-color: var(--emp-primary);"
+                            @onclick="PrintPayslipAsync">
+                        <i class="bi bi-printer me-1"></i> In phiếu
                     </button>
                 </div>
             }
@@ -76,24 +117,16 @@
 
     @if (!isYearlyView)
     {
-        @if (isLoading && payslips.Count == 0)
+        @if (isLoading && selectedPayslip is null)
         {
             <div class="py-5 text-center text-muted">
                 <div class="spinner-border mb-3" style="color: var(--emp-primary);" role="status"></div>
                 <p>Đang tải thông tin bảng lương...</p>
             </div>
         }
-        else if (payslips.Count == 0)
-        {
-            <div class="card border-0 shadow-sm p-5 text-center text-muted" style="border-radius: 14px;">
-                <div class="display-5 text-secondary mb-3">📄</div>
-                <h5 class="fw-bold" style="color: var(--emp-heading);">Chưa có phiếu lương nào</h5>
-                <p class="mb-0">Phiếu lương sẽ được phát hành sau khi phòng Nhân sự &amp; Kế toán hoàn tất chốt bảng công hàng tháng.</p>
-            </div>
-        }
         else
         {
-            <!-- Latest Period Highlight Card (Hidden when printing) -->
+            <!-- Period Highlight Summary Card (Hidden when printing) -->
             @if (selectedPayslip is not null)
             {
                 <div class="card border-0 shadow-sm mb-4 d-print-none" style="border-radius: 14px; background: var(--emp-surface); border: 1px solid var(--emp-border) !important; border-left: 5px solid var(--emp-primary) !important;">
@@ -102,19 +135,28 @@
                             <div class="col-12 col-md-4">
                                 <span class="emp-kpi-label d-block mb-1">KỲ LƯƠNG ĐANG XEM</span>
                                 <h4 class="fw-bold mb-1" style="color: var(--emp-heading);">Tháng @selectedPayslip.MonthPeriod/@selectedPayslip.YearPeriod</h4>
-                                <span class="emp-badge-success">
-                                    ✓ Đã quyết toán
-                                </span>
+                                @if (selectedPayslip.Id > 0)
+                                {
+                                    <span class="emp-badge-success">
+                                        ✓ Đã chốt sổ / Đã điều chỉnh
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning-subtle text-warning border border-warning px-2 py-1 rounded-pill small">
+                                        ● Dự tính thời gian thực (Realtime)
+                                    </span>
+                                }
                             </div>
                             <div class="col-6 col-md-4 text-md-center">
                                 <span class="emp-kpi-label d-block mb-1">NGÀY CÔNG THỰC TẾ</span>
-                                <span class="fs-3 fw-bold tabular-nums" style="color: var(--emp-heading);">@selectedPayslip.ActualDays</span>
-                                <small class="text-muted d-block">ngày làm việc ghi nhận</small>
+                                <span class="fs-3 fw-bold tabular-nums" style="color: var(--emp-heading);">@selectedPayslip.ActualDays.ToString("0.#")</span>
+                                <small class="text-muted d-block">/ @selectedPayslip.StandardWorkingDays.ToString("0.#") ngày chuẩn</small>
                             </div>
                             <div class="col-6 col-md-4 text-md-end">
                                 <span class="emp-kpi-label d-block mb-1">THỰC LĨNH (NET)</span>
                                 <span class="fs-2 fw-bold font-monospace tabular-nums" style="color: var(--emp-primary);">@FormatVnd(selectedPayslip.NetSalary)</span>
-                                <small class="text-muted d-block">Đã thanh toán chuyển khoản</small>
+                                <small class="text-muted d-block">Thu nhập chuyển khoản thực nhận</small>
                             </div>
                         </div>
                     </div>
@@ -125,24 +167,46 @@
                 <!-- Left Column: Period List (Hidden when printing) -->
                 <div class="col-12 col-lg-4 d-print-none">
                     <div class="card border-0 shadow-sm h-100" style="border-radius: 14px;">
-                        <div class="card-header bg-white border-bottom border-light py-3 px-4">
-                            <strong style="color: var(--emp-heading); font-size: 0.88rem; text-transform: uppercase; letter-spacing: 0.05em;">DANH SÁCH KỲ LƯƠNG</strong>
+                        <div class="card-header bg-white border-bottom border-light py-3 px-4 d-flex justify-content-between align-items-center">
+                            <strong style="color: var(--emp-heading); font-size: 0.88rem; text-transform: uppercase; letter-spacing: 0.05em;">DANH SÁCH 12 THÁNG (@selectedYear)</strong>
+                            <span class="badge bg-light text-muted border">@payslips.Count kỳ</span>
                         </div>
-                        <div class="list-group list-group-flush p-2">
-                            @foreach (var item in payslips)
+                        <div class="list-group list-group-flush p-2" style="max-height: 600px; overflow-y: auto;">
+                            @for (short m = 12; m >= 1; m--)
                             {
-                                var isCurrent = selectedPayslip?.Id == item.Id;
+                                var monthItem = m;
+                                var isCurrent = selectedMonth == monthItem;
+                                var matched = payslips.FirstOrDefault(p => p.MonthPeriod == monthItem);
+                                var days = matched?.ActualDays ?? 22m;
+                                var net = matched?.NetSalary ?? (selectedPayslip?.MonthPeriod == monthItem ? selectedPayslip.NetSalary : 0m);
+
                                 <button type="button"
                                         class="list-group-item list-group-item-action p-3 rounded-3 mb-2 border-0 d-flex justify-content-between align-items-center"
                                         style="@(isCurrent ? "background: var(--emp-primary-subtle); color: var(--emp-primary); font-weight: 700; border: 1px solid var(--emp-primary-light) !important;" : "")"
-                                        @onclick="() => SelectPayslipAsync(item.Id)">
+                                        @onclick="() => SelectMonthAsync(monthItem)">
                                     <div>
-                                        <div class="fw-bold fs-6">Tháng @item.MonthPeriod/@item.YearPeriod</div>
-                                        <div class="small text-muted">@item.ActualDays ngày công</div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="fw-bold fs-6">Tháng @monthItem/@selectedYear</span>
+                                            @if (matched != null && matched.Id > 0)
+                                            {
+                                                <span class="badge bg-success-subtle text-success border border-success" style="font-size: 7pt;">Đã chốt</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-light text-secondary border" style="font-size: 7pt;">Xem trước</span>
+                                            }
+                                        </div>
+                                        <div class="small text-muted">@days.ToString("0.#") công thực tế</div>
                                     </div>
                                     <div class="text-end">
-                                        <div class="fw-bold font-monospace tabular-nums" style="color: var(--emp-primary);">@FormatVnd(item.NetSalary)</div>
-                                        <small class="text-muted">Chi tiết →</small>
+                                        @if (net > 0)
+                                        {
+                                            <div class="fw-bold font-monospace tabular-nums" style="color: var(--emp-primary);">@FormatVnd(net)</div>
+                                        }
+                                        else
+                                        {
+                                            <div class="text-muted small">Bấm xem →</div>
+                                        }
                                     </div>
                                 </button>
                             }
@@ -244,47 +308,118 @@
                                         <!-- SECTION A: THU NHẬP -->
                                         <tr style="background-color: #f8fafc;">
                                             <td colspan="4" class="fw-bold text-success py-2">
-                                                A. CÁC KHOẢN THU NHẬP (GROSS SALARY)
+                                                A. CÁC KHOẢN THU NHẬP (GROSS SALARY &amp; THƯỞNG)
                                             </td>
                                         </tr>
                                         <tr>
                                             <td class="text-center">1</td>
-                                            <td>Số ngày công làm việc thực tế ghi nhận</td>
-                                            <td class="text-center">@selectedPayslip.ActualDays.ToString("0.#") ngày / 22 ngày công chuẩn</td>
-                                            <td class="text-end font-monospace">@selectedPayslip.ActualDays.ToString("0.#") công</td>
+                                            <td>
+                                                <div class="fw-semibold">Số ngày công làm việc thực tế ghi nhận</div>
+                                                <small class="text-muted">Căn cứ: Điểm danh Chấm công + Đơn nghỉ phép có lương (hoặc Điều chỉnh bởi Phòng Nhân sự)</small>
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="fw-bold text-primary">@selectedPayslip.ActualDays.ToString("0.#") ngày</span>
+                                                <span class="text-muted small"> / @selectedPayslip.StandardWorkingDays.ToString("0.#") ngày chuẩn</span>
+                                            </td>
+                                            <td class="text-end font-monospace fw-bold">@selectedPayslip.ActualDays.ToString("0.#") công</td>
                                         </tr>
                                         <tr>
                                             <td class="text-center">2</td>
-                                            <td>Lương vị trí &amp; Phụ cấp chức vụ (theo công thực tế)</td>
-                                            <td class="text-center text-muted">Lương cơ bản + tỷ lệ phụ cấp</td>
-                                            <td class="text-end font-monospace fw-semibold text-dark">@FormatVnd(selectedPayslip.GrossSalary)</td>
+                                            <td>
+                                                <div class="fw-semibold">Lương vị trí theo tỷ lệ ngày công thực tế</div>
+                                                <small class="text-muted">Công thức: (@FormatVnd(selectedPayslip.SnapshotBaseSalary + selectedPayslip.SnapshotPositionAllowance) / @selectedPayslip.StandardWorkingDays.ToString("0.#")) × @selectedPayslip.ActualDays.ToString("0.#") công</small>
+                                            </td>
+                                            <td class="text-center text-muted small">Tỷ lệ công thực tế</td>
+                                            <td class="text-end font-monospace fw-semibold text-dark">
+                                                @FormatVnd(Math.Round((selectedPayslip.SnapshotBaseSalary + selectedPayslip.SnapshotPositionAllowance) / (selectedPayslip.StandardWorkingDays > 0 ? selectedPayslip.StandardWorkingDays : 22m) * selectedPayslip.ActualDays, 0))
+                                            </td>
                                         </tr>
+                                        @if (selectedPayslip.SnapshotOtherAllowance > 0)
+                                        {
+                                            <tr>
+                                                <td class="text-center">3</td>
+                                                <td>
+                                                    <div class="fw-semibold">Phụ cấp ăn trưa / Hỗ trợ cố định</div>
+                                                    <small class="text-muted">Khoản phụ cấp không trừ theo ngày công</small>
+                                                </td>
+                                                <td class="text-center text-muted small">Khoản cố định</td>
+                                                <td class="text-end font-monospace text-dark">@FormatVnd(selectedPayslip.SnapshotOtherAllowance)</td>
+                                            </tr>
+                                        }
+                                        @if (selectedPayslip.BonusAmount > 0)
+                                        {
+                                            <tr>
+                                                <td class="text-center">@(selectedPayslip.SnapshotOtherAllowance > 0 ? "4" : "3")</td>
+                                                <td>
+                                                    <div class="fw-semibold text-success">Thưởng hiệu quả công việc / Dự án (+)</div>
+                                                    <small class="text-muted">Khen thưởng theo hiệu suất hoặc KPI tháng</small>
+                                                </td>
+                                                <td class="text-center text-success small">Khen thưởng kỳ này</td>
+                                                <td class="text-end font-monospace text-success fw-bold">+@FormatVnd(selectedPayslip.BonusAmount)</td>
+                                            </tr>
+                                        }
                                         <tr class="fw-bold" style="background-color: #f0fdf4;">
-                                            <td colspan="3" class="text-dark">TỔNG THU NHẬP GỘP (GROSS):</td>
-                                            <td class="text-end text-success font-monospace">@FormatVnd(selectedPayslip.GrossSalary)</td>
+                                            <td colspan="3" class="text-dark">TỔNG THU NHẬP (GROSS + THƯỞNG):</td>
+                                            <td class="text-end text-success font-monospace">@FormatVnd(selectedPayslip.GrossSalary + selectedPayslip.BonusAmount)</td>
                                         </tr>
 
                                         <!-- SECTION B: KHẤU TRỪ -->
                                         <tr style="background-color: #f8fafc;">
                                             <td colspan="4" class="fw-bold text-danger py-2">
-                                                B. CÁC KHOẢN TRÍCH NỘP &amp; KHẤU TRỪ THEO NGHĨA VỤ LUẬT
+                                                B. CÁC KHOẢN TRÍCH NỘP &amp; NGHĨA VỤ THUẾ THEO LUẬT
                                             </td>
                                         </tr>
                                         <tr>
                                             <td class="text-center">1</td>
-                                            <td>Bảo hiểm Xã hội, Y tế, Thất nghiệp (BHXH 10.5%)</td>
-                                            <td class="text-center text-muted">8% BHXH + 1.5% BHYT + 1% BHTN</td>
+                                            <td>
+                                                <div class="fw-semibold">Bảo hiểm Bắt buộc (BHXH, BHYT, BHTN: 10.5%)</div>
+                                                <small class="text-muted">8% BHXH + 1.5% BHYT + 1% BHTN (áp trần 46.800.000đ theo mức lương cơ sở)</small>
+                                            </td>
+                                            <td class="text-center text-muted small">10.5% lương đóng BHXH</td>
                                             <td class="text-end font-monospace text-danger">-@FormatVnd(selectedPayslip.BhxhDeduct)</td>
                                         </tr>
                                         <tr>
                                             <td class="text-center">2</td>
-                                            <td>Thuế Thu nhập Cá nhân tạm trích (TNCN)</td>
-                                            <td class="text-center text-muted">Biểu thuế lũy tiến từng phần</td>
-                                            <td class="text-end font-monospace text-danger">-@FormatVnd(selectedPayslip.TaxDeduct)</td>
+                                            <td>
+                                                <div class="fw-semibold text-secondary">Giảm trừ gia cảnh bản thân (Luật thuế TNCN)</div>
+                                                <small class="text-muted">Mức giảm trừ cá nhân cố định theo quy định</small>
+                                            </td>
+                                            <td class="text-center text-secondary small">Cố định / tháng</td>
+                                            <td class="text-end font-monospace text-secondary">-11.000.000 ₫</td>
                                         </tr>
+                                        <tr class="small" style="background-color: #fafafa;">
+                                            <td class="text-center text-muted">ℹ</td>
+                                            <td colspan="2" class="text-muted fst-italic">
+                                                Thu nhập tính thuế TNCN = (Gross + Thưởng) - BHXH - Giảm trừ gia cảnh (11tr)
+                                            </td>
+                                            <td class="text-end font-monospace fw-semibold text-dark">
+                                                @FormatVnd(Math.Max(0m, selectedPayslip.GrossSalary + selectedPayslip.BonusAmount - selectedPayslip.BhxhDeduct - 11_000_000m))
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="text-center">3</td>
+                                            <td>
+                                                <div class="fw-semibold text-danger">Thuế Thu nhập Cá nhân tạm trích (TNCN)</div>
+                                                <small class="text-muted">Áp dụng Biểu thuế lũy tiến từng phần 5 bậc mới</small>
+                                            </td>
+                                            <td class="text-center text-muted small">Biểu 5 bậc mới</td>
+                                            <td class="text-end font-monospace text-danger fw-semibold">-@FormatVnd(selectedPayslip.TaxDeduct)</td>
+                                        </tr>
+                                        @if (selectedPayslip.Deductions > 0)
+                                        {
+                                            <tr>
+                                                <td class="text-center">4</td>
+                                                <td>
+                                                    <div class="fw-semibold text-danger">Khoản phạt vi phạm nội quy / Tạm ứng (-)</div>
+                                                    <small class="text-muted">Khấu trừ trực tiếp vào lương sau thuế</small>
+                                                </td>
+                                                <td class="text-center text-danger small">Khấu trừ nội bộ</td>
+                                                <td class="text-end font-monospace text-danger">-@FormatVnd(selectedPayslip.Deductions)</td>
+                                            </tr>
+                                        }
                                         <tr class="fw-bold" style="background-color: #fef2f2;">
-                                            <td colspan="3" class="text-dark">TỔNG CÁC KHOẢN TRÍCH NỘP:</td>
-                                            <td class="text-end text-danger font-monospace">-@FormatVnd(selectedPayslip.BhxhDeduct + selectedPayslip.TaxDeduct)</td>
+                                            <td colspan="3" class="text-dark">TỔNG CÁC KHOẢN TRÍCH NỘP &amp; KHẤU TRỪ:</td>
+                                            <td class="text-end text-danger font-monospace">-@FormatVnd(selectedPayslip.BhxhDeduct + selectedPayslip.TaxDeduct + selectedPayslip.Deductions)</td>
                                         </tr>
 
                                         <!-- SECTION C: NET PAY -->
@@ -293,7 +428,7 @@
                                                 <div class="fw-bold text-success text-uppercase" style="font-size: 1rem;">
                                                     C. THỰC LĨNH CHUYỂN KHOẢN (NET SALARY)
                                                 </div>
-                                                <small class="text-muted d-block">Đã khấu trừ toàn bộ nghĩa vụ BHXH và thuế TNCN theo quy định</small>
+                                                <small class="text-muted d-block">Công thức chuẩn: (Gross + Thưởng) - Khấu trừ phạt - BHXH (10.5%) - Thuế TNCN (5 bậc mới)</small>
                                             </td>
                                             <td class="text-end py-3">
                                                 <span class="fs-4 fw-bold text-success font-monospace">@FormatVnd(selectedPayslip.NetSalary)</span>
@@ -577,6 +712,7 @@
     private PayslipDetailDto? selectedPayslip;
     private YearlyPayrollSummaryDto? yearlySummary;
     private bool isYearlyView = false;
+    private short selectedMonth = (short)DateTime.Today.Month;
     private short selectedYear = (short)DateTime.Today.Year;
     private bool isLoading = true;
     private bool isLoadingDetail = false;
@@ -609,6 +745,96 @@
         }
     }
 
+    private async Task OnPeriodYearChangedAsync(ChangeEventArgs e)
+    {
+        if (short.TryParse(e.Value?.ToString(), out var year))
+        {
+            selectedYear = year;
+            await LoadDataAsync();
+        }
+    }
+
+    private async Task OnMonthChangedAsync(ChangeEventArgs e)
+    {
+        if (short.TryParse(e.Value?.ToString(), out var month) && month is >= 1 and <= 12)
+        {
+            selectedMonth = month;
+            await LoadPeriodPayslipAsync();
+        }
+    }
+
+    private async Task ChangeMonthAsync(int delta)
+    {
+        var newMonth = selectedMonth + delta;
+        if (newMonth < 1)
+        {
+            selectedMonth = 12;
+            selectedYear--;
+        }
+        else if (newMonth > 12)
+        {
+            selectedMonth = 1;
+            selectedYear++;
+        }
+        else
+        {
+            selectedMonth = (short)newMonth;
+        }
+
+        await LoadDataAsync();
+    }
+
+    private async Task SetCurrentPeriodAsync()
+    {
+        selectedMonth = (short)DateTime.Today.Month;
+        selectedYear = (short)DateTime.Today.Year;
+        await LoadDataAsync();
+    }
+
+    private async Task SelectMonthAsync(short month)
+    {
+        selectedMonth = month;
+        await LoadPeriodPayslipAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+        try
+        {
+            // Tải danh sách các kỳ lương của năm đang chọn
+            payslips = await PayrollApiClient.GetMyPayslipsAsync(selectedYear);
+            // Tải chi tiết chuẩn công thức cho tháng và năm đang chọn
+            await LoadPeriodPayslipAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Không thể tải danh sách phiếu lương: " + ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadPeriodPayslipAsync()
+    {
+        isLoadingDetail = true;
+        try
+        {
+            selectedPayslip = await PayrollApiClient.GetPayslipByPeriodAsync(selectedMonth, selectedYear);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Lỗi khi tải phiếu lương Tháng {selectedMonth}/{selectedYear}: " + ex.Message;
+        }
+        finally
+        {
+            isLoadingDetail = false;
+        }
+    }
+
     private async Task LoadYearlyPayslipsAsync()
     {
         isLoadingYearly = true;
@@ -630,45 +856,6 @@
     private async Task PrintPayslipAsync()
     {
         await JSRuntime.InvokeVoidAsync("window.print");
-    }
-
-    private async Task LoadDataAsync()
-    {
-        isLoading = true;
-        errorMessage = null;
-        try
-        {
-            payslips = await PayrollApiClient.GetMyPayslipsAsync();
-            if (payslips.Count > 0)
-            {
-                await SelectPayslipAsync(payslips[0].Id);
-            }
-        }
-        catch (Exception ex)
-        {
-            errorMessage = "Không thể tải danh sách phiếu lương: " + ex.Message;
-        }
-        finally
-        {
-            isLoading = false;
-        }
-    }
-
-    private async Task SelectPayslipAsync(long id)
-    {
-        isLoadingDetail = true;
-        try
-        {
-            selectedPayslip = await PayrollApiClient.GetPayslipDetailAsync(id);
-        }
-        catch (Exception ex)
-        {
-            errorMessage = "Lỗi khi lấy chi tiết phiếu lương: " + ex.Message;
-        }
-        finally
-        {
-            isLoadingDetail = false;
-        }
     }
 
     private static string FormatVnd(decimal amount) =>

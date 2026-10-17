@@ -78,9 +78,10 @@ public sealed class SalaryProfileAndEducationTests
         // 2. When positionDepartmentId does not match targetDepartmentId, returns false
         Assert.False(DepartmentPositionPolicy.IsCompatible(10, 20, "HR", "Phòng Nhân sự", "Chuyên viên nhân sự", "HR_SPEC"));
 
-        // 3. When positionDepartmentId is null, falls back to name keyword matching
+        // 3. When positionDepartmentId is null or 0 (General/Cross-departmental position), returns true for any department
         Assert.True(DepartmentPositionPolicy.IsCompatible(10, null, "HR", "Phòng Nhân sự", "Chuyên viên tuyển dụng", "HR_REC"));
-        Assert.False(DepartmentPositionPolicy.IsCompatible(10, null, "HR", "Phòng Nhân sự", "Kỹ sư Backend", "DEV"));
+        Assert.True(DepartmentPositionPolicy.IsCompatible(10, null, "HR", "Phòng Nhân sự", "Thực tập sinh", "INTERN"));
+        Assert.True(DepartmentPositionPolicy.IsCompatible(10, 0, "HR", "Phòng Nhân sự", "Tổng Giám Đốc", "CEO"));
     }
 
     [Fact]

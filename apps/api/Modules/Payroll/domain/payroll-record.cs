@@ -12,6 +12,8 @@ public sealed class PayrollRecord
     public decimal SnapshotPositionAllowance { get; set; } // snapshot_position_allowance
     public decimal SnapshotOtherAllowance { get; set; } // snapshot_other_allowance
     public decimal GrossSalary { get; set; } // gross_sal
+    public decimal BonusAmount { get; set; } // bonus_amount
+    public decimal Deductions { get; set; } // deductions
     public decimal BhxhDeduct { get; set; } // bhxh_deduct
     public decimal TaxDeduct { get; set; } // tax_deduct
     public decimal NetSalary { get; set; } // net_sal

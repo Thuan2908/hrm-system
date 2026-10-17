@@ -66,6 +66,8 @@ public sealed class ReportPayroll
     public decimal SnapshotPositionAllowance { get; set; }
     public decimal SnapshotOtherAllowance { get; set; }
     public decimal GrossSalary { get; set; }
+    public decimal BonusAmount { get; set; }
+    public decimal Deductions { get; set; }
     public decimal NetSalary { get; set; }
     public decimal BhxhDeduct { get; set; }
     public decimal TaxDeduct { get; set; }

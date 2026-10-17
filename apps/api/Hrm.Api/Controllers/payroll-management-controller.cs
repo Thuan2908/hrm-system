@@ -31,6 +31,15 @@ public sealed class PayrollManagementController(IPayrollService payrollService) 
         return Ok(ApiResponse.Ok(count));
     }
 
+    [HttpPost("adjust")]
+    public async Task<ActionResult<ApiResponse<PayrollManagementItemDto>>> AdjustPayroll(
+        [FromBody] AdjustPayrollRecordRequest request,
+        CancellationToken cancellationToken)
+    {
+        var updated = await payrollService.AdjustPayrollRecordAsync(request.PayrollId, request.ActualDays, request.BonusAmount, request.Deductions, cancellationToken);
+        return Ok(ApiResponse.Ok(updated));
+    }
+
     private long GetUserId() =>
         long.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)
             ? userId

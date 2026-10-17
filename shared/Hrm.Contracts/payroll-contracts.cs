@@ -13,7 +13,9 @@ public sealed record PayslipSummaryDto(
     decimal StandardWorkingDays = 22m,
     decimal SnapshotBaseSalary = 0m,
     decimal SnapshotPositionAllowance = 0m,
-    decimal SnapshotOtherAllowance = 0m
+    decimal SnapshotOtherAllowance = 0m,
+    decimal BonusAmount = 0m,
+    decimal Deductions = 0m
 );
 
 public sealed record PayslipDetailDto(
@@ -29,12 +31,21 @@ public sealed record PayslipDetailDto(
     decimal StandardWorkingDays = 22m,
     decimal SnapshotBaseSalary = 0m,
     decimal SnapshotPositionAllowance = 0m,
-    decimal SnapshotOtherAllowance = 0m
+    decimal SnapshotOtherAllowance = 0m,
+    decimal BonusAmount = 0m,
+    decimal Deductions = 0m
 );
 
 public sealed record CalculatePayrollRequest(
     short MonthPeriod,
     short YearPeriod
+);
+
+public sealed record AdjustPayrollRecordRequest(
+    long PayrollId,
+    decimal ActualDays,
+    decimal BonusAmount,
+    decimal Deductions
 );
 
 public sealed record PayrollManagementItemDto(
@@ -53,7 +64,9 @@ public sealed record PayrollManagementItemDto(
     decimal StandardWorkingDays = 22m,
     decimal SnapshotBaseSalary = 0m,
     decimal SnapshotPositionAllowance = 0m,
-    decimal SnapshotOtherAllowance = 0m
+    decimal SnapshotOtherAllowance = 0m,
+    decimal BonusAmount = 0m,
+    decimal Deductions = 0m
 );
 
 public sealed record YearlyPayrollSummaryDto(

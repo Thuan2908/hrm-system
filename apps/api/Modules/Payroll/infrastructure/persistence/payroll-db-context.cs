@@ -3,9 +3,30 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Hrm.Modules.Payroll.Infrastructure.Persistence;
 
+public sealed class PayrollAttendanceRecord
+{
+    public Guid Id { get; set; }
+    public long EmployeeId { get; set; }
+    public DateOnly WorkDate { get; set; }
+    public string Status { get; set; } = string.Empty;
+}
+
+public sealed class PayrollLeaveRecord
+{
+    public Guid Id { get; set; }
+    public long EmployeeId { get; set; }
+    public string LeaveType { get; set; } = string.Empty;
+    public DateOnly StartDate { get; set; }
+    public DateOnly EndDate { get; set; }
+    public decimal DaysCount { get; set; }
+    public string Status { get; set; } = string.Empty;
+}
+
 public sealed class PayrollDbContext(DbContextOptions<PayrollDbContext> options) : DbContext(options)
 {
     public DbSet<PayrollRecord> Payrolls => Set<PayrollRecord>();
+    public DbSet<PayrollAttendanceRecord> Attendances => Set<PayrollAttendanceRecord>();
+    public DbSet<PayrollLeaveRecord> Leaves => Set<PayrollLeaveRecord>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -23,11 +44,36 @@ public sealed class PayrollDbContext(DbContextOptions<PayrollDbContext> options)
             entity.Property(e => e.SnapshotPositionAllowance).HasColumnName("snapshot_position_allowance").HasPrecision(18, 2).IsRequired();
             entity.Property(e => e.SnapshotOtherAllowance).HasColumnName("snapshot_other_allowance").HasPrecision(18, 2).IsRequired();
             entity.Property(e => e.GrossSalary).HasColumnName("gross_sal").HasPrecision(18, 2).IsRequired();
+            entity.Property(e => e.BonusAmount).HasColumnName("bonus_amount").HasPrecision(18, 2).IsRequired();
+            entity.Property(e => e.Deductions).HasColumnName("deductions").HasPrecision(18, 2).IsRequired();
             entity.Property(e => e.BhxhDeduct).HasColumnName("bhxh_deduct").HasPrecision(18, 2).IsRequired();
             entity.Property(e => e.TaxDeduct).HasColumnName("tax_deduct").HasPrecision(18, 2).IsRequired();
             entity.Property(e => e.NetSalary).HasColumnName("net_sal").HasPrecision(18, 2).IsRequired();
 
             entity.HasIndex(e => e.EmployeeId).HasDatabaseName("ix_payrolls_emp_id");
+        });
+
+        modelBuilder.Entity<PayrollAttendanceRecord>(entity =>
+        {
+            entity.ToTable("time_attendances");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.EmployeeId).HasColumnName("emp_id");
+            entity.Property(e => e.WorkDate).HasColumnName("work_date");
+            entity.Property(e => e.Status).HasColumnName("status");
+        });
+
+        modelBuilder.Entity<PayrollLeaveRecord>(entity =>
+        {
+            entity.ToTable("leave_requests");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.EmployeeId).HasColumnName("emp_id");
+            entity.Property(e => e.LeaveType).HasColumnName("leave_type");
+            entity.Property(e => e.StartDate).HasColumnName("start_date");
+            entity.Property(e => e.EndDate).HasColumnName("end_date");
+            entity.Property(e => e.DaysCount).HasColumnName("days_count").HasPrecision(4, 1);
+            entity.Property(e => e.Status).HasColumnName("status");
         });
     }
 }

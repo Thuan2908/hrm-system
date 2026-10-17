@@ -13,9 +13,26 @@ public sealed class PayrollController(IPayrollService payrollService) : Controll
 {
     [HttpGet("my-payslips")]
     [Authorize(Policy = PermissionCodes.PayrollSelfRead)]
-    public async Task<ActionResult<ApiResponse<IReadOnlyList<PayslipSummaryDto>>>> GetMyPayslips(CancellationToken cancellationToken)
+    public async Task<ActionResult<ApiResponse<IReadOnlyList<PayslipSummaryDto>>>> GetMyPayslips(
+        [FromQuery] short? year,
+        [FromQuery] long? employeeId,
+        CancellationToken cancellationToken)
     {
-        var result = await payrollService.GetMyPayslipsAsync(GetUserId(), cancellationToken);
+        var result = await payrollService.GetMyPayslipsAsync(GetUserId(), year, employeeId, cancellationToken);
+        return Ok(ApiResponse.Ok(result));
+    }
+
+    [HttpGet("my-payslips/by-period")]
+    [Authorize(Policy = PermissionCodes.PayrollSelfRead)]
+    public async Task<ActionResult<ApiResponse<PayslipDetailDto>>> GetPayslipByPeriod(
+        [FromQuery] short month,
+        [FromQuery] short year,
+        [FromQuery] long? employeeId,
+        CancellationToken cancellationToken)
+    {
+        var targetMonth = month is >= 1 and <= 12 ? month : (short)DateTime.UtcNow.Month;
+        var targetYear = year > 0 ? year : (short)DateTime.UtcNow.Year;
+        var result = await payrollService.GetPayslipForPeriodAsync(GetUserId(), targetMonth, targetYear, employeeId, cancellationToken);
         return Ok(ApiResponse.Ok(result));
     }
 
