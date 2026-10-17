@@ -481,123 +481,27 @@
         }
     </div>
 
-    <!-- Team Attendance Monitor for Managers & HR -->
+    <!-- Team Attendance shortcut banner for Managers & HR -->
     <AuthorizeView>
         <Authorized Context="authCtx">
             @if (authCtx.User.IsInRole("ADMIN") || authCtx.User.HasClaim("permission", PermissionCodes.AttendanceTeamRead) || authCtx.User.HasClaim("permission", "ATT_APPROVE"))
             {
-                <div class="card border-0 shadow-sm mt-4" style="border-radius: 18px;">
-                    <div class="card-header bg-white border-bottom border-light py-3 px-4 d-flex justify-content-between align-items-center">
+                <div class="card border-0 shadow-sm mt-4 p-4 d-flex flex-column flex-md-row justify-content-between align-items-center gap-3"
+                     style="border-radius: 16px; background: linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(59, 130, 246, 0.05) 100%); border: 1px solid rgba(34, 197, 94, 0.2) !important;">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-circle p-2 d-flex align-items-center justify-content-center text-white"
+                             style="width: 44px; height: 44px; background: var(--emp-primary);">
+                            <i class="bi bi-people-fill fs-5"></i>
+                        </div>
                         <div>
-                            <strong class="text-dark fs-5">📋 THEO DÕI ĐIỂM DANH TOÀN CÔNG TY HÔM NAY</strong>
-                            <div class="text-muted small">Dành cho Trưởng bộ phận và Cán bộ Nhân sự (HR) · @teamRecords.Count nhân sự</div>
-                        </div>
-                        <button class="btn btn-sm btn-outline-success rounded-pill px-3" @onclick="LoadTeamDataAsync" disabled="@isLoadingTeam">
-                            ↻ Cập nhật
-                        </button>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0">
-                                <thead class="table-light text-secondary small">
-                                    <tr>
-                                        <th class="ps-4">NHÂN VIÊN</th>
-                                        <th>PHÒNG BAN</th>
-                                        <th>GIỜ VÀO</th>
-                                        <th>GIỜ RA</th>
-                                        <th>GIỜ THỰC TẾ</th>
-                                        <th class="pe-4">TRẠNG THÁI</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @if (teamRecords.Count == 0 && !isLoadingTeam)
-                                    {
-                                        <tr>
-                                            <td colspan="6" class="text-center py-4 text-muted">Chưa có dữ liệu nhân viên.</td>
-                                        </tr>
-                                    }
-                                    else
-                                    {
-                                        @foreach (var emp in pagedTeamRecords)
-                                        {
-                                            <tr>
-                                                <td class="ps-4">
-                                                    <strong>@emp.FullName</strong>
-                                                    <div class="small text-muted font-monospace">@emp.EmployeeCode</div>
-                                                </td>
-                                                <td><span class="badge bg-light text-dark border">@emp.DepartmentName</span></td>
-                                                <td>
-                                                    <span class="font-monospace">@(emp.CheckInTime.HasValue ? emp.CheckInTime.Value.ToLocalTime().ToString("HH:mm:ss") : "--:--:--")</span>
-                                                </td>
-                                                <td>
-                                                    <span class="font-monospace">@(emp.CheckOutTime.HasValue ? emp.CheckOutTime.Value.ToLocalTime().ToString("HH:mm:ss") : "--:--:--")</span>
-                                                </td>
-                                                <td>
-                                                    <strong>@(emp.ActualHours.HasValue ? $"{emp.ActualHours.Value:F2}h" : "--")</strong>
-                                                </td>
-                                                <td class="pe-4">
-                                                    @if (emp.CheckOutTime.HasValue)
-                                                    {
-                                                        <span class="badge bg-success text-white rounded-pill px-2.5 py-1">Đã hoàn thành</span>
-                                                    }
-                                                    else if (emp.CheckInTime.HasValue)
-                                                    {
-                                                        <span class="badge bg-warning text-dark rounded-pill px-2.5 py-1">Đang làm việc</span>
-                                                    }
-                                                    else
-                                                    {
-                                                        <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2.5 py-1">Chưa vào ca</span>
-                                                    }
-                                                </td>
-                                            </tr>
-                                        }
-                                    }
-                                </tbody>
-                            </table>
+                            <div class="fw-bold text-dark fs-6">Bạn có quyền Quản lý &amp; Giám sát điểm danh bộ phận</div>
+                            <div class="text-muted small">Xem danh sách vào/ra ca, thống kê trạng thái và tình hình làm việc thực tế của nhân sự hôm nay.</div>
                         </div>
                     </div>
-
-                    <!-- Team Attendance Pagination Footer -->
-                    @if (teamRecords.Count > 0)
-                    {
-                        <div class="card-footer bg-white border-top border-light py-3 px-4 d-flex flex-column flex-md-row justify-content-between align-items-center gap-3">
-                            <div class="small text-muted">
-                                Hiển thị <strong class="text-dark">@(((teamCurrentPage - 1) * teamPageSize) + 1)</strong>
-                                đến <strong class="text-dark">@(Math.Min(teamCurrentPage * teamPageSize, teamRecords.Count))</strong>
-                                trong tổng số <strong class="text-dark">@teamRecords.Count</strong> nhân sự
-                            </div>
-                            <div class="d-flex align-items-center gap-2">
-                                <ul class="pagination pagination-sm mb-0 pagination-custom">
-                                    <li class="page-item @(teamCurrentPage == 1 ? "disabled" : "")">
-                                        <button class="page-link" @onclick="() => SetTeamPage(1)">«</button>
-                                    </li>
-                                    <li class="page-item @(teamCurrentPage == 1 ? "disabled" : "")">
-                                        <button class="page-link" @onclick="() => SetTeamPage(teamCurrentPage - 1)">‹</button>
-                                    </li>
-                                    @for (int p = 1; p <= teamTotalPages; p++)
-                                    {
-                                        var pageNum = p;
-                                        if (pageNum == 1 || pageNum == teamTotalPages || (pageNum >= teamCurrentPage - 1 && pageNum <= teamCurrentPage + 1))
-                                        {
-                                            <li class="page-item @(teamCurrentPage == pageNum ? "active" : "")">
-                                                <button class="page-link" @onclick="() => SetTeamPage(pageNum)">@pageNum</button>
-                                            </li>
-                                        }
-                                        else if (pageNum == teamCurrentPage - 2 || pageNum == teamCurrentPage + 2)
-                                        {
-                                            <li class="page-item disabled"><span class="page-link">...</span></li>
-                                        }
-                                    }
-                                    <li class="page-item @(teamCurrentPage >= teamTotalPages ? "disabled" : "")">
-                                        <button class="page-link" @onclick="() => SetTeamPage(teamCurrentPage + 1)">›</button>
-                                    </li>
-                                    <li class="page-item @(teamCurrentPage >= teamTotalPages ? "disabled" : "")">
-                                        <button class="page-link" @onclick="() => SetTeamPage(teamTotalPages)">»</button>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-                    }
+                    <a href="employee/attendance-management" class="btn btn-outline-success rounded-pill px-4 py-2 text-nowrap fw-medium shadow-sm d-flex align-items-center gap-2">
+                        <span>Đến trang Theo dõi chấm công</span>
+                        <i class="bi bi-arrow-right"></i>
+                    </a>
                 </div>
             }
         </Authorized>
@@ -699,9 +603,7 @@
 @code {
     private AttendanceTodayResponse? todayStatus;
     private IReadOnlyList<AttendanceRecordDto> historyRecords = [];
-    private IReadOnlyList<TeamAttendanceItemDto> teamRecords = [];
     private bool isLoading = true;
-    private bool isLoadingTeam = false;
     private bool isSubmitting = false;
     private string? successMessage;
     private string? errorMessage;
@@ -712,11 +614,6 @@
     private int historyPageSize = 5;
     private int historyTotalPages => Math.Max(1, (int)Math.Ceiling((double)historyRecords.Count / historyPageSize));
     private IEnumerable<AttendanceRecordDto> pagedHistoryRecords => historyRecords.Skip((historyCurrentPage - 1) * historyPageSize).Take(historyPageSize);
-
-    private int teamCurrentPage = 1;
-    private int teamPageSize = 5;
-    private int teamTotalPages => Math.Max(1, (int)Math.Ceiling((double)teamRecords.Count / teamPageSize));
-    private IEnumerable<TeamAttendanceItemDto> pagedTeamRecords => teamRecords.Skip((teamCurrentPage - 1) * teamPageSize).Take(teamPageSize);
 
     private System.Threading.Timer? clockTimer;
     private string currentDateStr = DateTime.Now.ToString("dddd, dd/MM/yyyy", new System.Globalization.CultureInfo("vi-VN"));
@@ -733,32 +630,6 @@
         }, null, 1000, 1000);
 
         await LoadDataAsync();
-        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
-        var canReadTeam = user.IsInRole("ADMIN") ||
-                          user.HasClaim("permission", PermissionCodes.AttendanceTeamRead) ||
-                          user.HasClaim("permission", "ATT_APPROVE");
-        if (canReadTeam)
-        {
-            _ = LoadTeamDataAsync();
-        }
-    }
-
-    private async Task LoadTeamDataAsync()
-    {
-        isLoadingTeam = true;
-        try
-        {
-            teamRecords = await AttendanceApiClient.GetTeamSummaryAsync();
-        }
-        catch
-        {
-            teamRecords = [];
-        }
-        finally
-        {
-            isLoadingTeam = false;
-        }
     }
 
     private async Task LoadDataAsync()
@@ -808,14 +679,6 @@
         {
             historyPageSize = size;
             historyCurrentPage = 1;
-        }
-    }
-
-    private void SetTeamPage(int page)
-    {
-        if (page >= 1 && page <= teamTotalPages)
-        {
-            teamCurrentPage = page;
         }
     }
 

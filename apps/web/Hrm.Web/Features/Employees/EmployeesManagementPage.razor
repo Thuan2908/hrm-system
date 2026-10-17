@@ -506,11 +506,39 @@
 
                             <div class="col-md-6">
                                 <label class="form-label small fw-semibold">Quản lý trực tiếp</label>
+                                @{
+                                    var selectedDept = departments.FirstOrDefault(d => d.Id == formDepartmentId);
+                                    var activeManagers = managerOptions.Where(e => e.Id != editingEmployeeId && e.Status == "ACTIVE").ToList();
+                                    var sameDeptManagers = formDepartmentId > 0
+                                        ? activeManagers.Where(e => e.DepartmentId == formDepartmentId).OrderBy(e => e.FullName).ToList()
+                                        : new List<EmployeeDto>();
+                                    var otherDeptManagers = formDepartmentId > 0
+                                        ? activeManagers.Where(e => e.DepartmentId != formDepartmentId).OrderBy(e => e.DepartmentName).ThenBy(e => e.FullName).ToList()
+                                        : activeManagers.OrderBy(e => e.FullName).ToList();
+                                }
                                 <select class="form-select" @bind="formManagerId">
                                     <option value="0">-- Chưa có quản lý --</option>
-                                    @foreach (var manager in managerOptions.Where(e => e.Id != editingEmployeeId && e.Status == "ACTIVE"))
+                                    @if (sameDeptManagers.Count > 0)
                                     {
-                                        <option value="@manager.Id">@manager.Code — @manager.FullName</option>
+                                        <optgroup label="🏢 Cùng phòng ban @(selectedDept != null ? $"({selectedDept.Name})" : "")">
+                                            @foreach (var manager in sameDeptManagers)
+                                            {
+                                                <option value="@manager.Id">
+                                                    @manager.Code — @manager.FullName @(!string.IsNullOrWhiteSpace(manager.PositionName) ? $"({manager.PositionName})" : "")
+                                                </option>
+                                            }
+                                        </optgroup>
+                                    }
+                                    @if (otherDeptManagers.Count > 0)
+                                    {
+                                        <optgroup label="🌐 Phòng ban khác / Ban Giám đốc">
+                                            @foreach (var manager in otherDeptManagers)
+                                            {
+                                                <option value="@manager.Id">
+                                                    @manager.Code — @manager.FullName @(!string.IsNullOrWhiteSpace(manager.PositionName) ? $"({manager.PositionName} - {manager.DepartmentName})" : $"({manager.DepartmentName})")
+                                                </option>
+                                            }
+                                        </optgroup>
                                     }
                                 </select>
                                 <div class="form-text">Quản lý cần quyền duyệt đơn nghỉ phép để xử lý đơn.</div>
