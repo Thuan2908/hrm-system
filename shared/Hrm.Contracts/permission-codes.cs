@@ -3,7 +3,9 @@ namespace Hrm.Contracts;
 public static class PermissionCodes
 {
     public const string EmployeeRead = "employee.read";
-    public const string EmployeeWrite = "employee.write";
+    public const string EmployeeCreate = "employee.create";
+    public const string EmployeeUpdate = "employee.update";
+    public const string EmployeeWrite = EmployeeUpdate;
     public const string EmployeeTransfer = "employee.transfer";
     public const string EmployeePromote = "employee.promote";
     public const string EmployeeOffboard = "employee.offboard";
@@ -26,7 +28,7 @@ public static class PermissionCodes
 
     public static IReadOnlyList<string> All { get; } =
     [
-        EmployeeRead, EmployeeWrite, EmployeeTransfer, EmployeePromote, EmployeeOffboard,
+        EmployeeRead, EmployeeCreate, EmployeeUpdate,
         AttendanceSelfWrite, AttendanceTeamRead,
         LeaveSelfCreate, LeaveApprove, LeaveApproveAll, SelfApproved,
         PayrollRun, PayrollFinalize, PayrollSelfRead, ReportRead,
@@ -45,10 +47,8 @@ public static class PermissionCodes
         new(PayrollRun, "Tính & Chốt bảng lương", "Tiền lương", "Tổng hợp công và tính lương cho nhân viên toàn đơn vị", ["PAYROLL_MANAGE"]),
         new(PayrollFinalize, "Duyệt chi lương chính thức", "Tiền lương", "Khóa sổ bảng lương và xuất phiếu chi trả", ["PAYROLL_FINALIZE"]),
         new(EmployeeRead, "Tra cứu Danh bạ Nhân sự", "Nhân sự", "Chỉ xem danh bạ và tra cứu thông tin nhân sự công ty (Read-only)", ["EMP_VIEW"]),
-        new(EmployeeWrite, "Cập nhật Hồ sơ Nhân sự", "Nhân sự", "Tiếp nhận nhân sự mới (Onboarding) và chỉnh sửa thông tin hồ sơ", ["EMP_EDIT"]),
-        new(EmployeeTransfer, "Điều chuyển phòng ban", "Nhân sự", "Thực hiện điều chuyển công tác, chuyển phòng ban cho nhân sự", ["EMP_TRANSFER"]),
-        new(EmployeePromote, "Bổ nhiệm & Thăng chức", "Nhân sự", "Bổ nhiệm chức vụ, thăng chức và nâng quyền cho nhân sự theo thẩm quyền", ["EMP_PROMOTE"]),
-        new(EmployeeOffboard, "Thực hiện thôi việc", "Nhân sự", "Quyết định thôi việc và khóa quyền truy cập của nhân sự", ["EMP_OFFBOARD"]),
+        new(EmployeeCreate, "Thêm nhân sự mới", "Nhân sự", "Tiếp nhận nhân sự mới (Onboarding), khởi tạo hồ sơ và cấp tài khoản", ["EMP_CREATE"]),
+        new(EmployeeUpdate, "Cập nhật hồ sơ & Điều hành", "Nhân sự", "Chỉnh sửa thông tin hồ sơ cá nhân, nâng chức vụ/bổ nhiệm và thực hiện thôi việc", ["employee.write", "EMP_EDIT", "EMP_UPDATE", "employee.promote", "EMP_PROMOTE", "employee.offboard", "EMP_OFFBOARD", "employee.transfer", "EMP_TRANSFER"]),
         new(ReportRead, "Báo cáo & Thống kê Nhân sự", "Báo cáo", "Xem các chỉ số KPI, biến động nhân sự, thâm niên và quỹ lương", ["REPORT_VIEW"]),
         new(AdminUserRead, "Xem danh sách tài khoản", "Quản trị", "Xem danh sách tài khoản người dùng hệ thống", ["admin.users.read"]),
         new(AdminUserSearch, "Tìm kiếm nâng cao tài khoản", "Quản trị", "Tìm kiếm, lọc tài khoản theo tiêu chí chi tiết", ["admin.users.search"]),

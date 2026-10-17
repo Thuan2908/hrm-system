@@ -1,4 +1,4 @@
-﻿@page "/employees"
+@page "/employees"
 @page "/employee/directory"
 @layout EmployeeLayout
 @attribute [Authorize]
@@ -13,33 +13,30 @@
     <div class="emp-page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
         <div>
             <div class="emp-page-header-subtitle d-flex align-items-center gap-2">
-                <i class="bi @(canWrite ? "bi-people-fill" : (canManageAny ? "bi-person-gear" : "bi-journal-text")) text-primary"></i>
-                <span>@(canWrite 
-                    ? "PHÂN HỆ QUẢN TRỊ & TIẾP NHẬN NHÂN SỰ" 
-                    : (canManageAny ? "ĐIỀU HÀNH & VẬN HÀNH NHÂN SỰ" : "DANH BẠ LIÊN LẠC NỘI BỘ"))</span>
+                <i class="bi @(canManageAny ? "bi-people-fill" : "bi-journal-text") text-primary"></i>
+                <span>@(canManageAny ? "PHÂN HỆ QUẢN TRỊ & VẬN HÀNH NHÂN SỰ" : "DANH BẠ LIÊN LẠC NỘI BỘ")</span>
             </div>
             <h1 class="emp-page-header-title">
-                @(canWrite 
-                    ? "Quản trị & Tiếp nhận Nhân sự" 
-                    : (canManageAny ? "Điều hành & Vận hành Nhân sự" : "Tra cứu Danh bạ Nhân viên"))
+                @(canManageAny ? "Quản trị & Vận hành Nhân sự" : "Tra cứu Danh bạ Nhân viên")
             </h1>
             <p class="emp-page-header-desc">
-                @(canWrite 
-                    ? "Tiếp nhận nhân sự mới (Onboarding), cập nhật hồ sơ cá nhân, quản lý danh mục phòng ban - chức danh và lịch sử nhân sự." 
-                    : (canManageAny 
-                        ? "Thực hiện điều chuyển công tác phòng ban và quy trình thôi việc (Offboarding) kèm thu hồi quyền truy cập." 
-                        : "Tra cứu danh sách nhân sự, thông tin liên hệ và phòng ban công tác trong toàn công ty."))
+                @(canManageAny 
+                    ? "Tiếp nhận nhân sự mới (Onboarding), cập nhật hồ sơ cá nhân, nâng chức vụ / thăng chức và quy trình thôi việc (Offboarding)." 
+                    : "Tra cứu danh sách nhân sự, thông tin liên hệ và phòng ban công tác trong toàn công ty.")
             </p>
         </div>
-        @if (canWrite)
+        @if (canManageAny)
         {
             <div class="d-flex align-items-center gap-2 flex-wrap">
                 <button class="btn emp-btn-secondary" @onclick="OpenCatalogModal">
                     <i class="bi bi-diagram-3 me-1"></i> Danh mục Phòng ban &amp; Chức danh
                 </button>
-                <button class="btn emp-btn-primary" @onclick="OpenCreateModal">
-                    <i class="bi bi-person-plus-fill me-1"></i> Thêm nhân sự mới
-                </button>
+                @if (canCreate)
+                {
+                    <button class="btn emp-btn-primary" @onclick="OpenCreateModal">
+                        <i class="bi bi-person-plus-fill me-1"></i> Thêm nhân sự mới
+                    </button>
+                }
             </div>
         }
     </div>
@@ -191,8 +188,8 @@
                                 <th class="ps-4">Nhân sự</th>
                                 <th>Chức vụ &amp; Phòng ban</th>
                                 <th>Thông tin liên hệ</th>
-                                <th>Trạng thái &amp; Tài khoản</th>
-                                @if (canWrite)
+                                <th>@(canManageAny ? "Trạng thái & Tài khoản" : "Trạng thái")</th>
+                                @if (canUpdate)
                                 {
                                     <th>Lương &amp; Phụ cấp</th>
                                 }
@@ -207,14 +204,14 @@
                                 <tr class="emp-table-row">
                                     <td class="ps-4">
                                         <div class="d-flex align-items-center gap-3">
-                                            <div class="rounded-circle text-white d-flex align-items-center justify-content-center fw-bold shadow-2xs @(canWrite ? "cursor-pointer" : "")"
+                                            <div class="rounded-circle text-white d-flex align-items-center justify-content-center fw-bold shadow-2xs @(canUpdate ? "cursor-pointer" : "")"
                                                  style="width: 38px; height: 38px; background: linear-gradient(135deg, var(--emp-primary) 0%, var(--emp-primary-hover) 100%); font-size: 0.9rem; flex-shrink: 0;"
-                                                 @onclick="() => { if (canWrite) OpenEditModal(emp); }"
-                                                 title="@(canWrite ? "Bấm để xem và chỉnh sửa hồ sơ" : "")">
+                                                 @onclick="() => { if (canUpdate) OpenEditModal(emp); }"
+                                                 title="@(canUpdate ? "Bấm để xem và chỉnh sửa hồ sơ" : "")">
                                                 @GetInitial(emp.FullName)
                                             </div>
                                             <div>
-                                                @if (canWrite)
+                                                @if (canUpdate)
                                                 {
                                                     <a href="javascript:void(0)" class="fw-bold text-dark text-decoration-none hover-primary text-nowrap d-inline-block"
                                                        @onclick="() => OpenEditModal(emp)"
@@ -265,22 +262,25 @@
                                                 </span>
                                             }
                                         </div>
-                                        <div class="mt-1">
-                                            @if (emp.HasAccount)
-                                            {
-                                                <span class="small text-muted text-nowrap d-inline-flex align-items-center gap-1" style="font-size: 0.73rem;">
-                                                    <i class="bi bi-person-check-fill text-success"></i> Đã có tài khoản
-                                                </span>
-                                            }
-                                            else
-                                            {
-                                                <span class="small text-secondary text-nowrap d-inline-flex align-items-center gap-1" style="font-size: 0.73rem;">
-                                                    <i class="bi bi-person-dash text-muted"></i> Chưa cấp User
-                                                </span>
-                                            }
-                                        </div>
+                                        @if (canManageAny)
+                                        {
+                                            <div class="mt-1">
+                                                @if (emp.HasAccount)
+                                                {
+                                                    <span class="small text-muted text-nowrap d-inline-flex align-items-center gap-1" style="font-size: 0.73rem;">
+                                                        <i class="bi bi-person-check-fill text-success"></i> Đã có tài khoản
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="small text-secondary text-nowrap d-inline-flex align-items-center gap-1" style="font-size: 0.73rem;">
+                                                        <i class="bi bi-person-dash text-muted"></i> Chưa cấp User
+                                                    </span>
+                                                }
+                                            </div>
+                                        }
                                     </td>
-                                    @if (canWrite)
+                                    @if (canUpdate)
                                     {
                                         <td>
                                             <div class="font-monospace fw-bold tabular-nums text-nowrap" style="color: var(--emp-primary); font-size: 0.92rem;">
@@ -299,7 +299,7 @@
                                                 <i class="bi bi-clock-history"></i> Timeline
                                             </button>
 
-                                            @if (canWrite)
+                                            @if (canUpdate)
                                             {
                                                 <button class="emp-action-btn emp-action-btn-edit"
                                                         title="Xem và chỉnh sửa hồ sơ"
@@ -308,7 +308,7 @@
                                                 </button>
                                             }
 
-                                            @if ((canTransfer || canPromote || canOffboard) && string.Equals(emp.Status, "ACTIVE", StringComparison.OrdinalIgnoreCase))
+                                            @if ((canPromote || canOffboard) && string.Equals(emp.Status, "ACTIVE", StringComparison.OrdinalIgnoreCase))
                                             {
                                                 <div class="position-relative d-inline-block">
                                                     <button class="emp-action-btn emp-action-btn-more @(activeActionMenuId == emp.Id ? "active" : "")"
@@ -329,21 +329,9 @@
                                                                     <span>Bổ nhiệm / Thăng chức</span>
                                                                 </button>
                                                             }
-                                                            @if (canTransfer)
-                                                            {
-                                                                @if (canPromote)
-                                                                {
-                                                                    <div class="emp-action-dropdown-divider"></div>
-                                                                }
-                                                                <button type="button" class="emp-action-dropdown-item"
-                                                                        @onclick="() => { CloseActionMenu(); OpenTransferModal(emp); }">
-                                                                    <i class="bi bi-arrow-left-right text-info"></i>
-                                                                    <span>Điều chuyển phòng ban</span>
-                                                                </button>
-                                                            }
                                                             @if (canOffboard)
                                                             {
-                                                                @if (canTransfer || canPromote)
+                                                                @if (canPromote)
                                                                 {
                                                                     <div class="emp-action-dropdown-divider"></div>
                                                                 }
@@ -421,14 +409,9 @@
                         <div class="row g-3">
                             <div class="col-12"><h6 class="fw-bold text-success border-bottom pb-2">1. Thông tin cá nhân &amp; Nhân thân</h6></div>
 
-                            <div class="col-md-6">
+                            <div class="col-12">
                                 <label class="form-label small fw-semibold">Họ và tên <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" placeholder="Ví dụ: Nguyễn Văn A" @bind="formFullName" />
-                            </div>
-
-                            <div class="col-md-6">
-                                <label class="form-label small fw-semibold">Mã nhân viên (bỏ trống để tự sinh)</label>
-                                <input type="text" class="form-control font-monospace" placeholder="Tự sinh: NV0001..." @bind="formCode" disabled="@isEditMode" />
                             </div>
 
                             <div class="col-md-4">
@@ -480,7 +463,7 @@
 
                             <div class="col-md-6">
                                 <label class="form-label small fw-semibold">Phòng ban công tác <span class="text-danger">*</span></label>
-                                @if (!isEditMode || canTransfer)
+                                @if (!isEditMode)
                                 {
                                     <select class="form-select" value="@formDepartmentId" @onchange="OnFormDepartmentChanged">
                                         <option value="0">-- Chọn phòng ban --</option>
@@ -489,10 +472,6 @@
                                             <option value="@d.Id">@d.Name (@d.Code)</option>
                                         }
                                     </select>
-                                    @if (isEditMode && canTransfer)
-                                    {
-                                        <div class="form-text small text-success">✓ Bạn có quyền điều chuyển phòng ban.</div>
-                                    }
                                 }
                                 else
                                 {
@@ -503,7 +482,7 @@
                                         }
                                     </select>
                                     <div class="form-text small text-muted">
-                                        🔒 Khóa: Cần quyền <strong>"Điều chuyển phòng ban"</strong> để thay đổi đơn vị công tác.
+                                        🔒 Phòng ban cố định theo hồ sơ. Để điều chỉnh chức vụ, vui lòng dùng chức năng <strong>"Bổ nhiệm / Thăng chức"</strong>.
                                     </div>
                                 }
                             </div>
@@ -1483,11 +1462,12 @@
     private string formPassword = string.Empty;
     private string formRole = "EMPLOYEE";
 
-    private bool canWrite = false;
-    private bool canTransfer = false;
-    private bool canPromote = false;
-    private bool canOffboard = false;
-    private bool canManageAny => canWrite || canTransfer || canPromote || canOffboard;
+    private bool canCreate = false;
+    private bool canUpdate = false;
+    private bool canWrite => canCreate || canUpdate;
+    private bool canPromote => canUpdate;
+    private bool canOffboard => canUpdate;
+    private bool canManageAny => canCreate || canUpdate;
 
     // Promote Modal state
     private bool showPromoteModal = false;
@@ -1551,21 +1531,16 @@
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
         var isAdmin = user.IsInRole("ADMIN");
-        canWrite = isAdmin
+        canCreate = isAdmin
+            || user.HasClaim("permission", PermissionCodes.EmployeeCreate)
+            || user.HasClaim("permission", "EMP_CREATE");
+        canUpdate = isAdmin
+            || user.HasClaim("permission", PermissionCodes.EmployeeUpdate)
             || user.HasClaim("permission", PermissionCodes.EmployeeWrite)
-            || user.HasClaim("permission", "EMP_EDIT");
-        canTransfer = isAdmin
-            || user.HasClaim("permission", PermissionCodes.EmployeeTransfer)
-            || user.HasClaim("permission", "EMP_TRANSFER");
-        canPromote = isAdmin
-            || user.IsInRole("MANAGER")
-            || user.IsInRole("HR_MANAGER")
+            || user.HasClaim("permission", "EMP_EDIT")
+            || user.HasClaim("permission", "EMP_UPDATE")
             || user.HasClaim("permission", PermissionCodes.EmployeePromote)
-            || user.HasClaim("permission", "EMP_PROMOTE")
-            || canWrite;
-        canOffboard = isAdmin
-            || user.HasClaim("permission", PermissionCodes.EmployeeOffboard)
-            || user.HasClaim("permission", "EMP_OFFBOARD");
+            || user.HasClaim("permission", PermissionCodes.EmployeeOffboard);
 
         await LoadDataAsync();
     }

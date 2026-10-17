@@ -72,9 +72,12 @@ builder.Services.AddAuthorization(options =>
             if (context.User.IsInRole("ADMIN")) return true;
             if (expanded.Any(p => context.User.HasClaim("permission", p))) return true;
 
-            // Quyền Quản lý & Thêm mới (Write) hoặc Quản trị xem tài khoản (AdminUserRead) mặc nhiên bao gồm quyền Đọc danh bạ (Read)
+            // Quyền Thêm mới (Create) hoặc Cập nhật (Update/Write) hoặc Quản trị xem tài khoản (AdminUserRead) mặc nhiên bao gồm quyền Đọc danh bạ (Read)
             if (permission == PermissionCodes.EmployeeRead &&
-                (context.User.HasClaim("permission", PermissionCodes.EmployeeWrite) ||
+                (context.User.HasClaim("permission", PermissionCodes.EmployeeCreate) ||
+                 context.User.HasClaim("permission", "EMP_CREATE") ||
+                 context.User.HasClaim("permission", PermissionCodes.EmployeeUpdate) ||
+                 context.User.HasClaim("permission", "employee.write") ||
                  context.User.HasClaim("permission", "EMP_EDIT") ||
                  context.User.HasClaim("permission", PermissionCodes.AdminUserRead) ||
                  context.User.HasClaim("permission", "admin.users.read")))
@@ -90,10 +93,12 @@ builder.Services.AddAuthorization(options =>
                 return true;
             }
 
-            if (permission == PermissionCodes.EmployeePromote &&
-                (context.User.HasClaim("permission", PermissionCodes.EmployeeWrite) ||
-                 context.User.HasClaim("permission", "EMP_EDIT") ||
-                 context.User.HasClaim("permission", PermissionCodes.EmployeeTransfer)))
+            if ((permission == PermissionCodes.EmployeePromote ||
+                 permission == PermissionCodes.EmployeeOffboard ||
+                 permission == PermissionCodes.EmployeeTransfer) &&
+                (context.User.HasClaim("permission", PermissionCodes.EmployeeUpdate) ||
+                 context.User.HasClaim("permission", "employee.write") ||
+                 context.User.HasClaim("permission", "EMP_EDIT")))
             {
                 return true;
             }

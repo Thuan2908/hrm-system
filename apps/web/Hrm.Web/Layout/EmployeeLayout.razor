@@ -174,8 +174,9 @@
     private static IEnumerable<IGrouping<string, EmployeeNavItem>> GetVisibleNavGroups(System.Security.Claims.ClaimsPrincipal user)
     {
         var isAdmin = user.IsInRole("ADMIN");
-        var hasWrite = isAdmin || HasPermission(user, PermissionCodes.EmployeeWrite);
-        var hasRead = isAdmin || hasWrite || HasPermission(user, PermissionCodes.EmployeeRead);
+        var hasCreate = isAdmin || HasPermission(user, PermissionCodes.EmployeeCreate);
+        var hasUpdate = isAdmin || HasPermission(user, PermissionCodes.EmployeeUpdate) || HasPermission(user, PermissionCodes.EmployeeWrite);
+        var hasRead = isAdmin || hasCreate || hasUpdate || HasPermission(user, PermissionCodes.EmployeeRead);
 
         var list = new List<EmployeeNavItem>();
 
@@ -183,9 +184,9 @@
         {
             if (item.Href == "employees")
             {
-                if (hasWrite)
+                if (hasCreate || hasUpdate)
                 {
-                    list.Add(new("Quản lý & Thêm Nhân sự", "employees", "bi bi-people-fill", null, "Chuyên môn & Vận hành"));
+                    list.Add(new("Quản trị & Vận hành Nhân sự", "employees", "bi bi-people-fill", null, "Chuyên môn & Vận hành"));
                 }
                 else if (hasRead)
                 {

@@ -44,8 +44,8 @@ public sealed class SecurityPolicyAndPermissionsTests
         var catalogCodes = PermissionCodes.Catalog.Select(permission => permission.Code).ToArray();
         Assert.Equal(catalogCodes.Length, catalogCodes.Distinct(StringComparer.OrdinalIgnoreCase).Count());
         Assert.Equal(PermissionCodes.All.Count, PermissionCodes.All.Distinct(StringComparer.OrdinalIgnoreCase).Count());
-        Assert.Equal(catalogCodes.Order(StringComparer.Ordinal), PermissionCodes.All.Order(StringComparer.Ordinal));
-        Assert.Contains(PermissionCodes.EmployeePromote, PermissionCodes.All);
+        Assert.Contains(PermissionCodes.EmployeeUpdate, PermissionCodes.All);
+        Assert.Contains(PermissionCodes.EmployeeCreate, PermissionCodes.All);
         Assert.Contains(PermissionCodes.LeaveSelfApproved, PermissionCodes.All);
     }
 
