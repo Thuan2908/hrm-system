@@ -29,7 +29,7 @@
                     <div class="col-md-4"><label class="form-label">Nhân viên</label><InputSelect class="form-select" @bind-Value="createModel.EmployeeId"><option value="0">-- Chọn nhân viên --</option>@foreach (var employee in employees.Where(item => !item.HasAccount)){<option value="@employee.Id">@employee.Code · @employee.FullName</option>}</InputSelect><ValidationMessage For="@(() => createModel.EmployeeId)" /></div>
                     <div class="col-md-3"><label class="form-label">Tên đăng nhập</label><InputText class="form-control" @bind-Value="createModel.UserName" /><ValidationMessage For="@(() => createModel.UserName)" /></div>
                     <div class="col-md-3"><label class="form-label">Mật khẩu tạm</label><InputText type="password" class="form-control" @bind-Value="createModel.Password" /><ValidationMessage For="@(() => createModel.Password)" /></div>
-                    <div class="col-md-4"><label class="form-label">Vai trò</label><InputSelect class="form-select" @bind-Value="createModel.Role"><option value="">-- Chọn vai trò --</option>@foreach (var role in roles){<option value="@role.Name">@role.Name</option>}</InputSelect><ValidationMessage For="@(() => createModel.Role)" /></div>
+                    <div class="col-md-4"><label class="form-label">Vai trò</label><InputSelect class="form-select" @bind-Value="createModel.Role"><option value="">-- Chọn vai trò --</option>@foreach (var role in roles.Where(r => !r.Name.Equals("ADMIN", StringComparison.OrdinalIgnoreCase))){<option value="@role.Name">@role.Name</option>}</InputSelect><ValidationMessage For="@(() => createModel.Role)" /></div>
                     <div class="col-12"><button class="btn btn-primary" type="submit">Lưu tài khoản</button> <button class="btn btn-outline-secondary" type="button" @onclick="ToggleCreate">Hủy</button></div>
                 </div>
             </EditForm>
@@ -69,7 +69,16 @@
                         var isBlocked = user.IsLocked || !user.IsActive;
                         <tr>
                             <td><strong>@user.FullName</strong>@if (isSelf){<span class="badge text-bg-info ms-2">Bạn</span>}<div class="small text-secondary">@user.UserName · @user.Department</div></td>
-                            <td><select class="form-select form-select-sm" value="@user.Roles.FirstOrDefault()" disabled="@isSelf" title="@(isSelf ? "Không thể tự đổi vai trò của mình" : null)" @onchange="args => ChangeRoleAsync(user, args)">@foreach (var item in roles){<option value="@item.Name">@item.Name</option>}</select></td>
+                            <td>
+                                @if (user.EmployeeId == null)
+                                {
+                                    <span class="badge text-bg-dark">ADMIN</span>
+                                }
+                                else
+                                {
+                                    <select class="form-select form-select-sm" value="@user.Roles.FirstOrDefault()" disabled="@isSelf" title="@(isSelf ? "Không thể tự đổi vai trò của mình" : null)" @onchange="args => ChangeRoleAsync(user, args)">@foreach (var item in roles.Where(r => !r.Name.Equals("ADMIN", StringComparison.OrdinalIgnoreCase))){<option value="@item.Name">@item.Name</option>}</select>
+                                }
+                            </td>
                             <td><span class="badge @GetStatusClass(user)">@GetStatusText(user)</span></td>
                             <td>@user.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy")</td>
                             <td>@(user.LastLoginAt?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "Chưa đăng nhập")</td>

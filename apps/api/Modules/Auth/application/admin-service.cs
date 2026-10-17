@@ -259,6 +259,14 @@ public sealed class AdminService(
             EnsureNotSelf(userId, actorUserId, "Bạn không thể tự gỡ vai trò ADMIN của mình.");
             await EnsureNotLastAdminAsync(user, cancellationToken);
         }
+        if (user.EmployeeId != null && IsAdminRole(role.Name))
+        {
+            throw new DomainException("ADMIN_ROLE_RESTRICTED", "Không thể gán vai trò ADMIN cho tài khoản nhân viên. Quyền ADMIN chỉ dành cho tài khoản Quản trị Hệ thống độc lập.");
+        }
+        if (user.EmployeeId == null && !IsAdminRole(role.Name))
+        {
+            throw new DomainException("SYSTEM_ACCOUNT_ROLE_IMMUTABLE", "Tài khoản Quản trị Hệ thống bắt buộc phải giữ vai trò ADMIN.");
+        }
         user.RoleId = role.Id;
         user.Role = role;
         await dbContext.SaveChangesAsync(cancellationToken);
