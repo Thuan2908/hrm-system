@@ -2,7 +2,7 @@ namespace Hrm.Contracts;
 
 public sealed record AdminUserDto(
     long Id,
-    long EmployeeId,
+    long? EmployeeId,
     string UserName,
     string FullName,
     string Department,
@@ -13,7 +13,7 @@ public sealed record AdminUserDto(
     IReadOnlyCollection<string> Roles);
 
 public sealed record CreateAdminUserRequest(
-    long EmployeeId,
+    long? EmployeeId,
     string UserName,
     string Password,
     IReadOnlyCollection<string> Roles);

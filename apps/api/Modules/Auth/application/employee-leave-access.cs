@@ -16,7 +16,7 @@ public sealed class EmployeeLeaveAccess(AuthDbContext dbContext, TimeProvider ti
             ?? throw new DomainException("AUTH_USER_NOT_FOUND", "Không tìm thấy tài khoản.");
         var permissions = await dbContext.RolePermissions.AsNoTracking()
             .Where(g => g.RoleId == user.RoleId).Select(g => g.Permission.Code).ToListAsync(cancellationToken);
-        var active = user.IsActive && user.Employee.Status == "ACTIVE"
+        var active = user.IsActive && (user.Employee == null || user.Employee.Status == "ACTIVE")
             && (user.SecurityState?.LockoutEnd is null || user.SecurityState.LockoutEnd <= timeProvider.GetUtcNow());
         return new LeaveUserAccess(user.Id, user.EmployeeId, active, permissions);
     }

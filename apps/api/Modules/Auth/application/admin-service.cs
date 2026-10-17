@@ -41,18 +41,23 @@ public sealed class AdminService(
     {
         (page, pageSize) = NormalizePaging(page, pageSize);
         var query = dbContext.Users.AsNoTracking()
-            .Include(user => user.Employee).ThenInclude(employee => employee.Department)
+            .Include(user => user.Employee).ThenInclude(employee => employee!.Department)
             .Include(user => user.Role).Include(user => user.SecurityState).Include(user => user.Metadata).AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(keyword))
         {
             var pattern = $"%{keyword.Trim()}%";
             query = query.Where(user => EF.Functions.ILike(user.UserName, pattern) ||
-                EF.Functions.ILike(user.Employee.FullName, pattern) || EF.Functions.ILike(user.Employee.Code, pattern));
+                (user.Employee != null && (EF.Functions.ILike(user.Employee.FullName, pattern) || EF.Functions.ILike(user.Employee.Code, pattern))) ||
+                (user.Employee == null && EF.Functions.ILike("System Administrator", pattern)));
         }
         if (!string.IsNullOrWhiteSpace(department))
-            query = query.Where(user => EF.Functions.ILike(user.Employee.Department.Code, department.Trim()) ||
-                EF.Functions.ILike(user.Employee.Department.Name, department.Trim()));
+        {
+            var deptTrim = department.Trim();
+            query = query.Where(user =>
+                (user.Employee != null && (EF.Functions.ILike(user.Employee.Department.Code, deptTrim) || EF.Functions.ILike(user.Employee.Department.Name, deptTrim))) ||
+                (user.Employee == null && EF.Functions.ILike("Quản trị Hệ thống", $"%{deptTrim}%")));
+        }
         if (!string.IsNullOrWhiteSpace(role))
             query = query.Where(user => EF.Functions.ILike(user.Role.Name, role.Trim()));
 
@@ -73,7 +78,7 @@ public sealed class AdminService(
             ("USERNAME", true) => query.OrderByDescending(user => user.UserName),
             ("CREATEDAT", false) => query.OrderBy(user => user.Metadata!.CreatedAt),
             ("CREATEDAT", true) => query.OrderByDescending(user => user.Metadata!.CreatedAt),
-            (_, false) => query.OrderBy(user => user.Employee.FullName),
+            (_, false) => query.OrderBy(user => user.Employee != null ? user.Employee.FullName : user.UserName),
             _ => query.OrderByDescending(user => user.Metadata!.CreatedAt)
         };
 
@@ -101,17 +106,32 @@ public sealed class AdminService(
         var userName = request.UserName.Trim();
         if (string.IsNullOrWhiteSpace(userName))
             throw new DomainException("USERNAME_INVALID", "Vui lòng nhập tên đăng nhập.");
-        var employee = await dbContext.Employees.Include(item => item.Department)
-            .SingleOrDefaultAsync(item => item.Id == request.EmployeeId, cancellationToken)
-            ?? throw new DomainException("EMPLOYEE_NOT_FOUND", "Không tìm thấy nhân viên.");
-        if (await dbContext.Users.AnyAsync(user => user.EmployeeId == request.EmployeeId, cancellationToken))
-            throw new DomainException("EMPLOYEE_ACCOUNT_EXISTS", "Nhân viên đã có tài khoản.");
+
+        Employee? employee = null;
+        if (IsAdminRole(role.Name))
+        {
+            if (request.EmployeeId is not null and > 0)
+                throw new DomainException("ADMIN_EMPLOYEE_LINK_FORBIDDEN", "Tài khoản Quản trị Hệ thống không thể gán vào nhân viên.");
+        }
+        else
+        {
+            if (request.EmployeeId is null or <= 0)
+                throw new DomainException("EMPLOYEE_REQUIRED", "Tài khoản nhân viên bắt buộc phải chọn nhân sự.");
+
+            employee = await dbContext.Employees.Include(item => item.Department)
+                .SingleOrDefaultAsync(item => item.Id == request.EmployeeId.Value, cancellationToken)
+                ?? throw new DomainException("EMPLOYEE_NOT_FOUND", "Không tìm thấy nhân viên.");
+            if (await dbContext.Users.AnyAsync(user => user.EmployeeId == request.EmployeeId, cancellationToken))
+                throw new DomainException("EMPLOYEE_ACCOUNT_EXISTS", "Nhân viên đã có tài khoản.");
+        }
 
         // Tài khoản đã bị xóa mềm trước đó của chính nhân viên này (nếu có) sẽ được tái sử dụng
         // để không vi phạm ràng buộc duy nhất emp_id/username của schema hiện có.
-        var deletedAccount = await dbContext.Users.IgnoreQueryFilters()
-            .Include(user => user.SecurityState).Include(user => user.Metadata)
-            .FirstOrDefaultAsync(user => user.EmployeeId == request.EmployeeId && user.DeletedAt != null, cancellationToken);
+        var deletedAccount = request.EmployeeId is not null and > 0
+            ? await dbContext.Users.IgnoreQueryFilters()
+                .Include(user => user.SecurityState).Include(user => user.Metadata)
+                .FirstOrDefaultAsync(user => user.EmployeeId == request.EmployeeId && user.DeletedAt != null, cancellationToken)
+            : null;
         var reusedId = deletedAccount?.Id ?? 0;
         if (await dbContext.Users.IgnoreQueryFilters()
                 .AnyAsync(user => user.Id != reusedId && EF.Functions.ILike(user.UserName, userName), cancellationToken))
@@ -149,7 +169,7 @@ public sealed class AdminService(
                 user = new ApplicationUser
                 {
                     Id = (await dbContext.Users.IgnoreQueryFilters().MaxAsync(item => (long?)item.Id, cancellationToken) ?? 0) + 1,
-                    EmployeeId = employee.Id,
+                    EmployeeId = employee?.Id,
                     RoleId = role.Id,
                     UserName = userName,
                     PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password, 12),
@@ -174,6 +194,10 @@ public sealed class AdminService(
         long userId, UpdateAdminUserRequest request, long actorUserId, CancellationToken cancellationToken)
     {
         var user = await FindUserAsync(userId, cancellationToken);
+        if (IsAdminRole(user.Role.Name))
+        {
+            throw new DomainException("ADMIN_EMPLOYEE_LINK_FORBIDDEN", "Tài khoản Quản trị Hệ thống không thể gán vào nhân viên.");
+        }
         var employee = await dbContext.Employees.Include(item => item.Department)
             .SingleOrDefaultAsync(item => item.Id == request.EmployeeId, cancellationToken)
             ?? throw new DomainException("EMPLOYEE_NOT_FOUND", "Không tìm thấy nhân viên.");
@@ -413,7 +437,7 @@ public sealed class AdminService(
     }
 
     private async Task<ApplicationUser> FindUserAsync(long userId, CancellationToken cancellationToken) =>
-        await dbContext.Users.Include(user => user.Employee).ThenInclude(employee => employee.Department)
+        await dbContext.Users.Include(user => user.Employee).ThenInclude(employee => employee!.Department)
             .Include(user => user.Role).Include(user => user.SecurityState)
             .Include(user => user.Metadata)
             .SingleOrDefaultAsync(user => user.Id == userId, cancellationToken)
@@ -457,7 +481,9 @@ public sealed class AdminService(
     }
 
     private static AdminUserDto MapUser(ApplicationUser user, DateTimeOffset now) => new(
-        user.Id, user.EmployeeId, user.UserName, user.Employee.FullName, user.Employee.Department.Name,
+        user.Id, user.EmployeeId, user.UserName,
+        user.Employee?.FullName ?? "System Administrator",
+        user.Employee?.Department?.Name ?? "Quản trị Hệ thống",
         user.IsActive, user.SecurityState?.LockoutEnd > now, user.Metadata?.CreatedAt ?? now,
         user.LastLoginAt is null ? null : new DateTimeOffset(DateTime.SpecifyKind(user.LastLoginAt.Value, DateTimeKind.Utc)),
         [user.Role.Name]);

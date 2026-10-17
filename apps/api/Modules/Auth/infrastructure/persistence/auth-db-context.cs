@@ -28,7 +28,7 @@ public sealed class AuthDbContext(DbContextOptions<AuthDbContext> options) : DbC
             entity.ToTable("users");
             entity.HasKey(user => user.Id);
             entity.Property(user => user.Id).HasColumnName("user_id").ValueGeneratedOnAdd().UseIdentityByDefaultColumn();
-            entity.Property(user => user.EmployeeId).HasColumnName("emp_id");
+            entity.Property(user => user.EmployeeId).HasColumnName("emp_id").IsRequired(false);
             entity.Property(user => user.RoleId).HasColumnName("role_id");
             entity.Property(user => user.UserName).HasColumnName("username");
             entity.Property(user => user.PasswordHash).HasColumnName("password_hash");
@@ -40,7 +40,7 @@ public sealed class AuthDbContext(DbContextOptions<AuthDbContext> options) : DbC
             entity.HasQueryFilter(user => user.DeletedAt == null);
             entity.HasIndex(user => user.UserName).IsUnique();
             entity.HasOne(user => user.Role).WithMany().HasForeignKey(user => user.RoleId);
-            entity.HasOne(user => user.Employee).WithMany().HasForeignKey(user => user.EmployeeId);
+            entity.HasOne(user => user.Employee).WithMany().HasForeignKey(user => user.EmployeeId).IsRequired(false);
         });
 
         builder.Entity<ApplicationRole>(entity =>

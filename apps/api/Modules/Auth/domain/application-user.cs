@@ -3,7 +3,7 @@ namespace Hrm.Modules.Auth.Domain;
 public sealed class ApplicationUser
 {
     public long Id { get; set; }
-    public long EmployeeId { get; set; }
+    public long? EmployeeId { get; set; }
     public long RoleId { get; set; }
     public required string UserName { get; set; }
     public required string PasswordHash { get; set; }
@@ -13,7 +13,7 @@ public sealed class ApplicationUser
     /// <summary>Thời điểm Admin xóa (mềm) tài khoản. Null nghĩa là tài khoản chưa bị xóa.</summary>
     public DateTimeOffset? DeletedAt { get; set; }
     public ApplicationRole Role { get; set; } = null!;
-    public Employee Employee { get; set; } = null!;
+    public Employee? Employee { get; set; }
     public UserSecurityState? SecurityState { get; set; }
     public UserAccountMetadata? Metadata { get; set; }
 }

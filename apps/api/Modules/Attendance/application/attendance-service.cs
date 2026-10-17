@@ -175,7 +175,12 @@ public sealed class AttendanceService(
             throw new DomainException("AUTH_USER_NOT_FOUND", "Không tìm thấy thông tin tài khoản.");
         }
 
-        return user.EmployeeId;
+        if (!user.EmployeeId.HasValue)
+        {
+            throw new DomainException("EMPLOYEE_NOT_APPLICABLE", "Tài khoản Quản trị Hệ thống không có dữ liệu chấm công.");
+        }
+
+        return user.EmployeeId.Value;
     }
 
     private DateOnly GetCurrentWorkDate()
